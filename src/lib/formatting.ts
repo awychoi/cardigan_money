@@ -44,6 +44,12 @@ export function monthLabel(month: string): string {
   });
 }
 
+/** Short month for dense chart axes; the year is in the chart caption. */
+export function monthShortLabel(month: string): string {
+  const [year, value] = month.split("-").map(Number);
+  return new Date(year, value - 1, 1).toLocaleDateString(undefined, { month: "short" });
+}
+
 export function dueAmountLabel(kind: string, amountMinor: number | null, currency: string): string {
   switch (kind) {
     case "minimum_due":

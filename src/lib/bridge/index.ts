@@ -89,6 +89,7 @@ export type {
   LedgerRow,
   CurrencySubtotal,
   MonthSummary,
+  Breakdown,
   AccountCard,
   TransactionDetail,
   OverrideInput,
