@@ -1,6 +1,6 @@
 # UI overhaul plan (2026-10)
 
-Status: **Phases 0–3 implemented (2026-10-24); Phase 4 next.** Written 2026-10-24.
+Status: **Phases 0–4 implemented (2026-10-24); Phase 5 next.** Written 2026-10-24.
 Scope: charts, the Overview rebuild, the Transactions re-grade, and Settings sectioning.
 This is the only live plan; the initial build plan is archived at
 [archive/2026-10-initial-build-plan.md](archive/2026-10-initial-build-plan.md).
@@ -221,6 +221,22 @@ and `current as of` footnote remain. Trend loading/error states are explicit.
 
 **Exit gate:** ledger e2e green, subtotal reconciles per currency, day totals are internally
 consistent with the rows shown (and only full-month if backend grouping is added).
+
+**Implemented 2026-10-24.**
+
+- Date-sorted views group rows by reporting date; amount/merchant sorts stay flat and keep the
+  Date column. Day subtotals are explicitly labelled **page subtotal** because the table is
+  paginated. A scroll observer hides group headers once their entire group is above the sticky
+  table header, so labels do not pile up.
+- Merchant monograms, category chips, dot + word status, and credit styling are in place:
+  refunds/payments use `amount-credit`, transfers are neutral, and rust is reserved for excluded
+  rows (including an excluded refund). The supplier table's refund column is also credit-styled.
+- The meta line keeps `N rows` as its own text node (existing e2e hook), adds `N eligible`, and
+  renders eligible/pending subtotals per currency with explicit currency codes.
+- The filter bar is sticky; the transaction table scrolls under a sticky column header.
+- Tests: 7 `ledgerPresentation` unit tests (monogram, amount tone, status, day totals, currency
+  separation) and an e2e test for grouping, page subtotals, sticky classes, credits, and the
+  hidden superseded headers.
 
 ---
 

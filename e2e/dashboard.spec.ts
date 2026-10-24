@@ -11,6 +11,22 @@ test.describe("read-only dashboard (browser mock)", () => {
     await expect(page.getByText("Pending in this month")).toBeVisible();
     await expect(page.getByText(/current as of/i)).toBeVisible();
     await expect(page.getByText(/Other currencies are shown separately/i)).toBeVisible();
+    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Monthly net spending/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
+  });
+
+  test("theme switch swaps ring for ranked bars without a reload", async ({ page }) => {
+    await openUnlocked(page);
+    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.locator(".theme-card", { hasText: "Graphite" }).click();
+    await page.getByRole("button", { name: "Overview", exact: true }).click();
+
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Spending by category" })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toHaveCount(0);
   });
 
   test("cards show due amount kinds without inventing an amount due", async ({ page }) => {
@@ -24,6 +40,45 @@ test.describe("read-only dashboard (browser mock)", () => {
     ).toBeVisible();
     await expect(page.getByText("Reconnect needed").first()).toBeVisible();
     await expect(page.getByText("Sync error").first()).toBeVisible();
+  });
+
+  test("ledger groups by day, labels page subtotals, and renders credits as credits", async ({
+    page,
+  }) => {
+    await openUnlocked(page);
+    await page.getByRole("button", { name: "Transactions", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+
+    await expect(page.locator(".ledger-day-row").first()).toBeVisible();
+    await expect(page.locator(".ledger-day-page").first()).toHaveText("page subtotal");
+    await expect(page.locator(".merchant-monogram").first()).not.toBeEmpty();
+    await expect(page.locator(".category-chip").first()).toBeVisible();
+    await expect(page.locator(".ledger-status-ok").first()).toBeVisible();
+    await expect(page.locator(".ledger-meta")).toContainText("eligible");
+    await expect(page.locator(".ledger-meta")).toContainText("USD");
+
+    const filterPosition = await page
+      .locator(".filter-bar")
+      .evaluate((element) => getComputedStyle(element).position);
+    expect(filterPosition).toBe("sticky");
+    const dayPosition = await page
+      .locator(".ledger-day-row th")
+      .first()
+      .evaluate((element) => getComputedStyle(element).position);
+    expect(dayPosition).toBe("sticky");
+
+    await page.locator(".ledger-table-wrap").evaluate((element) => {
+      element.scrollTop = 320;
+      element.dispatchEvent(new Event("scroll"));
+    });
+    await expect(page.locator(".ledger-day-row th").first()).toHaveClass(
+      /ledger-day-header-hidden/,
+    );
+    expect(await page.locator(".ledger-day-header-hidden").count()).toBeGreaterThan(0);
+
+    await page.getByLabel("Search transactions").fill("Payment Thank You");
+    const paymentRow = page.getByRole("row").filter({ hasText: "Payment Thank You" }).first();
+    await expect(paymentRow.locator(".amount-credit")).toBeVisible();
   });
 
   test("a card click filters the ledger while keeping the month", async ({ page }) => {
@@ -73,8 +128,26 @@ test.describe("read-only dashboard (browser mock)", () => {
       .locator(".metric", { hasText: "Current card balances" })
       .locator(".metric-value")
       .innerText();
+    const ringBefore = await page
+      .getByRole("img", { name: /Gross spending by category/i })
+      .getAttribute("aria-label");
+    const trendBefore = await page
+      .getByRole("img", { name: /Monthly net spending/i })
+      .getAttribute("aria-label");
     await page.getByRole("button", { name: "Previous month" }).click();
     await expect(page.locator(".month-label")).toHaveText("September 2026");
+    await expect(page.getByRole("img", { name: /Monthly net spending/i })).toHaveAttribute(
+      "aria-label",
+      /September 2026/,
+    );
+    const ringAfter = await page
+      .getByRole("img", { name: /Gross spending by category/i })
+      .getAttribute("aria-label");
+    const trendAfter = await page
+      .getByRole("img", { name: /Monthly net spending/i })
+      .getAttribute("aria-label");
+    expect(ringAfter).not.toBe(ringBefore);
+    expect(trendAfter).not.toBe(trendBefore);
     const balancesAfter = await page
       .locator(".metric", { hasText: "Current card balances" })
       .locator(".metric-value")
@@ -87,6 +160,11 @@ test.describe("read-only dashboard (browser mock)", () => {
   test("stays usable at 1100 x 760 without page overflow", async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 760 });
     await openUnlocked(page);
+    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+    const overviewOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overviewOverflow).toBe(false);
     await page.getByRole("button", { name: "Transactions", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
     const overflow = await page.evaluate(

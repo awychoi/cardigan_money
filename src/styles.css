@@ -1738,3 +1738,153 @@ h3 {
   padding-top: calc(var(--screen-pad) * 0.8);
   padding-bottom: calc(var(--screen-pad) * 1.2);
 }
+
+/* ---------- Transactions re-grade ---------- */
+
+.filter-bar-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+
+.ledger-table-wrap {
+  max-height: clamp(280px, calc(100vh - 380px), 640px);
+}
+
+.ledger-table thead th {
+  z-index: 3;
+}
+
+.ledger-day-group {
+  position: relative;
+}
+
+.ledger-table tbody tr.ledger-day-row {
+  cursor: default;
+}
+
+.ledger-day-header-hidden {
+  visibility: hidden;
+}
+
+.ledger-day-row th {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(11px * var(--type-scale));
+  font-weight: 650;
+  padding: 5px 10px;
+  position: sticky;
+  text-align: left;
+  top: calc(var(--row-y) * 2 + 17px);
+  z-index: 2;
+}
+
+:root[data-density="compact"] .ledger-day-row th {
+  top: calc(var(--row-y) * 1.4 + 15px);
+}
+
+.ledger-day-inner {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.ledger-day-date {
+  font-family: var(--font-mono);
+  font-size: calc(10.5px * var(--type-scale));
+  letter-spacing: 0.01em;
+}
+
+.ledger-day-subtotal {
+  color: var(--muted);
+  font-size: calc(10.5px * var(--type-scale));
+  font-variant-numeric: tabular-nums;
+  font-weight: 450;
+  white-space: nowrap;
+}
+
+.ledger-day-page {
+  color: var(--muted);
+  font-size: calc(8px * var(--type-scale));
+  letter-spacing: 0.06em;
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+
+.merchant-cell {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.merchant-monogram {
+  align-items: center;
+  background: var(--surface-3);
+  border-radius: 6px;
+  color: var(--text-2);
+  display: inline-flex;
+  flex: none;
+  font-size: calc(8.5px * var(--type-scale));
+  font-weight: 700;
+  height: 22px;
+  justify-content: center;
+  letter-spacing: 0.04em;
+  width: 22px;
+}
+
+.merchant-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-chip {
+  background: var(--surface-2);
+  border: var(--border-width) solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: calc(10px * var(--type-scale));
+  padding: 1px 7px;
+}
+
+.ledger-status {
+  align-items: center;
+  display: inline-flex;
+  font-size: calc(11px * var(--type-scale));
+  gap: 5px;
+}
+
+.ledger-status-dot {
+  background: currentColor;
+  border-radius: 999px;
+  height: 6px;
+  width: 6px;
+}
+
+.ledger-status-ok {
+  color: var(--success);
+}
+
+.ledger-status-warning {
+  color: var(--warning);
+}
+
+.ledger-status-danger {
+  color: var(--danger);
+}
+
+.amount-credit {
+  color: var(--success);
+}
+
+.amount-transfer {
+  color: var(--muted);
+}
+
+.amount-excluded {
+  color: var(--danger);
+  text-decoration: line-through;
+}

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
+  type Row,
 } from "@tanstack/react-table";
 import {
   command,
@@ -15,6 +16,7 @@ import {
 import { friendlyError } from "../../lib/bridge/errors";
 import { formatDateOnly, formatMoney, formatMonthRange, monthLabel } from "../../lib/formatting";
 import { Button } from "../../components/Button";
+import { amountTone, dayTotals, merchantMonogram, statusFor } from "./ledgerPresentation";
 import { TransactionEditor } from "./TransactionEditor";
 
 type Mode = "transactions" | "suppliers";
@@ -31,6 +33,24 @@ function subtotalLabel(
     .filter((item) => item[countKey] > 0)
     .map((item) => `${formatMoney(item[amountKey], item.currency)} ${item.currency}`);
   return values.length > 0 ? values.join(" · ") : "—";
+}
+
+function daySubtotalLabel(rows: LedgerRow[]): string {
+  const totals = dayTotals(rows);
+  if (totals.length === 0) return "No eligible spend";
+  return totals
+    .map((total) => {
+      const parts: string[] = [];
+      if (total.eligibleCount > 0) {
+        parts.push(`${formatMoney(total.eligibleMinor, total.currency)} ${total.currency}`);
+      }
+      if (total.pendingCount > 0) {
+        parts.push(`${formatMoney(total.pendingMinor, total.currency)} ${total.currency} pending`);
+      }
+      return parts.join(" · ");
+    })
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export function LedgerView({
@@ -67,6 +87,7 @@ export function LedgerView({
   const [reloadToken, setReloadToken] = useState(0);
   const [exportConfirm, setExportConfirm] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -140,55 +161,89 @@ export function LedgerView({
     reloadToken,
   ]);
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor("reportingDate", {
-        header: "Date",
-        cell: (info) => formatDateOnly(info.getValue()),
-      }),
-      columnHelper.accessor("merchant", { header: "Merchant" }),
-      columnHelper.accessor("accountName", {
-        header: "Card",
-        cell: (info) => (
-          <span>
-            {info.getValue()}
-            {info.row.original.accountLastFour ? ` · ${info.row.original.accountLastFour}` : ""}
+  const grouped = sort === "date_desc" || sort === "date_asc";
+  const columns = useMemo(() => {
+    const dateColumn = columnHelper.accessor("reportingDate", {
+      header: "Date",
+      cell: (info) => formatDateOnly(info.getValue()),
+    });
+    const merchantColumn = columnHelper.accessor("merchant", {
+      header: "Merchant",
+      cell: (info) => (
+        <span className="merchant-cell">
+          <span className="merchant-monogram" aria-hidden="true">
+            {merchantMonogram(info.getValue())}
           </span>
-        ),
-      }),
-      columnHelper.accessor("category", {
-        header: "Category",
-        cell: (info) => info.getValue() ?? "Uncategorized",
-      }),
-      columnHelper.accessor("pending", {
-        header: "Status",
-        cell: (info) => {
-          if (info.row.original.excluded)
-            return <span className="status-pill status-warn">Excluded</span>;
-          return info.getValue() ? (
-            <span className="status-pill status-warn">Pending</span>
-          ) : (
-            <span className="status-pill status-ok">Posted</span>
-          );
-        },
-      }),
-      columnHelper.accessor("amountMinor", {
-        header: "Amount",
-        cell: (info) => (
-          <span className={info.getValue() < 0 ? "amount-negative" : "amount"}>
-            {formatMoney(info.getValue(), info.row.original.currency)}
+          <span className="merchant-name">{info.getValue()}</span>
+        </span>
+      ),
+    });
+    const accountColumn = columnHelper.accessor("accountName", {
+      header: "Card",
+      cell: (info) => (
+        <span>
+          {info.getValue()}
+          {info.row.original.accountLastFour ? ` · ${info.row.original.accountLastFour}` : ""}
+        </span>
+      ),
+    });
+    const categoryColumn = columnHelper.accessor("category", {
+      header: "Category",
+      cell: (info) => <span className="category-chip">{info.getValue() ?? "Uncategorized"}</span>,
+    });
+    const statusColumn = columnHelper.accessor("pending", {
+      header: "Status",
+      cell: (info) => {
+        const state = statusFor(info.row.original);
+        return (
+          <span className={`ledger-status ledger-status-${state.tone}`}>
+            <span className="ledger-status-dot" aria-hidden="true" />
+            {state.label}
           </span>
-        ),
-      }),
-    ],
-    [],
-  );
+        );
+      },
+    });
+    const amountColumn = columnHelper.accessor("amountMinor", {
+      header: "Amount",
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <span className={`amount amount-${amountTone(row)}`}>
+            {formatMoney(info.getValue(), row.currency)}
+          </span>
+        );
+      },
+    });
+    return grouped
+      ? [merchantColumn, accountColumn, categoryColumn, statusColumn, amountColumn]
+      : [dateColumn, merchantColumn, accountColumn, categoryColumn, statusColumn, amountColumn];
+  }, [grouped]);
 
   const table = useReactTable({
     data: result?.rows ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  useEffect(() => {
+    const wrap = tableWrapRef.current;
+    if (!wrap || !grouped) return;
+    const update = () => {
+      const head = wrap.querySelector<HTMLElement>("thead");
+      const threshold =
+        wrap.getBoundingClientRect().top + (head?.getBoundingClientRect().height ?? 33) + 1;
+      const headers = Array.from(wrap.querySelectorAll<HTMLElement>(".ledger-day-row th"));
+      for (const header of headers) {
+        const group = header.closest("tbody");
+        const lastRow = group?.lastElementChild as HTMLElement | null;
+        const lastRowTop = lastRow ? lastRow.getBoundingClientRect().top : Number.POSITIVE_INFINITY;
+        header.classList.toggle("ledger-day-header-hidden", lastRowTop <= threshold + 1);
+      }
+    };
+    update();
+    wrap.addEventListener("scroll", update, { passive: true });
+    return () => wrap.removeEventListener("scroll", update);
+  }, [grouped, result]);
 
   function clearFilters() {
     setSearchInput("");
@@ -204,6 +259,36 @@ export function LedgerView({
   }
 
   const totalPages = result ? Math.max(1, Math.ceil(result.rowCount / result.pageSize)) : 1;
+
+  const bodyRows = table.getRowModel().rows;
+  const dateGroups: Array<{ date: string; rows: Row<LedgerRow>[] }> = [];
+  if (grouped) {
+    for (const row of bodyRows) {
+      const date = row.original.reportingDate;
+      const last = dateGroups[dateGroups.length - 1];
+      if (last?.date === date) last.rows.push(row);
+      else dateGroups.push({ date, rows: [row] });
+    }
+  }
+
+  const renderRow = (row: Row<LedgerRow>) => (
+    <tr
+      key={row.id}
+      className={selected?.id === row.original.id ? "row-selected" : undefined}
+      tabIndex={0}
+      onClick={() => setSelected(row.original)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          setSelected(row.original);
+        }
+      }}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+      ))}
+    </tr>
+  );
 
   function refreshAfterEdit() {
     setReloadToken((value) => value + 1);
@@ -314,7 +399,7 @@ export function LedgerView({
 
       {mode === "transactions" ? (
         <>
-          <div className="filter-bar" role="search">
+          <div className="filter-bar filter-bar-sticky" role="search">
             <label className="filter-field filter-search">
               <span className="field-label">Search</span>
               <input
@@ -447,7 +532,7 @@ export function LedgerView({
           ) : null}
 
           <div className={selected ? "ledger-layout" : "ledger-layout ledger-layout-full"}>
-            <div className="table-wrap">
+            <div className="table-wrap ledger-table-wrap" ref={tableWrapRef}>
               <table className="ledger-table">
                 <caption className="sr-only">
                   Transactions for {monthLabel(dashboard.month)}
@@ -465,28 +550,26 @@ export function LedgerView({
                     </tr>
                   ))}
                 </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={selected?.id === row.original.id ? "row-selected" : undefined}
-                      tabIndex={0}
-                      onClick={() => setSelected(row.original)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setSelected(row.original);
-                        }
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
+                {grouped ? (
+                  dateGroups.map((group) => (
+                    <tbody className="ledger-day-group" key={group.date}>
+                      <tr className="ledger-day-row">
+                        <th scope="rowgroup" colSpan={columns.length}>
+                          <span className="ledger-day-inner">
+                            <span className="ledger-day-date">{formatDateOnly(group.date)}</span>
+                            <span className="ledger-day-subtotal">
+                              {daySubtotalLabel(group.rows.map((row) => row.original))}
+                              <span className="ledger-day-page">page subtotal</span>
+                            </span>
+                          </span>
+                        </th>
+                      </tr>
+                      {group.rows.map(renderRow)}
+                    </tbody>
+                  ))
+                ) : (
+                  <tbody>{bodyRows.map(renderRow)}</tbody>
+                )}
               </table>
               {loading ? <p className="muted ledger-loading">Loading transactions…</p> : null}
               {!loading && result && result.rows.length === 0 ? (
@@ -586,7 +669,7 @@ export function LedgerView({
                   >
                     <td>{supplier.key}</td>
                     <td className="amount">{formatMoney(supplier.grossMinor)}</td>
-                    <td className="amount-negative">{formatMoney(supplier.refundsMinor)}</td>
+                    <td className="amount-credit">{formatMoney(supplier.refundsMinor)}</td>
                     <td className="amount">{formatMoney(supplier.netMinor)}</td>
                     <td>{supplier.count}</td>
                   </tr>

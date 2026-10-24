@@ -18,7 +18,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 8 | Sync engine, scheduler, mock provider | **Complete** (mock provider; no live provider call) |
 | 9 | Plaid adapter and verified linking (conditional) | **Sandbox verified**; Production disabled; live reconnect and Keychain ACL inspection unverified |
 | 10 | Independent security review, performance, packaging, handoff | **In progress** — automated evidence complete; owner native smoke and distribution signing outstanding |
-| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Phases 0–3 complete**; Phase 4 next |
+| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Phases 0–4 complete**; Phase 5 next |
 
 ## 2. Phase 0 — foundation and feasibility
 
@@ -359,7 +359,7 @@ See `docs/integrations/plaid-verification-2026-10-24.md`.
 - **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (36 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
 - **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready. This hash is historical: rebuild and record a new hash after any source change.
 - **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
-- **Automated suites (current):** 161 Rust (plus ignored release perf test), 64 Vitest, 37 Playwright; `pnpm build` + artifact scan passed.
+- **Automated suites (current):** 161 Rust (plus ignored release perf test), 71 Vitest, 38 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
 A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: [`docs/security/independent-review-2026-10-23.md`](../security/independent-review-2026-10-23.md).
@@ -368,7 +368,7 @@ A separate read-only review agent examined backup/restore, sync, gateway validat
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **161 Rust passed** (1 ignored 50k perf), **64 Vitest**, **37 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **161 Rust passed** (1 ignored 50k perf), **71 Vitest**, **38 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
 - Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; fresh-install restore unsupported; ad-hoc/non-notarized.
@@ -424,6 +424,29 @@ The review's settings hardening initially required a vault header even in demo m
 - Day subtotals must respect pagination: the ledger loads 50 rows per request, so full-month day totals need backend grouping or page-local labeling.
 - `eligibleCount` and per-currency subtotals are already on `LedgerPage`; use them in the new meta line.
 
+## 3l. UI overhaul — Phase 4: Transactions re-grade (2026-10-24)
+
+### Implemented
+- Date-sorted views group rows by reporting date with a sticky day header and a day subtotal. The subtotal is labelled **page subtotal** because the table is paginated; amount/merchant sorts stay flat and keep the Date column. A scroll observer hides group headers after their whole group has passed the sticky column header, preventing label pile-up.
+- Merchant monograms, category chips, status dot + word, and amount tones: refunds/payments use the success/credit tone, transfers are neutral, and danger/rust is reserved for excluded rows. Supplier-view refunds use the same credit tone.
+- Meta line keeps `N rows` as its own node for the existing e2e selector and adds `N eligible`, then eligible/pending subtotals per currency with explicit codes.
+- Sticky filter bar and a bounded, internally scrolling transaction table with a sticky column header.
+- Preserved: every filter label, `Clear filters`, `By supplier`, the detail-panel flow, and the `N rows` hook.
+
+### Actual test runs
+
+| Command | Result |
+| --- | --- |
+| `pnpm test` | 71 passed, including 7 `ledgerPresentation` tests |
+| `pnpm test:e2e` | 38 passed, including day grouping, page subtotals, sticky classes, credit styling, and scroll-hiding |
+| `pnpm verify:all` | typecheck, lint, Prettier, Vitest, build, Playwright, rustfmt, clippy, 161 Rust tests all pass |
+
+### Exit gate
+- Ledger e2e green: **yes**.
+- Subtotal reconciles per currency against the filtered rows: **yes** (Rust and mock tests from the earlier fix).
+- Day totals are internally consistent with the rows shown and explicitly page-local: **yes**.
+- Credits are no longer rendered as errors; rust is reserved for excluded rows: **yes**.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -474,6 +497,6 @@ Measured 2026-10-23 in release on a 50,000-transaction encrypted dataset (`cargo
 
 ## 9. Next phase
 
-The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): Phases 0–3 are implemented; **Phase 4 (Transactions re-grade) is next**, followed by Settings sectioning and polish.
+The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): Phases 0–4 are implemented; **Phase 5 (Settings sectioning) is next**, followed by polish.
 
 Release blockers are not UI work: owner native smoke, the Production Plaid decision, fresh-install restore (or an explicit docs limitation), and distribution signing remain outstanding.
