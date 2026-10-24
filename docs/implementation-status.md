@@ -319,7 +319,7 @@ Sync-specific assertions: three pages/three transactions, two accounts, two bala
 
 Known limits: only the mock provider is wired; an existing `plaid` connection fails closed until the Phase 9 adapter is configured. Scheduled runs are tested through the window matcher, not by waiting for wall-clock windows. The scheduler thread does not yet observe sleep/wake explicitly; on wake the window matcher still applies.
 
-## 3h. Phase 9 — Plaid adapter (conditional) — IMPLEMENTED, SANDBOX VERIFICATION PENDING
+## 3h. Phase 9 — Plaid adapter (conditional) — IMPLEMENTED; VERIFICATION BLOCKED
 
 ### Implemented
 - macOS Keychain store (generic password, `WhenUnlockedThisDeviceOnly`, non-synchronizable) for Sandbox client ID/secret and per-connection access tokens; native AppKit setup sheet; renderer never receives credentials.
@@ -330,8 +330,15 @@ Known limits: only the mock provider is wired; an existing `plaid` connection fa
 - UI: Sandbox setup/replace, link/cancel/waiting/linked status, connection table, reconnect action, capabilities copy; demo disabled.
 - Tests: Keychain memory store/credential scoping, link-session parsing, mapping fixtures, URL validation, mock UI flow. Live Sandbox verification is **not yet recorded**.
 
-### Pending verification (owner)
-Native sheet/Keychain access, Hosted Link completion, Sandbox Item linking, transaction/balance counts, liability availability, reconnect, and restart cursor continuity. See `docs/plaid-guide.md`. Phase 9 is not complete until these are recorded.
+### Verification status (honest)
+The owner reported that the native-sheet flow and Hosted Link/Item link **succeeded** while testing build `2ef8b68...`/its predecessor. This is owner-reported, not independently observed. No sanitized verification report, institution name, account count, transaction/balance counts, liability availability, restart/cursor evidence, Keychain attribute inspection, or reconnect confirmation has been provided. Therefore:
+
+- The adapter/linking implementation is code- and mock-tested, but **live transaction/balance sync is NOT recorded as verified**.
+- Phase 9 remains **BLOCKED** on owner-supplied evidence, not marked complete.
+- No live institution coverage or Production support is claimed.
+- Native sheet/Keychain behavior is owner-reported only.
+
+To unblock: open the `2ef8b68...` build, sync, click **Show verification report → Copy report**, paste it, then repeat after a full quit/reopen. Optionally force/repair a reconnect. Do not include secrets, tokens, or Hosted Link URLs.
 
 
 No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.
