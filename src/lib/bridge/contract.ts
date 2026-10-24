@@ -168,6 +168,218 @@ export const zAccountArchiveRequest = z
 export type Account = z.infer<typeof zAccount>;
 export type AccountPayload = z.infer<typeof zAccountPayload>;
 
+
+export const zPaymentInfo = z
+  .object({
+    nextDueDate: z.string().nullable(),
+    dueAmountMinor: z.number().int().nullable(),
+    dueAmountKind: z.enum(["minimum_due", "reported_zero", "not_reported", "no_due_date"]),
+    dueSource: z.string().nullable(),
+    statementBalanceMinor: z.number().int().nullable(),
+    statementBalanceSource: z.string().nullable(),
+    statementIssueDate: z.string().nullable(),
+    nextClosingDate: z.string().nullable(),
+    validThroughDate: z.string().nullable(),
+    manualExpired: z.boolean(),
+    retrievedAt: z.string().nullable(),
+  })
+  .strict();
+
+export const zAccountCard = z
+  .object({
+    accountId: z.string(),
+    issuer: z.string(),
+    displayName: z.string(),
+    lastFour: z.string().nullable(),
+    currency: z.string(),
+    included: z.boolean(),
+    sourceKind: z.string(),
+    connectionStatus: z.string().nullable(),
+    currentBalanceMinor: z.number().int().nullable(),
+    availableCreditMinor: z.number().int().nullable(),
+    creditLimitMinor: z.number().int().nullable(),
+    balanceRetrievedAt: z.string().nullable(),
+    balanceProvenance: z.string().nullable(),
+    balanceAgeDays: z.number().int().nullable(),
+    balanceStale: z.boolean(),
+    payment: zPaymentInfo,
+  })
+  .strict();
+
+export const zBalanceTotals = z
+  .object({
+    knownTotalMinor: z.number().int(),
+    accountsWithBalance: z.number().int(),
+    accountsMissingBalance: z.number().int(),
+    complete: z.boolean(),
+    otherCurrency: z.array(z.tuple([z.string(), z.number().int()])),
+  })
+  .strict();
+
+export const zUpcomingPayment = z
+  .object({
+    accountId: z.string(),
+    displayName: z.string(),
+    lastFour: z.string().nullable(),
+    currency: z.string(),
+    dueDate: z.string(),
+    amountMinor: z.number().int().nullable(),
+    amountKind: z.string(),
+    source: z.string(),
+  })
+  .strict();
+
+export const zUpcoming = z
+  .object({
+    asOfDate: z.string(),
+    windowDays: z.number().int(),
+    entries: z.array(zUpcomingPayment),
+    knownTotalMinor: z.number().int(),
+    unknownAmountCount: z.number().int(),
+    nonUsdEntryCount: z.number().int(),
+    complete: z.boolean(),
+  })
+  .strict();
+
+export const zOverview = z
+  .object({
+    accounts: z.array(zAccountCard),
+    balances: zBalanceTotals,
+    upcoming: zUpcoming,
+  })
+  .strict();
+
+export const zBreakdown = z
+  .object({
+    key: z.string(),
+    grossMinor: z.number().int(),
+    refundsMinor: z.number().int(),
+    netMinor: z.number().int(),
+    count: z.number().int(),
+  })
+  .strict();
+
+export const zReconciliation = z
+  .object({
+    eligibleNetMinor: z.number().int(),
+    supplierNetMinor: z.number().int(),
+    categoryNetMinor: z.number().int(),
+    exact: z.boolean(),
+  })
+  .strict();
+
+export const zMonthSummary = z
+  .object({
+    month: z.string(),
+    startDate: z.string(),
+    endDateExclusive: z.string(),
+    currency: z.string(),
+    grossPurchasesMinor: z.number().int(),
+    refundsMinor: z.number().int(),
+    feesInterestMinor: z.number().int(),
+    netSpendingMinor: z.number().int(),
+    pendingSubtotalMinor: z.number().int(),
+    eligibleCount: z.number().int(),
+    pendingCount: z.number().int(),
+    rowCount: z.number().int(),
+    otherCurrencyRowCount: z.number().int(),
+    suppliers: z.array(zBreakdown),
+    categories: z.array(zBreakdown),
+    reconciliation: zReconciliation,
+  })
+  .strict();
+
+export const zAccountSpend = z
+  .object({
+    accountId: z.string(),
+    currency: z.string(),
+    netMinor: z.number().int(),
+    count: z.number().int(),
+  })
+  .strict();
+
+export const zDashboard = z
+  .object({
+    mode: z.enum(["real", "demo"]),
+    demo: z.boolean(),
+    month: z.string(),
+    currentMonth: z.string(),
+    previousMonth: z.string(),
+    nextMonth: z.string(),
+    startDate: z.string(),
+    endDateExclusive: z.string(),
+    currency: z.string(),
+    summary: zMonthSummary,
+    overview: zOverview,
+    accountSpend: z.array(zAccountSpend),
+  })
+  .strict();
+
+export const zLedgerRow = z
+  .object({
+    id: z.string(),
+    reportingDate: z.string(),
+    merchant: z.string(),
+    merchantEdited: z.boolean(),
+    rawDescription: z.string(),
+    accountId: z.string(),
+    accountName: z.string(),
+    accountLastFour: z.string().nullable(),
+    category: z.string().nullable(),
+    categoryEdited: z.boolean(),
+    txType: z.string(),
+    pending: z.boolean(),
+    amountMinor: z.number().int(),
+    currency: z.string(),
+    sourceKind: z.string(),
+    authorizedDate: z.string().nullable(),
+    postedDate: z.string().nullable(),
+    reportingDateSource: z.string(),
+    excluded: z.boolean(),
+    notes: z.string().nullable(),
+  })
+  .strict();
+
+export const zLedgerPage = z
+  .object({
+    rows: z.array(zLedgerRow),
+    rowCount: z.number().int(),
+    page: z.number().int(),
+    pageSize: z.number().int(),
+    eligibleSubtotalMinor: z.number().int(),
+    pendingSubtotalMinor: z.number().int(),
+  })
+  .strict();
+
+export const zLedgerQuery = z
+  .object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    endDateExclusive: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    accountIds: z.array(z.string()).max(20).optional(),
+    category: z.string().max(80).nullable().optional(),
+    status: z.enum(["all", "pending", "posted"]).optional(),
+    txType: z
+      .enum(["purchase", "refund", "fee", "interest", "payment", "transfer", "other"])
+      .optional(),
+    search: z.string().max(120).nullable().optional(),
+    sort: z.enum(["date_desc", "date_asc", "amount_desc", "amount_asc", "merchant_asc"]).optional(),
+    page: z.number().int().min(0).max(10000).optional(),
+    pageSize: z.number().int().min(1).max(200).optional(),
+  })
+  .strict();
+
+export type PaymentInfo = z.infer<typeof zPaymentInfo>;
+export type UpcomingPayment = z.infer<typeof zUpcomingPayment>;
+export type AccountCard = z.infer<typeof zAccountCard>;
+export type Overview = z.infer<typeof zOverview>;
+export type MonthSummary = z.infer<typeof zMonthSummary>;
+export type Breakdown = z.infer<typeof zBreakdown>;
+export type AccountSpend = z.infer<typeof zAccountSpend>;
+export type Dashboard = z.infer<typeof zDashboard>;
+export type LedgerRow = z.infer<typeof zLedgerRow>;
+export type LedgerPage = z.infer<typeof zLedgerPage>;
+export type LedgerQuery = z.infer<typeof zLedgerQuery>;
+
 export type Settings = z.infer<typeof zSettings>;
 export type SettingsPatch = z.infer<typeof zSettingsPatch>;
 export type SecuritySummary = z.infer<typeof zSecuritySummary>;
@@ -196,6 +408,11 @@ export interface CommandDefs {
   account_update: { request: { id: string; account: AccountPayload }; response: Account };
   account_archive: { request: { id: string; archived: boolean }; response: Account };
   app_quit: { request: Record<string, never>; response: { quitting: boolean } };
+  demo_open: { request: Record<string, never>; response: VaultState };
+  demo_close: { request: Record<string, never>; response: VaultState };
+  demo_reset: { request: Record<string, never>; response: VaultState };
+  dashboard_get: { request: { month?: string | null }; response: Dashboard };
+  ledger_query: { request: LedgerQuery; response: LedgerPage };
 }
 
 export type CommandName = keyof CommandDefs;
@@ -219,6 +436,11 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   account_update: zAccountUpdateRequest,
   account_archive: zAccountArchiveRequest,
   app_quit: zEmpty,
+  demo_open: zEmpty,
+  demo_close: zEmpty,
+  demo_reset: zEmpty,
+  dashboard_get: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).nullable().optional() }).strict(),
+  ledger_query: zLedgerQuery,
 };
 
 export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["response"]> } = {
@@ -238,6 +460,11 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   account_update: zAccount,
   account_archive: zAccount,
   app_quit: z.object({ quitting: z.boolean() }).strict(),
+  demo_open: zVaultState,
+  demo_close: zVaultState,
+  demo_reset: zVaultState,
+  dashboard_get: zDashboard,
+  ledger_query: zLedgerPage,
 };
 
 export const zGatewayEnvelope = z

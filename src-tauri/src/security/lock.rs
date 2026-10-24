@@ -133,6 +133,12 @@ pub fn spawn_monitor<R: tauri::Runtime + 'static>(app: AppHandle<R>) {
                 }
             }
 
+            // Demo data is synthetic; do not auto-close it on idle. Screen
+            // lock/sleep still close it above.
+            if state.mode() == crate::state::SessionMode::Demo {
+                continue;
+            }
+
             let idle = native::idle_seconds().unwrap_or(0.0);
             let auto_lock_minutes = state
                 .with_db(|_conn, _header, settings| Ok(settings.auto_lock_minutes))

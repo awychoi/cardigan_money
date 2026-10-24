@@ -1,9 +1,17 @@
 import { BridgeError } from "../lib/bridge/errors";
 import {
+  archiveMockAccount,
+  createMockAccount,
+  mockAccounts,
+  mockDashboard,
+  mockLedger,
+  resetMockData,
+  updateMockAccount,
+} from "./data";
+import {
   API_VERSION,
   isCommandName,
   type CommandName,
-  type Account,
   type AccountPayload,
   type SecurityEvent,
   type SecuritySummary,
@@ -25,13 +33,14 @@ function initialState() {
   return {
     vaultExists: !empty,
     unlocked: false,
+    mode: "real" as "real" | "demo",
     generation: 1,
     events: [] as SecurityEvent[],
+    dashboardVersion: 1,
   };
 }
 
 const mockState = initialState();
-let accounts: Account[] = [];
 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
@@ -61,41 +70,6 @@ function recordEvent(eventType: string, outcome: SecurityEvent["outcome"]): void
   mockState.events = mockState.events.slice(0, 100);
 }
 
-function creditLimitToMinor(value: string | null): number | null {
-  if (!value || value.trim() === "") return null;
-  const normalized = value.replace(/[$,]/g, "").trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
-    throw new BridgeError("invalid_input", "Invalid credit limit.");
-  }
-  const minor = Math.round(Number(normalized) * 100);
-  if (!Number.isFinite(minor) || minor <= 0) {
-    throw new BridgeError("invalid_input", "Invalid credit limit.");
-  }
-  return minor;
-}
-
-function nowIso(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-}
-
-function accountFromPayload(payload: AccountPayload): Account {
-  const now = nowIso();
-  return {
-    id: crypto.randomUUID(),
-    issuer: payload.issuer,
-    displayName: payload.displayName,
-    lastFour: payload.lastFour,
-    accountType: payload.accountType,
-    currency: payload.currency,
-    creditLimitMinor: creditLimitToMinor(payload.creditLimit),
-    includeInOverview: payload.includeInOverview,
-    archived: false,
-    sourceKind: "manual",
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 function requireUnlocked(): void {
   if (!mockState.vaultExists) throw new BridgeError("vault_missing", "No vault.");
   if (!mockState.unlocked) throw new BridgeError("vault_locked", "The vault is locked.");
@@ -118,7 +92,7 @@ function vaultState(): VaultState {
   return {
     exists: mockState.vaultExists,
     unlocked: mockState.unlocked,
-    mode: "real",
+    mode: mockState.mode,
     settings: mockState.unlocked ? structuredClone(settings) : null,
     security: mockState.unlocked ? securitySummary() : null,
   };
@@ -157,17 +131,20 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       if (mockState.vaultExists) throw new BridgeError("vault_exists", "Vault exists.");
       mockState.vaultExists = true;
       mockState.unlocked = true;
+      mockState.mode = "real";
       recordEvent("vault_created", "success");
       data = vaultState();
       break;
     case "vault_unlock":
       if (!mockState.vaultExists) throw new BridgeError("vault_missing", "No vault.");
       mockState.unlocked = true;
+      mockState.mode = "real";
       recordEvent("unlock_success", "success");
       data = vaultState();
       break;
     case "vault_lock":
       mockState.unlocked = false;
+      mockState.mode = "real";
       recordEvent("lock", "info");
       data = vaultState();
       break;
@@ -197,54 +174,65 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       requireUnlocked();
       const includeArchived = (payload as { includeArchived?: boolean }).includeArchived ?? false;
       data = {
-        accounts: structuredClone(
-          includeArchived ? accounts : accounts.filter((account) => !account.archived),
-        ),
+        accounts: mockAccounts().filter((account) => includeArchived || !account.archived),
       };
       break;
     }
     case "account_create":
       requireUnlocked();
-      {
-        const created = accountFromPayload(payload as AccountPayload);
-        accounts = [...accounts, created];
-        data = structuredClone(created);
-      }
+      data = createMockAccount(payload as AccountPayload);
       break;
-    case "account_update":
+    case "account_update": {
       requireUnlocked();
-      {
-        const update = payload as { id: string; account: AccountPayload };
-        const existing = accounts.find((account) => account.id === update.id);
-        if (!existing) throw new BridgeError("not_found", "Account not found.");
-        const updated: Account = {
-          ...existing,
-          ...accountFromPayload(update.account),
-          id: existing.id,
-          createdAt: existing.createdAt,
-          updatedAt: nowIso(),
-          archived: existing.archived,
-        };
-        accounts = accounts.map((account) => (account.id === updated.id ? updated : account));
-        data = structuredClone(updated);
-      }
+      const update = payload as { id: string; account: AccountPayload };
+      data = updateMockAccount(update.id, update.account);
       break;
-    case "account_archive":
+    }
+    case "account_archive": {
       requireUnlocked();
-      {
-        const archive = payload as { id: string; archived: boolean };
-        const existing = accounts.find((account) => account.id === archive.id);
-        if (!existing) throw new BridgeError("not_found", "Account not found.");
-        const updated: Account = { ...existing, archived: archive.archived, updatedAt: nowIso() };
-        accounts = accounts.map((account) => (account.id === updated.id ? updated : account));
-        data = structuredClone(updated);
-      }
+      const archive = payload as { id: string; archived: boolean };
+      data = archiveMockAccount(archive.id, archive.archived);
       break;
+    }
     case "app_quit":
       mockState.unlocked = false;
+      mockState.mode = "real";
       recordEvent("lock", "info");
       data = { quitting: true };
       break;
+    case "demo_open":
+      mockState.mode = "demo";
+      mockState.vaultExists = true;
+      mockState.unlocked = true;
+      recordEvent("demo_reset", "info");
+      data = vaultState();
+      break;
+    case "demo_close":
+      mockState.mode = "real";
+      mockState.unlocked = false;
+      recordEvent("lock", "info");
+      data = vaultState();
+      break;
+    case "demo_reset":
+      resetMockData();
+      mockState.dashboardVersion += 1;
+      mockState.mode = "demo";
+      mockState.vaultExists = true;
+      mockState.unlocked = true;
+      recordEvent("demo_reset", "success");
+      data = vaultState();
+      break;
+    case "dashboard_get": {
+      requireUnlocked();
+      const request = payload as { month?: string | null };
+      data = mockDashboard(mockState.mode, request.month);
+      break;
+    }
+    case "ledger_query": {
+      requireUnlocked();
+      data = mockLedger(payload as Parameters<typeof mockLedger>[0]);
+      break;
+    }
     case "security_events_list": {
       requireUnlocked();
       const limit = (payload as { limit?: number }).limit ?? 20;
@@ -276,7 +264,9 @@ export function __resetMockBridge(): void {
   mockState.unlocked = false;
   mockState.generation = 1;
   mockState.events = [];
-  accounts = [];
+  mockState.mode = "real";
+  mockState.dashboardVersion += 1;
+  resetMockData();
   settings = { ...defaultSettings };
 }
 

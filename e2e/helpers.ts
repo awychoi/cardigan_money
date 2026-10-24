@@ -8,5 +8,5 @@ export async function openLocked(page: Page): Promise<void> {
 export async function openUnlocked(page: Page): Promise<void> {
   await openLocked(page);
   await page.getByRole("button", { name: "Unlock vault" }).click();
-  await expect(page.getByText("Your cards, in one quiet place.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 }

@@ -15,7 +15,14 @@ use crate::security::vault::{VaultHeader, VaultPaths};
 use crate::storage::events::record_event;
 use crate::storage::settings::Settings;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMode {
+    Real,
+    Demo,
+}
+
 pub struct VaultSession {
+    pub mode: SessionMode,
     pub header: Option<VaultHeader>,
     pub conn: Option<Connection>,
     pub cipher: Option<CipherInfo>,
@@ -27,6 +34,7 @@ pub struct VaultSession {
 impl VaultSession {
     pub fn locked() -> Self {
         Self {
+            mode: SessionMode::Real,
             header: None,
             conn: None,
             cipher: None,
@@ -48,6 +56,11 @@ impl VaultSession {
         self.cipher.take();
         self.settings.take();
         self.unlocked_at.take();
+        self.mode = SessionMode::Real;
+    }
+
+    pub fn mode(&self) -> SessionMode {
+        self.mode
     }
 }
 
@@ -81,13 +94,28 @@ impl AppState {
     /// because commands are declared `#[tauri::command(async)]`.
     pub fn with_db<T>(
         &self,
-        f: impl FnOnce(&Connection, &VaultHeader, &Settings) -> AppResult<T>,
+        f: impl FnOnce(&Connection, Option<&VaultHeader>, &Settings) -> AppResult<T>,
     ) -> AppResult<T> {
         let guard = self.session.lock().map_err(|_| AppError::Internal)?;
         let conn = guard.conn.as_ref().ok_or(AppError::Locked)?;
-        let header = guard.header.as_ref().ok_or(AppError::Locked)?;
         let settings = guard.settings.as_ref().ok_or(AppError::Locked)?;
-        f(conn, header, settings)
+        f(conn, guard.header.as_ref(), settings)
+    }
+
+    pub fn mode(&self) -> SessionMode {
+        self.session
+            .lock()
+            .map(|session| session.mode)
+            .unwrap_or(SessionMode::Real)
+    }
+
+    /// Demo mode is deliberately read-only for ledger mutations and never
+    /// touches the real vault, Keychain, backups, or exports.
+    pub fn require_real(&self, action: &'static str) -> AppResult<()> {
+        if self.mode() == SessionMode::Demo {
+            return Err(AppError::Blocked(action));
+        }
+        Ok(())
     }
 
     pub fn rate_limit(&self, key: &'static str, max: usize, seconds: u64) -> AppResult<()> {
@@ -98,7 +126,7 @@ impl AppState {
     /// Lock, zeroize, close the database, and notify the renderer. The renderer
     /// is never responsible for enforcing the lock.
     pub fn lock<R: tauri::Runtime>(&self, app: &AppHandle<R>, reason: &str) -> bool {
-        let unlocked = {
+        let state = {
             let mut session = match self.session.lock() {
                 Ok(guard) => guard,
                 Err(_) => return false,
@@ -114,9 +142,16 @@ impl AppState {
                     Some(serde_json::json!({ "reason": reason })),
                 );
             }
+            let was_demo = session.mode == SessionMode::Demo;
             session.clear();
-            true
+            (true, was_demo)
         };
+        let (unlocked, was_demo) = state;
+        if was_demo {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_title("cardigan_money");
+            }
+        }
         if unlocked {
             // Minimal event; no ledger data.
             let _ = app.emit_to(

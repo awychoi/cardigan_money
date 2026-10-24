@@ -30,7 +30,7 @@ test.describe("renderer security surface", () => {
     await openLocked(page);
     expect(await page.locator("input[type='password']").count()).toBe(0);
     await page.getByRole("button", { name: "Unlock vault" }).click();
-    await expect(page.getByText("Your cards, in one quiet place.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     expect(await page.locator("input[type='password']").count()).toBe(0);
     expect(await page.evaluate(() => document.documentElement.outerHTML)).not.toMatch(
       /type=["']password/i,

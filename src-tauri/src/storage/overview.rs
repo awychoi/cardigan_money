@@ -62,6 +62,8 @@ pub struct AccountCard {
     pub credit_limit_minor: Option<i64>,
     pub balance_retrieved_at: Option<String>,
     pub balance_provenance: Option<String>,
+    pub balance_age_days: Option<i64>,
+    pub balance_stale: bool,
     pub payment: PaymentInfo,
 }
 
@@ -348,6 +350,12 @@ pub fn overview(conn: &Connection, today: NaiveDate) -> AppResult<Overview> {
         let manual = manual_payment(conn, &row.id)?;
         let payment = payment_info(today, provider.as_ref(), manual.as_ref())?;
         let status = connection_status(conn, &row.id)?;
+        let balance_age_days = balance.as_ref().and_then(|balance| {
+            chrono::DateTime::parse_from_rfc3339(&balance.retrieved_at)
+                .ok()
+                .map(|retrieved| (today - retrieved.date_naive()).num_days().max(0))
+        });
+        let balance_stale = balance_age_days.map(|days| days > 7).unwrap_or(false);
 
         if row.included {
             if let Some(balance) = &balance {
@@ -376,6 +384,8 @@ pub fn overview(conn: &Connection, today: NaiveDate) -> AppResult<Overview> {
             credit_limit_minor: balance.as_ref().and_then(|b| b.limit),
             balance_retrieved_at: balance.as_ref().map(|b| b.retrieved_at.clone()),
             balance_provenance: balance.as_ref().map(|b| b.provenance.clone()),
+            balance_age_days,
+            balance_stale,
             payment: payment.clone(),
         };
 

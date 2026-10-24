@@ -29,6 +29,19 @@ export function VaultGate({
     }
   }
 
+  async function openDemo() {
+    setBusy("unlock");
+    setError(null);
+    setNotice(null);
+    try {
+      onOpened(await command("demo_open", {}));
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function unlockVault() {
     setBusy("unlock");
     setError(null);
@@ -67,6 +80,12 @@ export function VaultGate({
             <p className="sheet-note" role="note">
               The passphrase is requested by a native macOS sheet. This window never sees it.
             </p>
+            <div className="vault-demo">
+              <Button variant="ghost" onClick={openDemo} disabled={busy !== null}>
+                Open demo (synthetic data)
+              </Button>
+              <span className="fine-print">Separate database. No passphrase, no real data, no provider.</span>
+            </div>
           </>
         ) : (
           <>
@@ -89,6 +108,12 @@ export function VaultGate({
               You will enter the passphrase twice in a native sheet. Spaces and case are preserved.
               Losing it makes the ledger permanently unreadable.
             </p>
+            <div className="vault-demo">
+              <Button variant="ghost" onClick={openDemo} disabled={busy !== null}>
+                Open demo (synthetic data)
+              </Button>
+              <span className="fine-print">No passphrase needed. Synthetic data only.</span>
+            </div>
           </>
         )}
 

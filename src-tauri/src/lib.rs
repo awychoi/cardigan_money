@@ -1,7 +1,9 @@
 pub mod commands;
+pub mod demo;
 pub mod domain;
 pub mod error;
 pub mod ipc;
+pub mod providers;
 pub mod security;
 pub mod services;
 pub mod state;
@@ -195,6 +197,27 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&app_menu, &edit_menu])?;
             app.set_menu(menu)?;
 
+            #[cfg(debug_assertions)]
+            if std::env::var("CARDIGAN_MONEY_OPEN_DEMO").as_deref() == Ok("1") {
+                let state = app.state::<AppState>();
+                match crate::demo::open(&state, app.handle()) {
+                    Ok(view) => {
+                        let dashboard = crate::services::dashboard::get(&state, Some("2026-10".into()));
+                        match dashboard {
+                            Ok(dashboard) => eprintln!(
+                                "DEMO_NATIVE_OPEN=passed accounts={} rows={} net={} mode={}",
+                                dashboard.overview.accounts.len(),
+                                dashboard.summary.row_count,
+                                dashboard.summary.net_spending_minor,
+                                view.mode
+                            ),
+                            Err(_) => eprintln!("DEMO_NATIVE_OPEN=failed-dashboard"),
+                        }
+                    }
+                    Err(_) => eprintln!("DEMO_NATIVE_OPEN=failed"),
+                }
+            }
+
             let window = tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -217,6 +240,10 @@ pub fn run() {
             .build()?;
             harden_native_window(&window);
             window.show()?;
+            #[cfg(debug_assertions)]
+            if std::env::var("CARDIGAN_MONEY_OPEN_DEMO").as_deref() == Ok("1") {
+                crate::demo::touch_title(app.handle());
+            }
             security::lock::spawn_monitor(app.handle().clone());
 
             #[cfg(debug_assertions)]

@@ -26,6 +26,7 @@ function applyTheme(theme: Settings["theme"]): void {
 export function App() {
   const [boot, setBoot] = useState<Boot>({ kind: "loading" });
   const [notice, setNotice] = useState<string | null>(null);
+  const [sessionNonce, setSessionNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,12 +132,36 @@ export function App() {
     [boot, handleSettingsChanged],
   );
 
-  const handleRefreshVault = useCallback(async () => {
+  const handleDemoOpen = useCallback(async () => {
     try {
-      const vault = await command("vault_status", {});
+      const vault = await command("demo_open", {});
+      setNotice("Demo mode opened with synthetic data.");
       setBoot((current) => (current.kind === "ready" ? { ...current, vault } : current));
-    } catch {
-      // Leave the current view; the lock event or next command will correct it.
+      setSessionNonce((value) => value + 1);
+    } catch (error) {
+      setNotice(friendlyError(error));
+    }
+  }, []);
+
+  const handleDemoExit = useCallback(async () => {
+    try {
+      const vault = await command("demo_close", {});
+      setNotice("Demo mode closed. The real vault is still locked.");
+      setBoot((current) => (current.kind === "ready" ? { ...current, vault } : current));
+      setSessionNonce((value) => value + 1);
+    } catch (error) {
+      setNotice(friendlyError(error));
+    }
+  }, []);
+
+  const handleDemoReset = useCallback(async () => {
+    try {
+      const vault = await command("demo_reset", {});
+      setNotice("Demo data was recreated.");
+      setBoot((current) => (current.kind === "ready" ? { ...current, vault } : current));
+      setSessionNonce((value) => value + 1);
+    } catch (error) {
+      setNotice(friendlyError(error));
     }
   }, []);
 
@@ -194,9 +219,12 @@ export function App() {
         notice={notice}
         onDismissNotice={() => setNotice(null)}
         onLock={handleLock}
-        onRefreshVault={handleRefreshVault}
         onSettingsChanged={handleSettingsChanged}
+        onExitDemo={handleDemoExit}
+        onResetDemo={handleDemoReset}
+        onOpenDemo={handleDemoOpen}
         themeControl={<ThemeToggle theme={theme} onChange={handleTheme} />}
+        sessionNonce={sessionNonce}
       />
     </ErrorBoundary>
   );

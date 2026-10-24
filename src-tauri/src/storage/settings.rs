@@ -40,6 +40,13 @@ pub struct Settings {
     pub last_backup_status: Option<String>,
 }
 
+impl Settings {
+    /// Demo settings are synthetic; no real preference is read or written.
+    pub fn note_demo(&mut self) {
+        self.onboarding_completed = true;
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {

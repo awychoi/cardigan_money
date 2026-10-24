@@ -79,5 +79,11 @@ export type {
   ThemeChoice,
   Account,
   AccountPayload,
+  Dashboard,
+  LedgerPage,
+  LedgerQuery,
+  LedgerRow,
+  MonthSummary,
+  AccountCard,
 } from "./contract";
 export const _internals = { z } as const;

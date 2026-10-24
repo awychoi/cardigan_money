@@ -9,7 +9,7 @@ async function unlock() {
   render(<App />);
   expect(await screen.findByText(/Your encrypted ledger is locked/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Unlock vault" }));
-  expect(await screen.findByText("Your cards, in one quiet place.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
   return user;
 }
 
@@ -36,7 +36,7 @@ describe("app shell", () => {
     expect(await screen.findByText(/Create your encrypted ledger/)).toBeInTheDocument();
     expect(screen.getByText(/no recovery if you lose it/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Create vault/ }));
-    expect(await screen.findByText("Your cards, in one quiet place.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
   });
 
   it("unlocks through the typed bridge and shows the secure shell", async () => {
@@ -49,7 +49,7 @@ describe("app shell", () => {
     const user = await unlock();
     await user.click(screen.getByRole("button", { name: "Lock now" }));
     expect(await screen.findByText(/Your encrypted ledger is locked/)).toBeInTheDocument();
-    expect(screen.queryByText("Your cards, in one quiet place.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
   });
 
   it("stores no financial data or theme in browser storage", async () => {
@@ -78,7 +78,7 @@ describe("app shell", () => {
     await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
     expect(await screen.findByText("You are ready.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Finish setup" }));
-    expect(await screen.findByText("Your cards, in one quiet place.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
   });
 
   it("adds an account through the onboarding wizard", async () => {
@@ -94,7 +94,7 @@ describe("app shell", () => {
     expect(await screen.findByText(/Added Sapphire Reserve/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
     await user.click(screen.getByRole("button", { name: "Finish setup" }));
-    expect(await screen.findByText("Your cards, in one quiet place.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Sapphire Reserve")).toBeInTheDocument();
   });

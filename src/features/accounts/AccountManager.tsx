@@ -9,7 +9,7 @@ type Mode =
   | { kind: "create" }
   | { kind: "edit"; account: Account };
 
-export function AccountManager() {
+export function AccountManager({ onChanged, readOnly = false }: { onChanged?: () => void; readOnly?: boolean }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -46,6 +46,7 @@ export function AccountManager() {
       }
       setMode({ kind: "list" });
       await load(includeArchived);
+      onChanged?.();
     } catch (caught) {
       setError(friendlyError(caught));
     } finally {
@@ -61,6 +62,7 @@ export function AccountManager() {
       setMessage(archived ? "Account archived." : "Account restored.");
       setArchiving(null);
       await load(includeArchived);
+      onChanged?.();
     } catch (caught) {
       setError(friendlyError(caught));
     } finally {
@@ -77,7 +79,7 @@ export function AccountManager() {
             Manual accounts need no bank connection. Archiving keeps historical transactions.
           </p>
         </div>
-        {mode.kind === "list" ? (
+        {mode.kind === "list" && !readOnly ? (
           <Button variant="secondary" onClick={() => setMode({ kind: "create" })}>
             Add account
           </Button>
@@ -92,6 +94,13 @@ export function AccountManager() {
       {error ? (
         <p className="inline-error" role="alert">
           {error}
+        </p>
+      ) : null}
+
+      {readOnly ? (
+        <p className="fine-print">
+          Demo accounts are read-only. They come from synthetic fixtures and are recreated by
+          “Reset demo”.
         </p>
       ) : null}
 
@@ -138,7 +147,9 @@ export function AccountManager() {
                       <span className="status-pill status-info">{account.sourceKind}</span>
                     </td>
                     <td>
-                      {archiving === account.id ? (
+                      {readOnly ? (
+                        <span className="fine-print">Read-only</span>
+                      ) : archiving === account.id ? (
                         <span className="archive-confirm">
                           Archive?{" "}
                           <Button

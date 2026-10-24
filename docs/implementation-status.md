@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 4 exit (2026-10-23, America/New_York).
+Last updated: Phase 5 exit (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -12,7 +12,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 2 | Vault envelope, native secret input, lock lifecycle, migrations | **Complete** (implementation + automated evidence; owner passphrase-entry smoke pending) |
 | 3 | Domain rules, input bounds, calendar-month accounting | **Complete** |
 | 4 | Onboarding, accounts, settings, theme, security settings | **Complete** (native close/passphrase smoke pending owner) |
-| 5 | Demo data and read-only dashboard | Not started |
+| 5 | Demo data and read-only dashboard | **Complete** |
 | 6 | Edits, manual metadata, CSV import/export security | Not started |
 | 7 | Encrypted backup, restore, rotation, recovery | Not started |
 | 8 | Sync engine, scheduler, mock provider | Not started |
@@ -192,6 +192,36 @@ Notable assertions: October fixture gross 11 500 / refunds −2 500 / fees 700 /
 - Passphrase change via native sheet: **implemented and Rust-tested**; native entry owner smoke.
 - No provider required: **yes**.
 
+## 3d. Phase 5 — demo mode and read-only dashboard
+
+### Completed
+- Demo mode: separate SQLCipher database at `<app-data>/demo/demo.cmdb`, fixed app-managed synthetic key (SHA-256 of a documented string), no owner passphrase, no vault header. Opening demo closes any real session; the real DB remains separate. Demo reset deletes/recreates only the demo DB. Window title gains `— Demo (synthetic data)`; renderer shows a persistent demo banner with Reset/Exit.
+- Deterministic demo fixture generator: frozen clock 2026-10-23, 11 accounts across 5 fictionalized institutions (Chase, Synchrony, Bilt, Amex, Citi) plus a EUR synthetic card; 176 transactions across Aug–Oct; pending/posted pair; month-boundary authorization/posting; later-month refunds; payments, transfers, fees, interest, exclusions; two identical Café purchases; merchant aliases/rules; missing/zero/unknown due metadata; valid and expired manual metadata; stale/reconnect/error connections; partial and failed sync history; non-USD rows kept separate.
+- Mock provider module with capabilities (transactions/balances supported, liabilities unsupported), deterministic accounts/transactions/balances, and no credentials.
+- Read-only dashboard backed entirely by Rust services: overview headline metrics (net spending, current known balances with missing count, upcoming 14-day reported payments, pending), account freshness, cards view (balance/freshness, month spend, due-date with amount-kind, statement date labeled as not remaining due, next closing only if supplied, manual labels, connection health), ledger (search, card/category/status/type filters, sort, pagination, row count, eligible/pending subtotals, clear filters, read-only detail panel), supplier view with drill-down and exact reconciliation. Transactions/By supplier toggle preserves month and filters; card click filters the ledger while preserving month.
+- Empty, pending-only, stale, connection-error, unsupported-metadata note, and demo states; keyboard-reachable controls and focusable rows; usable at 1100×760 with table scrolling.
+- Demo isolation guards: account mutations, passphrase change, and real unlock/create are blocked in demo; demo never touches Keychain (no Keychain code path yet), backups/exports/imports do not exist yet and must be guarded when added.
+- Month navigation is backend-computed (`previousMonth`/`nextMonth` from the dashboard service); current balances/upcoming obligations do not change with the selected month.
+- Debug-only native demo harness (`CARDIGAN_MONEY_OPEN_DEMO=1`) verifies native demo DB opening and dashboard assembly without simulating input.
+
+### Actual test runs
+| Suite | Result |
+| --- | --- |
+| `cargo test` | 65 lib + 3 accounts + 5 demo + 2 domain_fixtures + 8 ledger + 4 properties + 7 vault_cipher + 11 vault_flow = **105 passed**, 0 failed |
+| `pnpm test` | 23 passed |
+| `pnpm test:e2e` | 22 passed (dashboard, demo mode, card filtering, supplier drill-down, month independence, 1100×760, security) |
+| `pnpm build` + artifact scan | Passed |
+| Native demo harness | `DEMO_NATIVE_OPEN=passed accounts=11 rows=67 net=446652 mode=demo`; renderer issued dashboard gateway requests |
+
+### Phase 5 exit gate check
+- Demo totals match backend fixture expectations exactly: **Rust demo tests compare deterministic summaries across reopen/reset**; UI renders backend-provided values only.
+- Demo never touches the real ledger; cannot open the real DB or Keychain: **isolation tests pass**; the fixed demo key cannot open the real DB; demo DB path is distinct; reset leaves the real vault usable.
+- All spec §15 scenarios appear: **covered by fixture and tests** (see list above).
+- Real-data import/export/backup/provider actions unavailable in demo: **no such features exist yet**; account/passphrase mutations are blocked and features must call `require_real` when added.
+- Usable at 1100×760 with scrolling: **Playwright viewport test passes**.
+- Month changes do not alter current balances/obligations: **tested**.
+- Read-only workflows navigable by keyboard: **card tiles/rows/controls are focusable**; a full assistive audit remains Phase 10.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -240,6 +270,10 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 No performance target has been measured yet (no ledger/dashboard). Do not treat any target as met. The 50,000-transaction encrypted benchmark is Phase 10 work.
 
 ## 9. Next phase
+
+Phase 6 will add transaction overrides, merchant rules, manual payment metadata, and the Rust-owned CSV import/export workflow with batch tracking, duplicate review, rollback, formula-injection defenses, and 0600 exports.
+
+## 10. Superseded next-phase note
 
 Phase 5 will build demo mode (separate database, fixed synthetic key, deterministic 150+ transaction fixture generator, mock provider), and the read-only overview/cards/ledger/supplier views backed by the Phase 3 services, with persistent demo labeling and demo isolation tests.
 

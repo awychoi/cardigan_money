@@ -329,6 +329,41 @@ pub fn query_ledger(conn: &Connection, query: &LedgerQuery) -> AppResult<LedgerP
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct AccountSpend {
+    pub account_id: String,
+    pub currency: String,
+    pub net_minor: i64,
+    pub count: i64,
+}
+
+/// Posted eligible spending per account and currency for the selected month.
+pub fn account_spend(conn: &Connection, month: Month) -> AppResult<Vec<AccountSpend>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT t.account_id, t.currency, COALESCE(SUM(t.amount_minor), 0), COUNT(*) \
+         FROM transactions t LEFT JOIN transaction_overrides o ON o.transaction_id = t.id \
+         WHERE t.removed = 0 AND t.pending = 0 AND {EFFECTIVE_EXCLUDED} = 0 \
+           AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} \
+           AND t.reporting_date >= ?1 AND t.reporting_date < ?2 \
+         GROUP BY t.account_id, t.currency"
+    ))?;
+    let rows = stmt
+        .query_map(
+            rusqlite::params![month.start_string(), month.end_exclusive_string()],
+            |row| {
+                Ok(AccountSpend {
+                    account_id: row.get(0)?,
+                    currency: row.get(1)?,
+                    net_minor: row.get(2)?,
+                    count: row.get(3)?,
+                })
+            },
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct Breakdown {
     pub key: String,
     pub gross_minor: i64,

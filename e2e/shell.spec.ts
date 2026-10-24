@@ -63,11 +63,15 @@ test.describe("secure shell (browser mock)", () => {
     await expect(page.getByText("Your cards, in one quiet place.")).toHaveCount(0);
   });
 
-  test("primary navigation is keyboard reachable and settings show real state", async ({ page }) => {
+  test("primary navigation and the supplier toggle preserve the month", async ({ page }) => {
     await openUnlocked(page);
-    await page.getByRole("button", { name: "Suppliers" }).click();
-    await expect(page.getByRole("heading", { name: "Suppliers" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Suppliers" })).toHaveAttribute("aria-current", "page");
+    await page.getByRole("button", { name: "Cards", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Cards" })).toBeVisible();
+    await page.getByRole("button", { name: "Transactions", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+    await page.getByRole("button", { name: "By supplier" }).click();
+    await expect(page.getByRole("heading", { name: "By supplier" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "By supplier" })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Settings" }).click();
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await expect(page.getByText(/4\.6\.1 community/).first()).toBeVisible();
@@ -79,16 +83,16 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByRole("button", { name: "Unlock vault" }).click();
     await expect(page.getByText("Add your first account.")).toBeVisible();
     await page.getByLabel("Issuer").fill("Chase");
-    await page.getByLabel("Display name").fill("Sapphire Reserve");
+    await page.getByLabel("Display name").fill("Wizard Card");
     await page.getByLabel(/Last four/).fill("1234");
     await page.getByRole("button", { name: "Add account" }).click();
-    await expect(page.getByText(/Added Sapphire Reserve/)).toBeVisible();
+    await expect(page.getByText(/Added Wizard Card/)).toBeVisible();
     await page.getByRole("button", { name: "Continue without a provider" }).click();
     await page.getByRole("button", { name: "Finish setup" }).click();
-    await expect(page.getByText("Your cards, in one quiet place.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await page.getByRole("button", { name: "Settings" }).click();
-    await expect(page.getByText("Sapphire Reserve")).toBeVisible();
-    await expect(page.getByText("Chase")).toBeVisible();
+    await expect(page.getByText("Wizard Card", { exact: true })).toBeVisible();
+    await expect(page.getByText("Chase").first()).toBeVisible();
   });
 
   test("manages accounts in settings and archives reversibly", async ({ page }) => {
@@ -96,17 +100,21 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Add account" }).click();
     await page.getByLabel("Issuer").fill("Bilt");
-    await page.getByLabel("Display name").fill("Bilt Mastercard");
+    await page.getByLabel("Display name").fill("Local Test Card");
     await page.getByLabel(/Last four/).fill("4321");
     await page.getByRole("button", { name: "Add account" }).click();
-    await expect(page.getByText("Bilt Mastercard")).toBeVisible();
-    await page.getByRole("button", { name: "Archive" }).click();
-    await page.getByRole("button", { name: "Archive", exact: true }).last().click();
-    await expect(page.getByText("Bilt Mastercard")).toHaveCount(0);
+    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
+    const row = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
+    await row.getByRole("button", { name: "Archive" }).click();
+    await row.getByRole("button", { name: "Archive", exact: true }).click();
+    await expect(page.getByText("Local Test Card", { exact: true })).toHaveCount(0);
     await page.getByLabel("Show archived accounts").check();
-    await expect(page.getByText("Bilt Mastercard")).toBeVisible();
-    await page.getByRole("button", { name: "Restore" }).click();
-    await expect(page.getByText("Bilt Mastercard")).toBeVisible();
+    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
+    const archivedRow = page
+      .getByRole("row")
+      .filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
+    await archivedRow.getByRole("button", { name: "Restore" }).click();
+    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
   });
 
   test("persists the window close behavior setting", async ({ page }) => {
@@ -124,6 +132,6 @@ test.describe("secure shell (browser mock)", () => {
     await expect(page.getByText(/Create your encrypted ledger/)).toBeVisible();
     await expect(page.getByText(/no recovery if you lose it/i)).toBeVisible();
     await page.getByRole("button", { name: /Create vault/ }).click();
-    await expect(page.getByText("Your cards, in one quiet place.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   });
 });

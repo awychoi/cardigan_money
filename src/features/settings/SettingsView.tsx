@@ -15,10 +15,18 @@ export function SettingsView({
   vault,
   onSettingsChanged,
   onLock,
+  onAccountsChanged,
+  demo,
+  onOpenDemo,
+  onResetDemo,
 }: {
   vault: VaultState;
   onSettingsChanged: (settings: Settings) => void;
   onLock: () => Promise<void>;
+  onAccountsChanged: () => void;
+  demo: boolean;
+  onOpenDemo: () => Promise<void>;
+  onResetDemo: () => Promise<void>;
 }) {
   const settings = vault.settings;
   const [events, setEvents] = useState<SecurityEvent[]>([]);
@@ -170,7 +178,7 @@ export function SettingsView({
           </div>
         </section>
 
-        <AccountManager />
+        <AccountManager onChanged={onAccountsChanged} readOnly={demo} />
 
         <section className="panel" aria-labelledby="close-title">
           <h2 id="close-title">Window close behavior</h2>
@@ -260,15 +268,44 @@ export function SettingsView({
           ) : (
             <p className="muted">Security status is unavailable.</p>
           )}
-          <div className="button-row">
-            <Button variant="secondary" disabled={busy} onClick={changePassphrase}>
-              Change passphrase…
-            </Button>
-          </div>
+          {!demo ? (
+            <div className="button-row">
+              <Button variant="secondary" disabled={busy} onClick={changePassphrase}>
+                Change passphrase…
+              </Button>
+            </div>
+          ) : (
+            <p className="fine-print">Passphrase change is unavailable in demo mode.</p>
+          )}
           <p className="fine-print">
             Changing the passphrase rotates the data encryption key. Older backups remain readable
             only with the old passphrase. There is no recovery if every passphrase is lost.
           </p>
+        </section>
+
+        <section className="panel" aria-labelledby="demo-title">
+          <h2 id="demo-title">Demo mode</h2>
+          <p className="fine-print">
+            Demo mode is a separate database with synthetic cards for exploring the dashboard. It
+            cannot open the real ledger, read the Keychain, import real CSV, or create backups or
+            exports. Opening demo closes the real session; you will need your passphrase again.
+          </p>
+          <div className="button-row">
+            {demo ? (
+              <>
+                <Button variant="secondary" onClick={() => void onResetDemo()} disabled={busy}>
+                  Reset demo data
+                </Button>
+                <Button variant="ghost" onClick={() => void onOpenDemo()} disabled={busy}>
+                  Reopen demo
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={() => void onOpenDemo()} disabled={busy}>
+                Open demo (synthetic)…
+              </Button>
+            )}
+          </div>
         </section>
 
         <section className="panel" aria-labelledby="quit-title">

@@ -8,6 +8,8 @@ use crate::services::{security as security_service, vault as vault_service};
 use crate::services::vault::SecuritySummary;
 use crate::state::AppState;
 use crate::storage::events::SecurityEvent;
+use crate::storage::ledger::{query_ledger, LedgerPage, LedgerQuery};
+use crate::services::dashboard::{self, Dashboard};
 use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
 use crate::domain::money::parse_currency_amount;
@@ -21,6 +23,13 @@ struct EmptyPayload {}
 struct EventsPayload {
     #[serde(default)]
     limit: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct DashboardPayload {
+    #[serde(default)]
+    month: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -161,6 +170,7 @@ pub fn execute<R: tauri::Runtime>(
         }
         "vault_create" => {
             let _: EmptyPayload = request.decode_payload()?;
+            state.require_real("create a vault while demo mode is open")?;
             state.rate_limit("vault_create", 3, 60)?;
             let Some(passphrase) =
                 secure_input::ask_new_confirmed(app, SecurePurpose::CreateVault)?
@@ -171,6 +181,7 @@ pub fn execute<R: tauri::Runtime>(
         }
         "vault_unlock" => {
             let _: EmptyPayload = request.decode_payload()?;
+            state.require_real("unlock a vault while demo mode is open")?;
             state.rate_limit("vault_unlock", 10, 60)?;
             let Some(passphrase) = secure_input::ask(app, SecurePurpose::Unlock)? else {
                 return Err(AppError::Cancelled);
@@ -231,6 +242,37 @@ pub fn execute<R: tauri::Runtime>(
             let summary: SecuritySummary = security_service::summary(state)?;
             GatewayResponse::ok(SecurityView { security: summary })
         }
+        "demo_open" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            state.rate_limit("demo_open", 3, 60)?;
+            GatewayResponse::ok(crate::demo::open(state, app)?)
+        }
+        "demo_close" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            let view = if state.mode() == crate::state::SessionMode::Demo {
+                crate::demo::close(state, app)
+            } else {
+                vault_service::status(state)
+            };
+            GatewayResponse::ok(view)
+        }
+        "demo_reset" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            state.rate_limit("demo_reset", 3, 60)?;
+            GatewayResponse::ok(crate::demo::reset(state, app)?)
+        }
+        "dashboard_get" => {
+            let payload: DashboardPayload = request.decode_payload()?;
+            let dashboard: Dashboard = dashboard::get(state, payload.month)?;
+            GatewayResponse::ok(dashboard)
+        }
+        "ledger_query" => {
+            let query: LedgerQuery = request.decode_payload()?;
+            let page: LedgerPage = state.with_db(|conn, _header, _settings| {
+                query_ledger(conn, &query)
+            })?;
+            GatewayResponse::ok(page)
+        }
         "accounts_list" => {
             let payload: AccountsListPayload = request.decode_payload()?;
             let include_archived = payload.include_archived.unwrap_or(false);
@@ -240,6 +282,7 @@ pub fn execute<R: tauri::Runtime>(
             GatewayResponse::ok(AccountsView { accounts })
         }
         "account_create" => {
+            state.require_real("add an account in demo mode")?;
             let payload: AccountPayload = request.decode_payload()?;
             let input = payload.into_input()?;
             let created = state.with_db(|conn, _header, _settings| {
@@ -254,6 +297,7 @@ pub fn execute<R: tauri::Runtime>(
             GatewayResponse::ok(created)
         }
         "account_update" => {
+            state.require_real("edit an account in demo mode")?;
             let payload: AccountUpdatePayload = request.decode_payload()?;
             let input = payload.account.into_input()?;
             let updated = state.with_db(|conn, _header, _settings| {
@@ -262,6 +306,7 @@ pub fn execute<R: tauri::Runtime>(
             GatewayResponse::ok(updated)
         }
         "account_archive" => {
+            state.require_real("archive an account in demo mode")?;
             let payload: AccountArchivePayload = request.decode_payload()?;
             let updated = state.with_db(|conn, _header, _settings| {
                 accounts::set_archived(conn, &payload.id, payload.archived)
@@ -375,6 +420,34 @@ mod tests {
                 assert!(execute(&app, &state, request).is_err(), "malformed request accepted: {raw}");
             }
         }
+    }
+
+    #[test]
+    fn dashboard_and_ledger_require_an_unlocked_session() {
+        let app = app();
+        let state = state();
+        let err = execute(&app, &state, req("dashboard_get", json!({}))).unwrap_err();
+        assert_eq!(err.code(), "vault_locked");
+        let err = execute(
+            &app,
+            &state,
+            req(
+                "ledger_query",
+                json!({"startDate":"2026-10-01","endDateExclusive":"2026-11-01"}),
+            ),
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), "vault_locked");
+        let err = execute(
+            &app,
+            &state,
+            req(
+                "dashboard_get",
+                json!({"month":"not-a-month"}),
+            ),
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), "vault_locked");
     }
 
     #[test]

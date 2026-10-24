@@ -1,19 +1,21 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { command, type AppInfo, type Settings, type VaultState } from "../lib/bridge";
+import { command, type AppInfo, type Dashboard, type Settings, type VaultState } from "../lib/bridge";
+import { friendlyError } from "../lib/bridge/errors";
+import { OverviewView } from "../features/dashboard/OverviewView";
+import { CardsView } from "../features/dashboard/CardsView";
+import { LedgerView } from "../features/dashboard/LedgerView";
 import { SettingsView } from "../features/settings/SettingsView";
 import { Button } from "../components/Button";
+import { formatMonthRange, monthLabel } from "../lib/formatting";
 
-type View = "overview" | "cards" | "transactions" | "suppliers" | "settings";
+type View = "overview" | "cards" | "transactions" | "settings";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "cards", label: "Cards" },
   { id: "transactions", label: "Transactions" },
-  { id: "suppliers", label: "Suppliers" },
   { id: "settings", label: "Settings" },
 ];
-
-const MONTH_LABEL = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
 
 export function AppShell({
   info,
@@ -22,9 +24,12 @@ export function AppShell({
   notice,
   onDismissNotice,
   onLock,
-  onRefreshVault,
   onSettingsChanged,
+  onExitDemo,
+  onResetDemo,
+  onOpenDemo,
   themeControl,
+  sessionNonce,
 }: {
   info: AppInfo;
   vault: VaultState;
@@ -32,69 +37,151 @@ export function AppShell({
   notice: string | null;
   onDismissNotice: () => void;
   onLock: () => Promise<void>;
-  onRefreshVault: () => Promise<void>;
   onSettingsChanged: (settings: Settings) => void;
+  onExitDemo: () => Promise<void>;
+  onResetDemo: () => Promise<void>;
+  onOpenDemo: () => Promise<void>;
   themeControl: ReactNode;
+  sessionNonce: number;
 }) {
   const [view, setView] = useState<View>("overview");
-  const [accountCount, setAccountCount] = useState<number | null>(null);
+  const [month, setMonth] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const [preset, setPreset] = useState<{ accountId: string | null; search: string | null; nonce: number }>({
+    accountId: null,
+    search: null,
+    nonce: 0,
+  });
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const demo = vault.mode === "demo";
+
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
-        const result = await command("accounts_list", {});
-        if (!cancelled) setAccountCount(result.accounts.length);
-      } catch {
-        if (!cancelled) setAccountCount(null);
+        const result = await command("dashboard_get", { month });
+        if (!cancelled) setDashboard(result);
+      } catch (caught) {
+        if (!cancelled) setError(friendlyError(caught));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [view]);
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  }, [month, refresh, sessionNonce]);
+
+  function filterAccount(accountId: string) {
+    setPreset({ accountId, search: null, nonce: Date.now() });
+    setView("transactions");
+  }
+
+  function addAccount() {
+    setView("settings");
+  }
 
   return (
     <div className="app">
       <header className="header">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">cm</span>
+          <span className="brand-mark" aria-hidden="true">
+            cm
+          </span>
           <span className="brand-name">cardigan_money</span>
+          {demo ? <span className="status-pill status-warn">Demo</span> : null}
         </div>
 
         <div className="month-nav" aria-label="Selected calendar month">
-          <button type="button" className="icon-btn" aria-label="Previous month" disabled>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Previous month"
+            disabled={!dashboard}
+            onClick={() => dashboard && setMonth(dashboard.previousMonth)}
+          >
             ‹
           </button>
           <div className="month-display">
-            <span className="month-label">{MONTH_LABEL.format(monthStart)}</span>
+            <span className="month-label">{dashboard ? monthLabel(dashboard.month) : "—"}</span>
             <span className="month-range">
-              {monthStart.toLocaleDateString()} – {monthEnd.toLocaleDateString()}
+              {dashboard ? formatMonthRange(dashboard.startDate, dashboard.endDateExclusive) : ""}
             </span>
           </div>
-          <button type="button" className="icon-btn" aria-label="Next month" disabled>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Next month"
+            disabled={!dashboard}
+            onClick={() => dashboard && setMonth(dashboard.nextMonth)}
+          >
             ›
           </button>
-          <button type="button" className="btn btn-ghost btn-small" disabled>
+          <button
+            type="button"
+            className="btn btn-ghost btn-small"
+            disabled={!dashboard || dashboard.month === dashboard.currentMonth}
+            onClick={() => setMonth(null)}
+          >
             This month
           </button>
         </div>
 
         <div className="header-actions">
           <span className="sync-state" role="status">
-            <span className="dot dot-muted" aria-hidden="true" /> No provider connected
+            <span className="dot dot-muted" aria-hidden="true" />
+            {demo ? "Synthetic demo data" : "No provider connected"}
           </span>
           <button type="button" className="btn btn-secondary btn-small" disabled>
             Sync now
           </button>
           {themeControl}
           <Button variant="ghost" aria-label="Lock now" onClick={() => void onLock()}>
-            Lock
+            {demo ? "Exit demo" : "Lock"}
           </Button>
         </div>
       </header>
+
+      {demo ? (
+        <div className="demo-banner demo-banner-strong" role="status">
+          <strong>Demo mode — synthetic data.</strong>
+          <span> Separate database. No real ledger, provider, Keychain, import, backup, or export.</span>
+          <span className="banner-actions">
+            {resetConfirm ? (
+              <>
+                <span>Reset demo data?</span>
+                <button
+                  type="button"
+                  className="btn btn-small btn-danger"
+                  onClick={() => {
+                    setResetConfirm(false);
+                    void onResetDemo();
+                  }}
+                >
+                  Reset
+                </button>
+                <button type="button" className="btn btn-small btn-ghost" onClick={() => setResetConfirm(false)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="btn btn-small btn-ghost" onClick={() => setResetConfirm(true)}>
+                  Reset demo
+                </button>
+                <button type="button" className="btn btn-small btn-ghost" onClick={() => void onExitDemo()}>
+                  Exit demo
+                </button>
+              </>
+            )}
+          </span>
+        </div>
+      ) : null}
 
       {usingMock ? (
         <div className="demo-banner" role="status">
@@ -126,48 +213,45 @@ export function AppShell({
       </nav>
 
       <main className="content" id="main-content">
-        {view === "settings" ? (
-          <SettingsView vault={vault} onSettingsChanged={onSettingsChanged} onLock={onLock} />
-        ) : view === "overview" ? (
-          <section className="empty-state" aria-labelledby="overview-title">
-            <h1 id="overview-title">Your cards, in one quiet place.</h1>
-            {accountCount === 0 ? (
-              <>
-                <p className="muted">
-                  No accounts yet. Add your first account manually; no bank connection is required,
-                  and the app is usable with an empty ledger.
-                </p>
-                <div className="button-row">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => setView("settings")}
-                  >
-                    Add account
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="muted">
-                The vault is unlocked. The calendar-month dashboard and the unified ledger arrive in
-                the next build stage.
-              </p>
-            )}
-            <p className="fine-print">
-              Nothing on this screen contacts a network. Missing provider data is never shown as zero.
-            </p>
-            <button type="button" className="btn btn-ghost btn-small" onClick={() => void onRefreshVault()}>
-              Refresh security status
-            </button>
+        {error ? (
+          <section className="empty-state" role="alert">
+            <h1>Dashboard unavailable</h1>
+            <p className="error-text">{error}</p>
+            <Button variant="primary" onClick={() => setRefresh((value) => value + 1)}>
+              Retry
+            </Button>
           </section>
+        ) : loading && !dashboard ? (
+          <p className="muted" role="status">
+            Loading the encrypted ledger…
+          </p>
+        ) : dashboard ? (
+          view === "overview" ? (
+            <OverviewView dashboard={dashboard} onAddAccount={addAccount} />
+          ) : view === "cards" ? (
+            <CardsView dashboard={dashboard} onFilterAccount={filterAccount} />
+          ) : view === "transactions" ? (
+            <LedgerView
+              dashboard={dashboard}
+              presetAccountId={preset.accountId}
+              presetSearch={preset.search}
+              presetNonce={preset.nonce}
+              onClearPreset={() => setPreset({ accountId: null, search: null, nonce: 0 })}
+            />
+          ) : (
+            <SettingsView
+              key={`${vault.mode}-${sessionNonce}`}
+              vault={vault}
+              onSettingsChanged={onSettingsChanged}
+              onLock={onLock}
+              onAccountsChanged={() => setRefresh((value) => value + 1)}
+              demo={demo}
+              onOpenDemo={onOpenDemo}
+              onResetDemo={onResetDemo}
+            />
+          )
         ) : (
-          <section className="empty-state" aria-labelledby="placeholder-title">
-            <h1 id="placeholder-title">
-              {VIEWS.find((item) => item.id === view)?.label ?? "View"}
-            </h1>
-            <p className="muted">This view is not connected to the ledger yet.</p>
-            <p className="fine-print">Build stage 2 — encrypted vault and lock lifecycle.</p>
-          </section>
+          <p className="muted">No dashboard data available.</p>
         )}
       </main>
 
@@ -175,6 +259,7 @@ export function AppShell({
         <span>Encrypted local ledger · no telemetry</span>
         <span>
           v{info.version} · SQLCipher {vault.security?.cipherVersion ?? ""}
+          {demo ? " · synthetic demo" : ""}
         </span>
       </footer>
     </div>

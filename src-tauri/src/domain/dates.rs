@@ -138,6 +138,11 @@ pub fn timezone(name: &str) -> Result<Tz, DateError> {
 }
 
 /// Current calendar month in the configured reporting timezone.
+pub fn today(tz_name: &str) -> Result<NaiveDate, DateError> {
+    let tz = timezone(tz_name)?;
+    Ok(Utc::now().with_timezone(&tz).date_naive())
+}
+
 pub fn current_month(tz_name: &str) -> Result<Month, DateError> {
     let tz = timezone(tz_name)?;
     let now = Utc::now().with_timezone(&tz);
@@ -207,7 +212,6 @@ mod tests {
 
     #[test]
     fn new_york_dst_days_keep_their_calendar_date() {
-        let tz = timezone("America/New_York").unwrap();
         // 2026-03-08 is US spring-forward; 2026-11-01 is fall-back.
         for (y, m, d) in [(2026, 3, 8), (2026, 11, 1)] {
             let instant = Utc.with_ymd_and_hms(y, m, d, 12, 0, 0).unwrap();

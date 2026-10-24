@@ -91,3 +91,24 @@ pub fn set_schema_version(conn: &Connection, version: u32) -> AppResult<()> {
     )?;
     Ok(())
 }
+
+/// Insert demo-mode audit metadata (no vault header; fixed synthetic key).
+pub fn insert_demo_metadata(
+    conn: &Connection,
+    cipher: &CipherInfo,
+    schema_version: u32,
+) -> AppResult<()> {
+    conn.execute(
+        "INSERT INTO vault_metadata
+         (id, vault_id, cipher_version, cipher_provider, schema_version, generation, created_at, rotated_at, last_integrity_check_at)
+         VALUES (1, ?1, ?2, ?3, ?4, 1, ?5, NULL, ?5)",
+        rusqlite::params![
+            crate::demo::fixtures::DEMO_VAULT_ID,
+            cipher.version,
+            cipher.provider,
+            schema_version,
+            now_rfc3339()
+        ],
+    )?;
+    Ok(())
+}

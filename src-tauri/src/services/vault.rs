@@ -21,7 +21,7 @@ use crate::security::vault::{
     load_header, load_journal, remove_header, remove_journal, write_header, write_journal,
     RotationJournal, VaultHeader, VaultPaths,
 };
-use crate::state::AppState;
+use crate::state::{AppState, SessionMode};
 use crate::storage::events::{recent_events, record_event, SecurityEvent};
 use crate::storage::migrations::{run_migrations, supported_schema_version};
 use crate::storage::settings::{load_settings, save_settings, Settings};
@@ -54,16 +54,22 @@ pub struct VaultState {
     pub security: Option<SecuritySummary>,
 }
 
-fn summary(conn: &Connection, header: &VaultHeader, cipher: &CipherInfo) -> AppResult<SecuritySummary> {
+fn summary(
+    conn: &Connection,
+    header: Option<&VaultHeader>,
+    cipher: &CipherInfo,
+) -> AppResult<SecuritySummary> {
     let meta = load_meta(conn)?;
     Ok(SecuritySummary {
         cipher_version: cipher.version.clone(),
         cipher_provider: cipher.provider.clone(),
-        kdf_summary: header.params.human_summary(),
-        generation: header.generation,
+        kdf_summary: header
+            .map(|header| header.params.human_summary())
+            .unwrap_or_else(|| "Demo mode: fixed synthetic key; no owner passphrase".to_string()),
+        generation: meta.generation,
         schema_version: meta.schema_version,
         last_integrity_check_at: meta.last_integrity_check_at,
-        vault_id_prefix: header.vault_id_hex().chars().take(8).collect(),
+        vault_id_prefix: meta.vault_id.chars().take(8).collect(),
         cipher_status_supported: cipher.cipher_status_supported,
     })
 }
@@ -76,18 +82,21 @@ pub fn status(state: &AppState) -> VaultState {
             return VaultState { exists, unlocked: false, mode: "real", settings: None, security: None }
         }
     };
-    if let (Some(conn), Some(header), Some(cipher), Some(settings)) = (
+    let mode = match guard.mode() {
+        SessionMode::Real => "real",
+        SessionMode::Demo => "demo",
+    };
+    if let (Some(conn), Some(cipher), Some(settings)) = (
         guard.conn.as_ref(),
-        guard.header.as_ref(),
         guard.cipher.as_ref(),
         guard.settings.as_ref(),
     ) {
         VaultState {
             exists,
             unlocked: true,
-            mode: "real",
+            mode,
             settings: Some(settings.clone()),
-            security: summary(conn, header, cipher).ok(),
+            security: summary(conn, guard.header.as_ref(), cipher).ok(),
         }
     } else {
         VaultState { exists, unlocked: false, mode: "real", settings: None, security: None }
@@ -96,9 +105,8 @@ pub fn status(state: &AppState) -> VaultState {
 
 fn session_state(state: &AppState) -> AppResult<VaultState> {
     let guard = state.session.lock().map_err(|_| AppError::Internal)?;
-    let (Some(conn), Some(header), Some(cipher), Some(settings)) = (
+    let (Some(conn), Some(cipher), Some(settings)) = (
         guard.conn.as_ref(),
-        guard.header.as_ref(),
         guard.cipher.as_ref(),
         guard.settings.as_ref(),
     ) else {
@@ -107,9 +115,12 @@ fn session_state(state: &AppState) -> AppResult<VaultState> {
     Ok(VaultState {
         exists: true,
         unlocked: true,
-        mode: "real",
+        mode: match guard.mode() {
+            SessionMode::Real => "real",
+            SessionMode::Demo => "demo",
+        },
         settings: Some(settings.clone()),
-        security: Some(summary(conn, header, cipher)?),
+        security: Some(summary(conn, guard.header.as_ref(), cipher)?),
     })
 }
 
@@ -165,6 +176,7 @@ pub fn create(state: &AppState, passphrase: SecretString) -> AppResult<VaultStat
 
     match initialized {
         Ok(settings) => {
+            guard.mode = SessionMode::Real;
             guard.header = Some(header);
             guard.conn = Some(conn);
             guard.cipher = Some(cipher);
@@ -353,6 +365,7 @@ pub fn unlock(state: &AppState, passphrase: SecretString) -> AppResult<VaultStat
     {
         let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
         guard.clear();
+        guard.mode = SessionMode::Real;
         guard.header = Some(opened.header);
         guard.conn = Some(opened.conn);
         guard.cipher = Some(opened.cipher);
@@ -388,6 +401,9 @@ pub fn change_passphrase<R: tauri::Runtime>(
     new: SecretString,
 ) -> AppResult<()> {
     validate_new_passphrase(&new)?;
+    if state.mode() == SessionMode::Demo {
+        return Err(AppError::Blocked("passphrase change in demo mode"));
+    }
     let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
     let conn = guard.conn.as_ref().ok_or(AppError::Locked)?;
     let header = guard.header.as_ref().ok_or(AppError::Locked)?.clone();
