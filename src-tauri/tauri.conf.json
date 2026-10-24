@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "cardigan_money",
+  "version": "0.1.0",
+  "identifier": "com.awychoi.cardiganmoney",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "macOSPrivateApi": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; media-src 'none'",
+      "devCsp": "default-src 'none'; script-src 'self' http://127.0.0.1:1420; style-src 'self' 'unsafe-inline' http://127.0.0.1:1420; img-src 'self' data:; font-src 'self' http://127.0.0.1:1420; connect-src ipc: http://ipc.localhost http://127.0.0.1:1420 ws://127.0.0.1:1420; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; media-src 'none'",
+      "freezePrototype": true,
+      "dangerousDisableAssetCspModification": false,
+      "assetProtocol": {
+        "enable": false,
+        "scope": []
+      },
+      "capabilities": [
+        "main-window"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns"
+    ],
+    "category": "Finance",
+    "shortDescription": "Local-first encrypted personal card ledger",
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    }
+  }
+}

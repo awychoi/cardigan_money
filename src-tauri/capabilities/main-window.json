@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Minimal capability for the single main window. Custom commands are the only bridge; no fs/shell/http/sql/store/dialog/opener/process/updater/deep-link permissions are granted.",
+  "windows": ["main"],
+  "permissions": ["core:event:default"]
+}

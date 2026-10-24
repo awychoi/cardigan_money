@@ -1,0 +1,13 @@
+[package]
+name = "plain-sqlite-probe"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Deliberately a separate workspace: this binary must link PLAIN SQLite, with no
+# SQLCipher feature anywhere in the dependency graph. It compiles the app's
+# exact fail-closed check and proves that check rejects a non-SQLCipher build.
+[workspace]
+
+[dependencies]
+rusqlite = { version = "0.37", features = ["bundled"] }

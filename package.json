@@ -1,0 +1,56 @@
+{
+  "name": "cardigan_money",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint src e2e --max-warnings=0",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\"",
+    "audit": "pnpm audit --audit-level high",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "8.21.3",
+    "@tauri-apps/api": "2.12.4",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/vite": "4.1.16",
+    "@tauri-apps/cli": "2.12.4",
+    "@testing-library/jest-dom": "6.10.0",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/node": "22.20.5",
+    "@types/react": "19.1.16",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.4",
+    "eslint": "9.39.1",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "jsdom": "26.1.0",
+    "prettier": "3.6.2",
+    "tailwindcss": "4.1.16",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.2",
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
+  }
+}

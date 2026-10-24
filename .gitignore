@@ -1,0 +1,53 @@
+# Dependencies / toolchain (workspace-local)
+node_modules/
+.toolchain/
+.cache/
+.pnpm-store/
+src-tauri/target/
+target/
+
+# Build output
+dist/
+build/
+*.app
+*.dmg
+src-tauri/gen/
+
+# Local databases, backups, exports, fixtures
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.cmbackup
+*.cmexport
+data/
+backups/
+exports/
+fixtures/real/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Logs / crash artifacts
+*.log
+*.crash
+*.ips
+core.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Test output
+test-results/
+playwright-report/
+blob-report/
+*.tsbuildinfo
