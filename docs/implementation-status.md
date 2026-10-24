@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 10 exit (2026-10-23, America/New_York); owner native smoke and live Plaid remain external blockers.
+Last updated: Phase 9 Sandbox verification (2026-10-24); owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production is disabled.
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
