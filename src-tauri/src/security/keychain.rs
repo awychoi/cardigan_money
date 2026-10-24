@@ -13,6 +13,12 @@ use crate::error::{AppError, AppResult};
 use crate::security::crypto::SecretString;
 
 pub const KEYCHAIN_SERVICE: &str = "com.awychoi.cardiganmoney.plaid";
+
+#[cfg(target_os = "macos")]
+extern "C" {
+    static kSecAttrAccessible: core_foundation_sys::string::CFStringRef;
+    static kSecMatchLimitOne: core_foundation_sys::string::CFStringRef;
+}
 pub const ACCOUNT_CLIENT_ID: &str = "plaid-client-id-sandbox";
 pub const ACCOUNT_SECRET: &str = "plaid-secret-sandbox";
 
@@ -81,7 +87,7 @@ fn keychain_set(service: &str, account: &str, value: &[u8]) -> AppResult<()> {
     // Remove any prior item first so the accessibility class cannot be
     // silently inherited from an older item.
     let _ = keychain_delete(service, account);
-    let accessible_key = CFString::new("accessible");
+    let accessible_key = unsafe { CFString::wrap_under_get_rule(kSecAttrAccessible) };
     let accessible_value =
         unsafe { CFString::wrap_under_get_rule(kSecAttrAccessibleWhenUnlockedThisDeviceOnly) };
     let pairs: Vec<(CFString, CFType)> = vec![
@@ -151,6 +157,10 @@ fn keychain_get(service: &str, account: &str) -> AppResult<Option<SecretString>>
         (
             unsafe { CFString::wrap_under_get_rule(kSecReturnData) },
             CFBoolean::from(true).into_CFType(),
+        ),
+        (
+            unsafe { CFString::wrap_under_get_rule(kSecMatchLimitOne) },
+            unsafe { CFString::wrap_under_get_rule(kSecMatchLimitOne) }.into_CFType(),
         ),
     ];
     let dictionary = CFDictionary::<CFString, CFType>::from_CFType_pairs(&pairs);

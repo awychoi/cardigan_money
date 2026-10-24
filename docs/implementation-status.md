@@ -319,7 +319,20 @@ Sync-specific assertions: three pages/three transactions, two accounts, two bala
 
 Known limits: only the mock provider is wired; an existing `plaid` connection fails closed until the Phase 9 adapter is configured. Scheduled runs are tested through the window matcher, not by waiting for wall-clock windows. The scheduler thread does not yet observe sleep/wake explicitly; on wake the window matcher still applies.
 
-## 3h. Phase 9 — Plaid adapter (conditional) — BLOCKED
+## 3h. Phase 9 — Plaid adapter (conditional) — IMPLEMENTED, SANDBOX VERIFICATION PENDING
+
+### Implemented
+- macOS Keychain store (generic password, `WhenUnlockedThisDeviceOnly`, non-synchronizable) for Sandbox client ID/secret and per-connection access tokens; native AppKit setup sheet; renderer never receives credentials.
+- Rust Plaid client through the HTTPS exact-host allowlist, no redirects, timeouts, bounded responses; static sanitized provider errors; no raw Plaid messages/tokens in errors or logs.
+- Hosted Link: create token with `hosted_link: {}`, open only `https://secure.plaid.com/...` via the Tauri opener, poll `/link/token/get` with backoff/expiry/cancel, exchange public token in Rust, store access token, insert connection, initial sync. Hosted URL/link/public tokens are memory-only.
+- Plaid Transactions Sync/balances/optional Liabilities mapping; credit-card account mapping to local accounts without duplicates; pending/removed handling; cursor through the existing sync engine.
+- Reconnect/update mode (existing access token, no products, no new exchange) and disconnect with `/item/remove` attempt plus local token deletion.
+- UI: Sandbox setup/replace, link/cancel/waiting/linked status, connection table, reconnect action, capabilities copy; demo disabled.
+- Tests: Keychain memory store/credential scoping, link-session parsing, mapping fixtures, URL validation, mock UI flow. Live Sandbox verification is **not yet recorded**.
+
+### Pending verification (owner)
+Native sheet/Keychain access, Hosted Link completion, Sandbox Item linking, transaction/balance counts, liability availability, reconnect, and restart cursor continuity. See `docs/plaid-guide.md`. Phase 9 is not complete until these are recorded.
+
 
 No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.
 
@@ -341,7 +354,7 @@ A separate read-only review agent examined backup/restore, sync, gateway validat
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **144 Rust passed** (1 ignored 50k perf), **23 Vitest**, **35 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **153 Rust passed** (1 ignored 50k perf), **23 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
 - Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; live Plaid is **blocked** (no credentials/authorized Item); fresh-install restore unsupported; ad-hoc/non-notarized.

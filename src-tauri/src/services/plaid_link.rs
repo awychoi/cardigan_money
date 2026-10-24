@@ -239,6 +239,12 @@ fn poll_link<R: tauri::Runtime>(
                 return;
             }
         };
+        if cancel.load(Ordering::SeqCst) {
+            if let Some(state) = app.try_state::<AppState>() {
+                set_status(&state, "cancelled", Some("Plaid link cancelled.".into()), None);
+            }
+            return;
+        }
         if let Some(connection_id) = reconnect_connection_id.as_deref() {
             if response.session_finished() {
                 finish_reconnect(&app, connection_id);

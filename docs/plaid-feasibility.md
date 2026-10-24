@@ -171,13 +171,6 @@ All retrieved **2026-10-23**: [Hosted Link](https://plaid.com/docs/link/hosted-l
 
 **Known uncertainties.** (1) Whether `/link/token/get` serves data after the Hosted Link token expires but inside the six-hour window. (2) Whether a desktop Hosted Link session with no `redirect_uri` completes OAuth institutions via the pop-up flow — strongly implied, not stated. (3) Whether `completion_redirect_uri` accepts a custom scheme on macOS with `is_mobile_app: false`. (4) Actual pricing, which is not public. (5) Whether a brand-new account has usable Sandbox credentials before Trial approval. (6) Plaid's docs are undated, so "current" means "as served on 2026-10-23".
 
-## Current blocker (2026-10-23)
+## Current status (2026-10-24)
 
-No owner Plaid Trial account, client ID/secret, or authorized Item is available in this environment. The Hosted Link + `/link/token/get` flow was researched but is **not implemented as a live adapter and not verified**. The app therefore:
-
-- shows "No provider connected" and a provider-free Connections & sync panel;
-- fails any pre-existing `plaid` connection closed with "live Plaid adapter is not configured";
-- never exposes a link URL, link token, public token, access token, or client secret to the renderer;
-- keeps all CSV/manual/demo workflows usable.
-
-To unblock: create a Plaid Trial account (owner accepts terms/eligibility), record product access/limits, provide credentials through a non-repository secret source, then implement/verify the documented Hosted Link polling flow against Sandbox. Do not claim live coverage until an authorized account syncs transactions and balances end to end.
+The Sandbox adapter and Hosted Link flow are **implemented**. Sandbox verification with owner credentials is **pending**; no live Item or institution coverage is claimed yet. See `docs/plaid-guide.md` for the owner test. No link URL, link token, public token, access token, or client secret is exposed to the renderer. Production remains disabled.
