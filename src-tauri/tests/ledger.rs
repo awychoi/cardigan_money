@@ -4,10 +4,12 @@ use chrono::NaiveDate;
 
 use cardigan_money_lib::domain::dates::Month;
 use cardigan_money_lib::security::crypto::SecretString;
-use cardigan_money_lib::services::vault;
+use cardigan_money_lib::services::{dashboard, vault};
 use cardigan_money_lib::state::AppState;
 use cardigan_money_lib::storage::accounts::{create_manual, AccountInput, AccountType};
-use cardigan_money_lib::storage::ledger::{month_summary, query_ledger, LedgerQuery};
+use cardigan_money_lib::storage::ledger::{
+    month_summary, query_ledger, spend_history, LedgerQuery,
+};
 use cardigan_money_lib::storage::overview::overview;
 
 const PASS: &str = "correct horse battery staple ledger";
@@ -931,4 +933,143 @@ fn ledger_subtotals_never_sum_different_currencies() {
     assert_eq!(eur_only.subtotals[0].currency, "EUR");
     assert_eq!(eur_only.subtotals[0].eligible_minor, 2_000);
     assert_eq!(eur_only.subtotals[0].eligible_count, 1);
+}
+
+#[test]
+fn spend_history_reconciles_with_the_month_summary_and_zero_fills() {
+    let (_tmp, state) = setup();
+    let _account = october_fixture(&state);
+    let history = state
+        .with_db(|conn, _h, _s| {
+            spend_history(
+                conn,
+                Month::new(2026, 10).unwrap(),
+                12,
+                Month::new(2026, 10).unwrap(),
+                "USD",
+            )
+        })
+        .unwrap();
+
+    assert_eq!(history.currency, "USD");
+    assert_eq!(history.start_month, "2025-11");
+    assert_eq!(history.end_month, "2026-10");
+    assert_eq!(history.months.len(), 12);
+    assert_eq!(history.months[0].month, "2025-11");
+    assert_eq!(history.months[0].net_minor, 0);
+    assert!(history.months[0].complete);
+
+    let october = &history.months[11];
+    assert_eq!(october.month, "2026-10");
+    assert_eq!(october.gross_minor, 19_700);
+    assert_eq!(october.refunds_minor, 2_500);
+    assert_eq!(october.net_minor, 17_200);
+    assert_eq!(october.count, 7);
+    assert!(!october.complete);
+    assert_eq!(
+        october.gross_minor - october.refunds_minor,
+        october.net_minor
+    );
+
+    let summary = state
+        .with_db(|conn, _h, _s| month_summary(conn, Month::new(2026, 10).unwrap(), "USD"))
+        .unwrap();
+    assert_eq!(october.net_minor, summary.net_spending_minor);
+}
+
+#[test]
+fn spend_history_never_mixes_currencies() {
+    let (_tmp, state) = setup();
+    let _account = october_fixture(&state);
+    let eur = account(&state, "Euro Card", "EUR");
+    tx(
+        &state,
+        &eur,
+        "2026-10-08",
+        2_500,
+        "purchase",
+        "Paris Cafe",
+        Some("Dining"),
+        false,
+        false,
+        "EUR",
+        None,
+        None,
+    );
+
+    let (usd, eur_history) = state
+        .with_db(|conn, _h, _s| {
+            Ok((
+                spend_history(
+                    conn,
+                    Month::new(2026, 10).unwrap(),
+                    12,
+                    Month::new(2026, 10).unwrap(),
+                    "USD",
+                )?,
+                spend_history(
+                    conn,
+                    Month::new(2026, 10).unwrap(),
+                    12,
+                    Month::new(2026, 10).unwrap(),
+                    "EUR",
+                )?,
+            ))
+        })
+        .unwrap();
+
+    assert_eq!(usd.months[11].net_minor, 17_200);
+    // october_fixture already has one EUR 5,000 purchase; add is 2,500.
+    assert_eq!(eur_history.months[11].net_minor, 7_500);
+    assert_eq!(eur_history.months[11].count, 2);
+    // Every non-October month is zero for both currencies (the EUR row is not
+    // duplicated into USD totals or into another month).
+    assert!(usd.months[..11].iter().all(|m| m.net_minor == 0));
+    assert!(eur_history.months[..11].iter().all(|m| m.net_minor == 0));
+}
+
+#[test]
+fn spend_history_rejects_out_of_range_windows() {
+    let (_tmp, state) = setup();
+    for months in [0u32, 25u32] {
+        let err = state
+            .with_db(|conn, _h, _s| {
+                spend_history(
+                    conn,
+                    Month::new(2026, 10).unwrap(),
+                    months,
+                    Month::new(2026, 10).unwrap(),
+                    "USD",
+                )
+            })
+            .unwrap_err();
+        assert_eq!(err.code(), "invalid_input", "months={months}");
+    }
+}
+
+#[test]
+fn spend_history_marks_current_and_future_months_incomplete() {
+    let (_tmp, state) = setup();
+    let history = state
+        .with_db(|conn, _h, _s| {
+            spend_history(
+                conn,
+                Month::new(2026, 12).unwrap(),
+                3,
+                Month::new(2026, 10).unwrap(),
+                "USD",
+            )
+        })
+        .unwrap();
+    assert_eq!(history.months.len(), 3);
+    assert!(!history.months[0].complete); // October (current)
+    assert!(!history.months[1].complete); // November (future)
+    assert!(!history.months[2].complete); // December (future)
+}
+
+#[test]
+fn spend_history_service_rejects_a_malformed_end_month() {
+    let (_tmp, state) = setup();
+    let err = dashboard::spend_history(&state, Some("2026-13".into()), Some(12)).unwrap_err();
+    assert_eq!(err.code(), "invalid_input");
 }

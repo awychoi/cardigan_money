@@ -82,6 +82,8 @@ export type {
   Account,
   AccountPayload,
   Dashboard,
+  MonthTotal,
+  SpendHistory,
   LedgerPage,
   LedgerQuery,
   LedgerRow,

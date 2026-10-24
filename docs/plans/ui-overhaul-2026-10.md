@@ -1,6 +1,6 @@
 # UI overhaul plan (2026-10)
 
-Status: **ready to build.** Written 2026-10-24.
+Status: **Phase 0 implemented (2026-10-24); Phase 1 next.** Written 2026-10-24.
 Scope: charts, the Overview rebuild, the Transactions re-grade, and Settings sectioning.
 This is the only live plan; the initial build plan is archived at
 [archive/2026-10-initial-build-plan.md](archive/2026-10-initial-build-plan.md).
@@ -64,7 +64,7 @@ spend_history: {
       refundsMinor: number; // positive magnitude
       netMinor: number;     // gross − refunds
       count: number;
-      complete: boolean;    // false only for the current month
+      complete: boolean;    // false for the current and future months
     }>;
   };
 }
@@ -72,12 +72,14 @@ spend_history: {
 
 **Rust** — [ledger.rs](../../src-tauri/src/storage/ledger.rs):
 
-- `spend_history(conn, end: Month, months: u32) -> Vec<MonthTotal>`.
+- `spend_history(conn, end: Month, months: u32, current_month: Month, currency: &str) -> SpendHistory`.
 - One query grouping on `substr(reporting_date, 1, 7)`, reusing the existing
   `EFFECTIVE_TYPE`, `EFFECTIVE_EXCLUDED`, `SPEND_TYPES` constants and the `account_spend`
   predicate set (`removed = 0`, `pending = 0`, `currency = USD`).
-- Zero-fill missing months from a `BTreeMap`; clamp `months` to 1–24; derive `complete` from the
-  existing current-month helper.
+- Zero-fill missing months from a `BTreeMap`; **reject** `months` outside 1–24 rather than clamping;
+  mark the current and any future month incomplete.
+- Resolve the current month in the service from the same demo/real source as the dashboard
+  (`demo_today()` or the settings timezone), default `endMonth` to it, and reject malformed values.
 - Register the command in the gateway, require an unlocked session, keep the sanitized-error path.
 
 **Mock** — [bridge.ts](../../src/mocks/bridge.ts) via `summaryFor(month)` in
@@ -86,13 +88,24 @@ spend_history: {
 **Tests**
 
 - current-month row equals `dashboard.summary.netSpendingMinor` exactly (reconciliation guard);
-- zero months appear as zeros, ordering is stable, window clamps;
+- zero months appear as zeros, ordering is stable, out-of-range windows are rejected;
 - EUR rows never leak into a USD total;
 - locked session is rejected with `vault_locked`;
 - request validation rejects `months: 0`, `months: 25`, malformed `endMonth`.
 
 **Exit gate:** `cargo test` for the new module, contract tests green, mock parity verified by a
 Vitest call to the mock bridge.
+
+**Implemented 2026-10-24.** Deliberate differences from the draft above:
+
+- `months` is validated and rejected, never clamped. The current/future distinction is applied to
+  every month in the window, not just the last one.
+- The storage function takes `current_month` and `currency` explicitly so it stays independent of
+  demo mode and timezone; the service resolves both.
+- Refunds are returned as a positive magnitude; `net = gross − refunds` is asserted, and the
+  current-month `net` is reconciled against `month_summary`.
+- Evidence: 6 new Rust integration tests, 3 mock-data tests, 2 contract/bridge tests; `pnpm verify:all`
+  green. The chart UI is still Phase 2–3 work.
 
 ---
 
@@ -170,13 +183,20 @@ the hero, 1100 × 760 clean, theme switch changes composition without a reload.
 - Merchant monograms; category as a quiet chip; status as dot + word.
 - Credits (payments/refunds) stop rendering as errors; rust is reserved for excluded/failed.
 - Meta line: `26 rows · 18 eligible · $420.16 USD`.
-- **Fix the cross-currency subtotal bug**: `eligible_subtotal_minor` currently sums EUR rows into
-  a USD figure ([ledger.rs:368](../../src-tauri/src/storage/ledger.rs#L368)). Add the currency
-  predicate and a regression test asserting the subtotal matches the Overview total.
+- **Cross-currency subtotals were fixed ahead of this phase.** `eligible_subtotal_minor` and
+  `pending_subtotal_minor` are gone; `LedgerPage.subtotals` returns one entry per currency with
+  amounts and eligible/pending counts. Use it; never add a hardcoded USD predicate because that
+  would zero a foreign-currency-only filter. See the fix in `ledger.rs` and the regression test
+  `ledger_subtotals_never_sum_different_currencies`.
+- **Decide the pagination contract before building day subtotals.** The table loads 50 rows per
+  request, so a day split across pages cannot have a correct full-month subtotal on the client.
+  Either return day groups from Rust or label each day subtotal as page-local; the exit gate must
+  not claim full-month day totals otherwise.
 - Sticky filter bar; keep every existing label (`Search transactions`, `Clear filters`,
   `By supplier`) and the detail-panel flow.
 
-**Exit gate:** ledger e2e green, subtotal reconciles, day totals sum to the eligible subtotal.
+**Exit gate:** ledger e2e green, subtotal reconciles per currency, day totals are internally
+consistent with the rows shown (and only full-month if backend grouping is added).
 
 ---
 

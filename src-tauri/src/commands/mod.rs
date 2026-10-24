@@ -209,6 +209,15 @@ struct DashboardPayload {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SpendHistoryPayload {
+    #[serde(default)]
+    months: Option<u32>,
+    #[serde(default)]
+    end_month: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct AccountsListPayload {
     #[serde(default)]
     include_archived: Option<bool>,
@@ -468,6 +477,11 @@ pub fn execute<R: tauri::Runtime>(
             let payload: DashboardPayload = request.decode_payload()?;
             let dashboard: Dashboard = dashboard::get(state, payload.month)?;
             GatewayResponse::ok(dashboard)
+        }
+        "spend_history" => {
+            let payload: SpendHistoryPayload = request.decode_payload()?;
+            let history = dashboard::spend_history(state, payload.end_month, payload.months)?;
+            GatewayResponse::ok(history)
         }
         "ledger_query" => {
             let query: LedgerQuery = request.decode_payload()?;
@@ -945,6 +959,8 @@ mod tests {
         let app = app();
         let state = state();
         let err = execute(&app, &state, req("dashboard_get", json!({}))).unwrap_err();
+        assert_eq!(err.code(), "vault_locked");
+        let err = execute(&app, &state, req("spend_history", json!({}))).unwrap_err();
         assert_eq!(err.code(), "vault_locked");
         let err = execute(
             &app,

@@ -317,6 +317,26 @@ export const zDashboard = z
   })
   .strict();
 
+export const zMonthTotal = z
+  .object({
+    month: z.string(),
+    grossMinor: z.number().int(),
+    refundsMinor: z.number().int(),
+    netMinor: z.number().int(),
+    count: z.number().int(),
+    complete: z.boolean(),
+  })
+  .strict();
+
+export const zSpendHistory = z
+  .object({
+    currency: z.string(),
+    startMonth: z.string(),
+    endMonth: z.string(),
+    months: z.array(zMonthTotal),
+  })
+  .strict();
+
 export const zLedgerRow = z
   .object({
     id: z.string(),
@@ -387,6 +407,8 @@ export type MonthSummary = z.infer<typeof zMonthSummary>;
 export type Breakdown = z.infer<typeof zBreakdown>;
 export type AccountSpend = z.infer<typeof zAccountSpend>;
 export type Dashboard = z.infer<typeof zDashboard>;
+export type MonthTotal = z.infer<typeof zMonthTotal>;
+export type SpendHistory = z.infer<typeof zSpendHistory>;
 export type LedgerRow = z.infer<typeof zLedgerRow>;
 export type LedgerPage = z.infer<typeof zLedgerPage>;
 export type CurrencySubtotal = z.infer<typeof zCurrencySubtotal>;
@@ -770,6 +792,7 @@ export interface CommandDefs {
   demo_close: { request: Record<string, never>; response: VaultState };
   demo_reset: { request: Record<string, never>; response: VaultState };
   dashboard_get: { request: { month?: string | null }; response: Dashboard };
+  spend_history: { request: { months?: number; endMonth?: string }; response: SpendHistory };
   ledger_query: { request: LedgerQuery; response: LedgerPage };
   transaction_detail: { request: { id: string }; response: TransactionDetail };
   transaction_override_set: {
@@ -874,6 +897,15 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
         .optional(),
     })
     .strict(),
+  spend_history: z
+    .object({
+      months: z.number().int().min(1).max(24).optional(),
+      endMonth: z
+        .string()
+        .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+        .optional(),
+    })
+    .strict(),
   ledger_query: zLedgerQuery,
   transaction_detail: z.object({ id: z.string().min(1).max(64) }).strict(),
   transaction_override_set: z
@@ -945,6 +977,7 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   demo_close: zVaultState,
   demo_reset: zVaultState,
   dashboard_get: zDashboard,
+  spend_history: zSpendHistory,
   ledger_query: zLedgerPage,
   transaction_detail: zTransactionDetail,
   transaction_override_set: zTransactionDetail,

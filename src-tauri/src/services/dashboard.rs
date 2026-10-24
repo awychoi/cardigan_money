@@ -6,7 +6,10 @@ use serde::Serialize;
 use crate::domain::dates::{self, Month};
 use crate::error::{AppError, AppResult};
 use crate::state::{AppState, SessionMode};
-use crate::storage::ledger::{account_spend, month_summary, AccountSpend, MonthSummary};
+use crate::storage::ledger::{
+    account_spend, month_summary, spend_history as ledger_spend_history, AccountSpend,
+    MonthSummary, SpendHistory,
+};
 use crate::storage::overview::{overview, Overview};
 
 #[derive(Debug, Clone, Serialize)]
@@ -58,5 +61,30 @@ pub fn get(state: &AppState, requested_month: Option<String>) -> AppResult<Dashb
             overview,
             account_spend,
         })
+    })
+}
+
+/// Trailing spend history for the Overview trend. The window ends at the
+/// requested month (default: the current month) and is always zero-filled.
+pub fn spend_history(
+    state: &AppState,
+    requested_end: Option<String>,
+    months: Option<u32>,
+) -> AppResult<SpendHistory> {
+    let demo = state.mode() == SessionMode::Demo;
+    state.with_db(|conn, _header, settings| {
+        let today = if demo {
+            crate::demo::demo_today()
+        } else {
+            dates::today(&settings.timezone).map_err(|_| AppError::InvalidInput("timezone"))?
+        };
+        let current_month = Month::from_date(today);
+        let end = match requested_end.as_deref() {
+            Some(value) if !value.is_empty() => {
+                Month::parse(value).map_err(|_| AppError::InvalidInput("endMonth"))?
+            }
+            _ => current_month,
+        };
+        ledger_spend_history(conn, end, months.unwrap_or(12), current_month, "USD")
     })
 }

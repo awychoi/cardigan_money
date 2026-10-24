@@ -16,6 +16,7 @@ import {
   mockRollbackImport,
   mockSetManualPayment,
   mockSetOverride,
+  mockSpendHistory,
   mockTransactionDetail,
   mockUpdateMerchantRule,
   mockValidateImport,
@@ -251,6 +252,12 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       requireUnlocked();
       const request = payload as { month?: string | null };
       data = mockDashboard(mockState.mode, request.month);
+      break;
+    }
+    case "spend_history": {
+      requireUnlocked();
+      const request = payload as { months?: number; endMonth?: string };
+      data = mockSpendHistory(request.months, request.endMonth);
       break;
     }
     case "ledger_query": {

@@ -17,6 +17,7 @@ import type {
   MonthSummary,
   Overview,
   PaymentInfo,
+  SpendHistory,
   UpcomingPayment,
 } from "../lib/bridge/contract";
 import { BridgeError } from "../lib/bridge/errors";
@@ -658,6 +659,37 @@ export function mockDashboard(mode: "real" | "demo", month?: string | null): Das
     overview: overviewFor(),
     accountSpend: accountSpendFor(selected),
   };
+}
+
+/**
+ * Trailing USD spend history ending at `endMonth` (default: current month).
+ * Mirrors the Rust window: exactly `months` rows, zero-filled, and `complete`
+ * is false for the current and future months.
+ */
+export function mockSpendHistory(months = 12, endMonth?: string): SpendHistory {
+  if (!Number.isInteger(months) || months < 1 || months > 24) {
+    throw new BridgeError("invalid_input", "months");
+  }
+  if (endMonth !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(endMonth)) {
+    throw new BridgeError("invalid_input", "endMonth");
+  }
+  const end = endMonth ?? CURRENT_MONTH;
+  const start = shiftMonth(end, -(months - 1));
+  const rows: SpendHistory["months"] = [];
+  let cursor = start;
+  for (let index = 0; index < months; index += 1) {
+    const summary = summaryFor(cursor);
+    rows.push({
+      month: cursor,
+      grossMinor: summary.grossPurchasesMinor + summary.feesInterestMinor,
+      refundsMinor: Math.abs(summary.refundsMinor),
+      netMinor: summary.netSpendingMinor,
+      count: summary.eligibleCount,
+      complete: cursor < CURRENT_MONTH,
+    });
+    cursor = shiftMonth(cursor, 1);
+  }
+  return { currency: "USD", startMonth: start, endMonth: end, months: rows };
 }
 
 function toRow(tx: MockTx): LedgerRow {

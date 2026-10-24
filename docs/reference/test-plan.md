@@ -10,6 +10,7 @@ This plan maps the specification's required tests (§16) to commands and phases.
 | Rust integration tests | `cd src-tauri && cargo test --test '*'` | Real temporary SQLCipher DBs, migrations, backups, sync mock, CSV |
 | Plain-SQLite negative build | `./scripts/verify-plain-sqlite-reject.sh` | Builds a separate binary linking plain SQLite and proves the exact app check rejects it |
 | Frontend unit/component | `pnpm test` | Vitest + React Testing Library |
+| Full gate | `pnpm verify:all` | Typecheck, lint, Prettier, Vitest, build, Playwright, rustfmt, clippy, `cargo test` |
 | Type checking | `pnpm typecheck` | `tsc -b` |
 | Lint/format | `pnpm lint`, `pnpm format:check`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` | ESLint flat config + Prettier + rustfmt + clippy (warnings are errors) |
 | Browser UI | `pnpm test:e2e` | Playwright against the dev-only mock bridge |
@@ -95,6 +96,7 @@ This plan maps the specification's required tests (§16) to commands and phases.
 | Spec area | Where |
 | --- | --- |
 | Financial/domain | `src-tauri/src/domain/*` unit tests; `tests/ledger.rs`, `tests/domain_fixtures.rs`, `tests/properties.rs` |
+| History/trend | `tests/ledger.rs` (`spend_history`), `src/mocks/data.test.ts`, `src/lib/bridge/bridge.test.ts` |
 | Vault/encryption | `src-tauri/tests/vault_cipher.rs`, `tests/vault_flow.rs`, `tests/backups.rs` |
 | Database/sync | `tests/sync.rs`, `tests/vault_flow.rs` (migrations), `tests/demo.rs` |
 | Import | `tests/imports.rs` |

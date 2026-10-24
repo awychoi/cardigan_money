@@ -18,6 +18,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 8 | Sync engine, scheduler, mock provider | **Complete** (mock provider; no live provider call) |
 | 9 | Plaid adapter and verified linking (conditional) | **Sandbox verified**; Production disabled; live reconnect and Keychain ACL inspection unverified |
 | 10 | Independent security review, performance, packaging, handoff | **In progress** — automated evidence complete; owner native smoke and distribution signing outstanding |
+| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Phase 0 complete**; Phase 1 next |
 
 ## 2. Phase 0 — foundation and feasibility
 
@@ -358,7 +359,7 @@ See `docs/integrations/plaid-verification-2026-10-24.md`.
 - **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (36 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
 - **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready. This hash is historical: rebuild and record a new hash after any source change.
 - **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
-- **Automated suites (current):** 155 Rust (plus ignored release perf test), 28 Vitest, 36 Playwright; `pnpm build` + artifact scan passed.
+- **Automated suites (current):** 161 Rust (plus ignored release perf test), 35 Vitest, 36 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
 A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: [`docs/security/independent-review-2026-10-23.md`](../security/independent-review-2026-10-23.md).
@@ -367,11 +368,34 @@ A separate read-only review agent examined backup/restore, sync, gateway validat
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **155 Rust passed** (1 ignored 50k perf), **28 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **161 Rust passed** (1 ignored 50k perf), **35 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
 - Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; fresh-install restore unsupported; ad-hoc/non-notarized.
 - The offline/demo/CSV scope is implemented and evidenced. The project is not represented as distribution-ready or watertight.
+
+## 3j. UI overhaul — Phase 0 `spend_history` (2026-10-24)
+
+### Implemented
+- Gateway command `spend_history` with `{ months?: 1..24, endMonth?: YYYY-MM }`; defaults are 12 months and the current month. Out-of-range or malformed values are rejected, not clamped.
+- `storage/ledger.rs::spend_history` runs one grouped query over posted, non-excluded spend rows for one currency, zero-fills the window from a `BTreeMap`, returns refunds as a positive magnitude, and marks the current and any future month `complete: false`. `net = gross − refunds` and the current-month total reconciles with `month_summary`.
+- `services/dashboard.rs::spend_history` resolves "today" from `demo_today()` in demo mode or the settings timezone otherwise, so the history window matches the dashboard.
+- Typed contract (`zSpendHistory`, request validation), mock bridge parity through `summaryFor`, and no new dependency.
+
+### Actual test runs
+
+| Command | Result |
+| --- | --- |
+| `cargo test --test ledger` | 14 passed (4 history tests, 1 service validation test, 1 cross-currency subtotal test) |
+| `pnpm test` | 35 passed, including 3 mock-history tests and 2 bridge contract tests |
+| `pnpm verify:all` | typecheck, lint, Prettier, Vitest, build, 36 Playwright, rustfmt, clippy, `cargo test` all pass; 161 Rust tests |
+
+### Phase 0 exit gate
+- Reconciliation guard: **yes** (current-month `net` equals `month_summary` and the mock dashboard).
+- Zero-fill, ordering, window rejection, currency isolation: **yes**.
+- Locked session rejected with `vault_locked`: **yes** (`commands::tests`).
+- Mock parity through the real `command()` path: **yes**.
+- Chart UI: not part of this phase; Phase 2–3.
 
 ## 4. Toolchain and environment
 
@@ -423,6 +447,6 @@ Measured 2026-10-23 in release on a 50,000-transaction encrypted dataset (`cargo
 
 ## 9. Next phase
 
-The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): `spend_history`, theme schema, chart components, Overview rebuild, Transactions re-grade, and Settings sectioning.
+The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): Phase 0 (`spend_history`) is implemented; **Phase 1 (theme schema) is next**, followed by chart components and the Overview rebuild.
 
 Release blockers are not UI work: owner native smoke, the Production Plaid decision, fresh-install restore (or an explicit docs limitation), and distribution signing remain outstanding.

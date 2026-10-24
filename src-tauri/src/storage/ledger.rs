@@ -4,6 +4,8 @@
 //! come from closed enums, values are positional parameters, and LIKE patterns
 //! are escaped. Money is signed integer minor units throughout.
 
+use std::collections::BTreeMap;
+
 use rusqlite::types::Value;
 use rusqlite::{params_from_iter, Connection};
 use serde::{Deserialize, Serialize};
@@ -457,6 +459,30 @@ pub fn account_spend(conn: &Connection, month: Month) -> AppResult<Vec<AccountSp
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct MonthTotal {
+    pub month: String,
+    /// Purchases + fees + interest.
+    pub gross_minor: i64,
+    /// Positive magnitude; amounts are stored negative for refunds.
+    pub refunds_minor: i64,
+    /// gross − refunds.
+    pub net_minor: i64,
+    pub count: i64,
+    /// False for the current and any future month.
+    pub complete: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SpendHistory {
+    pub currency: String,
+    pub start_month: String,
+    pub end_month: String,
+    pub months: Vec<MonthTotal>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct Breakdown {
     pub key: String,
     pub gross_minor: i64,
@@ -609,6 +635,83 @@ pub fn month_summary(conn: &Connection, month: Month, currency: &str) -> AppResu
             category_net_minor: category_net,
             exact,
         },
+    })
+}
+
+/// Posted spending by calendar month for a trailing window ending at `end`.
+///
+/// The window always contains exactly `months` rows, zero-filled. The current
+/// month is marked incomplete because it is still accruing transactions; a
+/// future month is incomplete for the same reason.
+pub fn spend_history(
+    conn: &Connection,
+    end: Month,
+    months: u32,
+    current_month: Month,
+    currency: &str,
+) -> AppResult<SpendHistory> {
+    if !(1..=24).contains(&months) {
+        return Err(AppError::InvalidInput("months"));
+    }
+
+    let mut start = end;
+    for _ in 1..months {
+        start = start.previous();
+    }
+
+    let mut stmt = conn.prepare(&format!(
+        "SELECT substr(t.reporting_date, 1, 7) AS month, \
+            COALESCE(SUM(CASE WHEN {EFFECTIVE_TYPE} IN ('purchase','fee','interest') THEN t.amount_minor ELSE 0 END), 0), \
+            COALESCE(SUM(CASE WHEN {EFFECTIVE_TYPE} = 'refund' THEN -t.amount_minor ELSE 0 END), 0), \
+            COALESCE(SUM(t.amount_minor), 0), \
+            COUNT(*) \
+         FROM transactions t LEFT JOIN transaction_overrides o ON o.transaction_id = t.id \
+         WHERE t.removed = 0 AND t.pending = 0 AND {EFFECTIVE_EXCLUDED} = 0 \
+           AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} \
+           AND t.reporting_date >= ?1 AND t.reporting_date < ?2 AND t.currency = ?3 \
+         GROUP BY month"
+    ))?;
+
+    let mut by_month: BTreeMap<String, (i64, i64, i64, i64)> = BTreeMap::new();
+    let rows = stmt.query_map(
+        rusqlite::params![start.start_string(), end.end_exclusive_string(), currency],
+        |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, i64>(2)?,
+                row.get::<_, i64>(3)?,
+                row.get::<_, i64>(4)?,
+            ))
+        },
+    )?;
+    for row in rows {
+        let (month, gross, refunds, net, count) = row?;
+        by_month.insert(month, (gross, refunds, net, count));
+    }
+
+    let mut totals = Vec::with_capacity(months as usize);
+    let mut cursor = start;
+    for _ in 0..months {
+        let key = cursor.key();
+        let (gross_minor, refunds_minor, net_minor, count) =
+            by_month.get(&key).copied().unwrap_or((0, 0, 0, 0));
+        totals.push(MonthTotal {
+            month: key,
+            gross_minor,
+            refunds_minor,
+            net_minor,
+            count,
+            complete: (cursor.year, cursor.month) < (current_month.year, current_month.month),
+        });
+        cursor = cursor.next();
+    }
+
+    Ok(SpendHistory {
+        currency: currency.to_string(),
+        start_month: start.key(),
+        end_month: end.key(),
+        months: totals,
     })
 }
 

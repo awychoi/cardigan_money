@@ -26,6 +26,30 @@ describe("bridge contract", () => {
     });
   });
 
+  it("round-trips spend history through the mock bridge", async () => {
+    await command("vault_unlock", {});
+    const history = await command("spend_history", { months: 12, endMonth: "2026-10" });
+    expect(history.currency).toBe("USD");
+    expect(history.startMonth).toBe("2025-11");
+    expect(history.endMonth).toBe("2026-10");
+    expect(history.months).toHaveLength(12);
+
+    const dashboard = await command("dashboard_get", { month: "2026-10" });
+    expect(history.months[11].netMinor).toBe(dashboard.summary.netSpendingMinor);
+  });
+
+  it("rejects invalid spend history requests", async () => {
+    await expect(command("spend_history", { months: 0 })).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+    await expect(command("spend_history", { months: 25 })).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+    await expect(command("spend_history", { endMonth: "2026-13" })).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+  });
+
   it("normalizes unknown errors without leaking their text", () => {
     const err = toBridgeError(new Error("secret=abc123"));
     expect(err.code).toBe("bridge_error");
