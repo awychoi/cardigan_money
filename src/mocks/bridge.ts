@@ -56,6 +56,7 @@ function initialState() {
 
 const mockState = initialState();
 let mockBackups: import("../lib/bridge/contract").BackupItem[] = [];
+let mockSyncRuns: import("../lib/bridge/contract").SyncRunView[] = [];
 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
@@ -410,6 +411,39 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       mockBackups = [];
       resetMockData();
       data = vaultState();
+      break;
+    case "sync_status":
+      requireUnlocked();
+      data = {
+        connections: [],
+        recentRuns: structuredClone(mockSyncRuns),
+        runtime: {
+          running: false,
+          lastResult: mockSyncRuns[0]?.status ?? null,
+          lastSkipReason: null,
+          lastAttemptAt: mockSyncRuns[0]?.startedAt ?? null,
+          lastFinishedAt: mockSyncRuns[0]?.finishedAt ?? null,
+        },
+        providerLive: false,
+      };
+      break;
+    case "sync_now":
+      requireUnlocked();
+      data = {
+        accepted: true,
+        skipReason: "no_connections",
+        results: [],
+        startedAt: "2026-10-23T12:00:00Z",
+        finishedAt: "2026-10-23T12:00:01Z",
+      };
+      break;
+    case "sync_runs_list":
+      requireUnlocked();
+      data = { runs: structuredClone(mockSyncRuns) };
+      break;
+    case "connection_disconnect":
+      requireUnlocked();
+      data = { deleted: true };
       break;
     case "security_events_list": {
       requireUnlocked();

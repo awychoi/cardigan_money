@@ -43,7 +43,7 @@ libc = "0.2"
 rust_decimal = "1.43"
 regex = "1"
 unicode-normalization = "0.1"
-reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "charset"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "charset", "blocking"] }
 security-framework = "3.5.1"
 security-framework-sys = "2.15"
 core-foundation = "0.10.1"

@@ -2,5 +2,7 @@ pub mod backups;
 pub mod dashboard;
 pub mod exports;
 pub mod imports;
+pub mod scheduler;
 pub mod security;
+pub mod sync;
 pub mod vault;

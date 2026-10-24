@@ -46,3 +46,16 @@ test.describe("backup and recovery UI (browser mock)", () => {
     await expect(page.getByRole("button", { name: "Erase all local data…" })).toHaveCount(0);
   });
 });
+
+test.describe("sync status UI (browser mock)", () => {
+  test("shows the provider-free state and disables manual sync", async ({ page }) => {
+    await openUnlocked(page);
+    await expect(page.getByText(/No provider connected/).first()).toBeVisible();
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("heading", { name: "Connections & sync" })).toBeVisible();
+    await expect(page.getByText(/No provider connected. Import a CSV/)).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("button", { name: "Sync now", exact: true }),
+    ).toBeDisabled();
+  });
+});

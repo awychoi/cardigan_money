@@ -1128,3 +1128,7 @@ h3 {
   color: var(--danger);
   margin: 0;
 }
+
+.sync-dot-warn {
+  background: var(--warning);
+}

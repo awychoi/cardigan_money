@@ -18,6 +18,7 @@ use crate::services::exports::ExportResult;
 use crate::services::imports::{self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview};
 use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
 use crate::services::dashboard::{self, Dashboard};
+use crate::services::sync::{self, ConnectionView, SyncRunView, SyncRuntimeStatus, SyncSummary};
 use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
 use crate::domain::money::parse_currency_amount;
@@ -106,6 +107,34 @@ struct BatchListPayload {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ExportPayload {
     query: LedgerQuery,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncStatusView {
+    connections: Vec<ConnectionView>,
+    recent_runs: Vec<SyncRunView>,
+    runtime: SyncRuntimeStatus,
+    provider_live: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncRunsView {
+    runs: Vec<SyncRunView>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SyncRunsPayload {
+    #[serde(default)]
+    limit: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ConnectionIdPayload {
+    connection_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -654,6 +683,36 @@ pub fn execute<R: tauri::Runtime>(
             let _: EmptyPayload = request.decode_payload()?;
             let view = backups::crypto_erase(state, app)?;
             GatewayResponse::ok(view)
+        }
+        "sync_status" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            let connections = sync::list_connections(state)?;
+            let recent_runs = sync::recent_runs(state, 10)?;
+            let runtime = sync::runtime_status(state)?;
+            GatewayResponse::ok(SyncStatusView {
+                connections,
+                recent_runs,
+                runtime,
+                provider_live: false,
+            })
+        }
+        "sync_now" => {
+            state.require_real("sync in demo mode")?;
+            state.rate_limit("sync_now", 6, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let summary: SyncSummary = sync::sync_now(state, "manual")?;
+            GatewayResponse::ok(summary)
+        }
+        "sync_runs_list" => {
+            let payload: SyncRunsPayload = request.decode_payload()?;
+            let runs = sync::recent_runs(state, payload.limit.unwrap_or(10))?;
+            GatewayResponse::ok(SyncRunsView { runs })
+        }
+        "connection_disconnect" => {
+            state.require_real("disconnect a provider in demo mode")?;
+            let payload: ConnectionIdPayload = request.decode_payload()?;
+            sync::disconnect(state, &payload.connection_id)?;
+            GatewayResponse::ok(DeletedView { deleted: true })
         }
         "security_events_list" => {
             let payload: EventsPayload = request.decode_payload()?;

@@ -72,6 +72,8 @@ pub struct AppState {
     pub unlock_failures: AtomicU32,
     pub rate: Mutex<RateLimiter>,
     pub imports: ImportJobs,
+    pub sync_gate: Mutex<()>,
+    pub sync_runtime: Mutex<crate::services::sync::SyncRuntimeStatus>,
     pub quitting: AtomicBool,
     pub close_prompt_open: AtomicBool,
 }
@@ -87,6 +89,8 @@ impl AppState {
             unlock_failures: AtomicU32::new(0),
             rate: Mutex::new(RateLimiter::default()),
             imports: Mutex::new(std::collections::HashMap::new()),
+            sync_gate: Mutex::new(()),
+            sync_runtime: Mutex::new(Default::default()),
             quitting: AtomicBool::new(false),
             close_prompt_open: AtomicBool::new(false),
         })

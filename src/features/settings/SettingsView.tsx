@@ -14,6 +14,7 @@ import { MerchantRulesPanel } from "./MerchantRulesPanel";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
 import { ImportExportPanel } from "./ImportExportPanel";
 import { BackupsPanel } from "./BackupsPanel";
+import { ConnectionsSyncPanel } from "./ConnectionsSyncPanel";
 
 export function SettingsView({
   vault,
@@ -190,6 +191,7 @@ export function SettingsView({
 
         {!demo ? (
           <>
+            <ConnectionsSyncPanel onSyncFinished={onDataChanged} readOnly={false} />
             <BackupsPanel
               onDataChanged={onDataChanged}
               onVaultChanged={onVaultChanged}

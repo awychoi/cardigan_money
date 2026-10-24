@@ -100,5 +100,9 @@ export type {
   BackupItem,
   BackupResult,
   RestoreResult,
+  ConnectionView,
+  SyncRunView,
+  SyncStatus,
+  SyncSummary,
 } from "./contract";
 export const _internals = { z } as const;

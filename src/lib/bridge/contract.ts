@@ -602,6 +602,91 @@ export type BackupItem = z.infer<typeof zBackupItem>;
 export type BackupResult = z.infer<typeof zBackupResult>;
 export type RestoreResult = z.infer<typeof zRestoreResult>;
 
+
+export const zConnectionView = z
+  .object({
+    id: z.string(),
+    provider: z.string(),
+    environment: z.string(),
+    institutionName: z.string().nullable(),
+    status: z.string(),
+    lastAttemptAt: z.string().nullable(),
+    lastSuccessAt: z.string().nullable(),
+    sanitizedError: z.string().nullable(),
+    hasCursor: z.boolean(),
+    accountCount: z.number().int(),
+  })
+  .strict();
+export const zSyncStepView = z
+  .object({
+    stream: z.string(),
+    status: z.string(),
+    itemsAdded: z.number().int(),
+    itemsModified: z.number().int(),
+    itemsRemoved: z.number().int(),
+    sanitizedError: z.string().nullable(),
+  })
+  .strict();
+export const zSyncRunView = z
+  .object({
+    id: z.string(),
+    connectionId: z.string(),
+    institutionName: z.string().nullable(),
+    trigger: z.string(),
+    status: z.string(),
+    startedAt: z.string(),
+    finishedAt: z.string().nullable(),
+    errorCode: z.string().nullable(),
+    steps: z.array(zSyncStepView),
+  })
+  .strict();
+export const zSyncRuntime = z
+  .object({
+    running: z.boolean(),
+    lastResult: z.string().nullable(),
+    lastSkipReason: z.string().nullable(),
+    lastAttemptAt: z.string().nullable(),
+    lastFinishedAt: z.string().nullable(),
+  })
+  .strict();
+export const zSyncStatus = z
+  .object({
+    connections: z.array(zConnectionView),
+    recentRuns: z.array(zSyncRunView),
+    runtime: zSyncRuntime,
+    providerLive: z.boolean(),
+  })
+  .strict();
+export const zSyncSummary = z
+  .object({
+    accepted: z.boolean(),
+    skipReason: z.string().nullable(),
+    results: z.array(
+      z
+        .object({
+          connectionId: z.string(),
+          institution: z.string(),
+          status: z.string(),
+          transactionsAdded: z.number().int(),
+          transactionsModified: z.number().int(),
+          transactionsRemoved: z.number().int(),
+          balancesWritten: z.number().int(),
+          liabilitiesStatus: z.string(),
+          errorCode: z.string().nullable(),
+        })
+        .strict(),
+    ),
+    startedAt: z.string(),
+    finishedAt: z.string(),
+  })
+  .strict();
+
+export type ConnectionView = z.infer<typeof zConnectionView>;
+export type SyncRunView = z.infer<typeof zSyncRunView>;
+export type SyncRuntime = z.infer<typeof zSyncRuntime>;
+export type SyncStatus = z.infer<typeof zSyncStatus>;
+export type SyncSummary = z.infer<typeof zSyncSummary>;
+
 export type Settings = z.infer<typeof zSettings>;
 export type SettingsPatch = z.infer<typeof zSettingsPatch>;
 export type SecuritySummary = z.infer<typeof zSecuritySummary>;
@@ -682,6 +767,13 @@ export interface CommandDefs {
   backup_restore: { request: Record<string, never>; response: RestoreResult };
   portable_export: { request: Record<string, never>; response: BackupItem };
   crypto_erase: { request: Record<string, never>; response: VaultState };
+  sync_status: { request: Record<string, never>; response: SyncStatus };
+  sync_now: { request: Record<string, never>; response: SyncSummary };
+  sync_runs_list: { request: { limit?: number }; response: { runs: SyncRunView[] } };
+  connection_disconnect: {
+    request: { connectionId: string };
+    response: { deleted: boolean };
+  };
 }
 
 export type CommandName = keyof CommandDefs;
@@ -747,6 +839,10 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   backup_restore: zEmpty,
   portable_export: zEmpty,
   crypto_erase: zEmpty,
+  sync_status: zEmpty,
+  sync_now: zEmpty,
+  sync_runs_list: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
+  connection_disconnect: z.object({ connectionId: z.string().min(1).max(64) }).strict(),
 };
 
 export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["response"]> } = {
@@ -794,6 +890,10 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   backup_restore: zRestoreResult,
   portable_export: zBackupItem,
   crypto_erase: zVaultState,
+  sync_status: zSyncStatus,
+  sync_now: zSyncSummary,
+  sync_runs_list: z.object({ runs: z.array(zSyncRunView) }).strict(),
+  connection_disconnect: z.object({ deleted: z.boolean() }).strict(),
 };
 
 export const zGatewayEnvelope = z

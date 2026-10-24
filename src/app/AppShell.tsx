@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { command, type AppInfo, type Dashboard, type Settings, type VaultState } from "../lib/bridge";
+import { command, type AppInfo, type Dashboard, type Settings, type SyncStatus, type VaultState } from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { OverviewView } from "../features/dashboard/OverviewView";
 import { CardsView } from "../features/dashboard/CardsView";
@@ -58,7 +58,29 @@ export function AppShell({
     nonce: 0,
   });
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState<string | null>(null);
   const demo = vault.mode === "demo";
+
+  useEffect(() => {
+    if (demo) {
+      setSyncStatus(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await command("sync_status", {});
+        if (!cancelled) setSyncStatus(result);
+      } catch {
+        // Dashboard remains usable if status cannot be loaded; the panel shows details.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [demo, refresh, sessionNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +108,45 @@ export function AppShell({
 
   function addAccount() {
     setView("settings");
+  }
+
+  const connections = syncStatus?.connections ?? [];
+  const connectionError = connections.some((connection) => connection.status !== "healthy");
+  const latestSuccess = connections
+    .map((connection) => connection.lastSuccessAt)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  const syncLabel = demo
+    ? "Synthetic demo data"
+    : connections.length === 0
+      ? "No provider connected"
+      : connectionError
+        ? "Provider needs attention"
+        : `${connections.length} connection${connections.length === 1 ? "" : "s"} · ${latestSuccess ? `synced ${latestSuccess.slice(0, 10)}` : "not synced yet"}`;
+
+  async function runSyncNow() {
+    setSyncing(true);
+    setSyncNote(null);
+    try {
+      const summary = await command("sync_now", {});
+      if (!summary.accepted) {
+        setSyncNote(
+          summary.skipReason === "no_connections"
+            ? "No provider connected."
+            : `Sync skipped: ${summary.skipReason?.replaceAll("_", " ") ?? "unknown"}.`,
+        );
+      } else {
+        const added = summary.results.reduce((sum, result) => sum + result.transactionsAdded, 0);
+        const failed = summary.results.filter((result) => result.status === "failed").length;
+        setSyncNote(`Sync complete: ${added} new transaction(s)${failed ? `, ${failed} failed` : ""}.`);
+      }
+      setRefresh((value) => value + 1);
+    } catch (caught) {
+      setSyncNote(friendlyError(caught));
+    } finally {
+      setSyncing(false);
+    }
   }
 
   return (
@@ -135,13 +196,24 @@ export function AppShell({
         </div>
 
         <div className="header-actions">
-          <span className="sync-state" role="status">
-            <span className="dot dot-muted" aria-hidden="true" />
-            {demo ? "Synthetic demo data" : "No provider connected"}
+          <span className="sync-state" role="status" title={syncNote ?? undefined}>
+            <span className={connectionError && !demo ? "sync-dot sync-dot-warn" : "dot dot-muted"} aria-hidden="true" />
+            {syncNote ?? syncLabel}
           </span>
-          <button type="button" className="btn btn-secondary btn-small" disabled>
-            Sync now
-          </button>
+          {!demo && connections.length > 0 ? (
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={() => void runSyncNow()}
+              disabled={syncing}
+            >
+              {syncing ? "Syncing…" : "Sync now"}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-secondary btn-small" disabled>
+              Sync now
+            </button>
+          )}
           {themeControl}
           <Button variant="ghost" aria-label="Lock now" onClick={() => void onLock()}>
             {demo ? "Exit demo" : "Lock"}

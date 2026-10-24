@@ -169,6 +169,7 @@ pub fn run() {
             let state = state::AppState::new(app_data.clone()).map_err(|e| e.code())?;
             app.manage(state);
             let _ = APP_HANDLE.set(app.handle().clone());
+            crate::services::scheduler::spawn(app.handle());
 
             let lock_item = MenuItem::with_id(
                 app,

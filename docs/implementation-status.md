@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 7 exit (2026-10-23, America/New_York).
+Last updated: Phase 8 exit (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -287,6 +287,38 @@ Known limits to carry forward: native file dialogs are exercised by the owner sm
 
 Known limits: native file pickers/sheets/confirmations are not automated; empty-install restore is not implemented; a crash between the two restore renames is a documented window mitigated by the pre-restore backup/`.restore-old`; backups exclude Keychain material by design.
 
+## 3g. Phase 8 — sync engine, scheduler, mock provider, network boundary
+
+### Completed
+- Provider abstraction/capabilities and a deterministic mock provider with paged changes, pending/posted transitions, balances, liabilities capability shapes, and injected transient failure.
+- Sync engine: account mapping/creation from provider sources; page loop; per-page transactional upsert + cursor advancement in the same transaction; idempotent replays; pending→posted linking with the pending row retired (no double count); tombstoning removals without deleting local edits; balances as append-only snapshots; liabilities never delete prior values on `available_but_null`/unsupported/partial; rule reapplication; per-connection isolation; run/step records with sanitized errors; audit events; stale `running` runs marked interrupted on the next attempt.
+- Cursor safety: provider failure leaves the cursor at the last committed page; vault lock mid-sync stops without advancing and can resume; a lock before start returns a skip without writes.
+- Concurrency: one global `try_lock` gate; concurrent triggers return `already_running` without network or writes.
+- Scheduler: 08:00/20:00 local two-window loop, launch sync, 5-minute window, per-window in-memory de-duplication, skip when vault locked/quitting, retry on the next poll while the window is open. Settings windows/launch flag are respected.
+- Network boundary: Rust-only `reqwest::blocking` client, HTTPS-only, exact host allowlist (`sandbox.plaid.com`, `production.plaid.com`), no redirects, TLS verification, connect/total timeouts, 4 MiB bounded response reader; renderer has no network source. Unit tests cover scheme/host/port/userinfo rejection and the response cap.
+- UI: header sync status (provider count/last success/error), manual Sync now when connections exist, and Settings → Connections & sync with connection/status/account counts and recent run/step history. Provider-free state is explicit; CSV remains available.
+- Commands: `sync_status`, `sync_now`, `sync_runs_list`, `connection_disconnect`; demo sync is blocked, status remains readable.
+
+### Actual test runs
+| Suite | Result |
+| --- | --- |
+| `cargo test` | 79 lib + 3 accounts + 8 backups + 5 demo + 2 domain_fixtures + 6 imports + 8 ledger + 4 properties + 8 sync + 7 vault_cipher + 11 vault_flow = **141 passed**, 0 failed |
+| `pnpm test` | 23 passed |
+| `pnpm test:e2e` | 33 passed (provider-free status, disabled manual sync, prior phases) |
+| `pnpm build` + artifact scan | Passed |
+
+Sync-specific assertions: three pages/three transactions, two accounts, two balances; replay no-op; provider failure at page 2 leaves cursor `page-2`; lock after page 1 leaves cursor `page-2` and resumes without duplication; pending→posted leaves one visible posted transaction and retires the pending row; `available_but_null` preserves a prior liability snapshot; two connections (mock + unconfigured plaid) isolate failure; concurrent and locked triggers skip.
+
+### Phase 8 exit gate check
+- Incremental/idempotent/paged sync, cursor safety, lock-mid-sync, pending/posted, removals: **tested**.
+- Partial liability preservation and per-stream partial status: **tested**.
+- One connection failure does not block another: **tested**.
+- Manual/scheduled/launch triggers and concurrent suppression: **implemented/tested at the gate/window level**; no sleep/wake or multi-hour wall-clock test.
+- Network allowlist/TLS/redirect/cap: **policy-tested**; no live network call was made (no credentials).
+- No tokens in renderer/logs/errors: **by construction**; Plaid token storage is Phase 9 and not yet implemented.
+
+Known limits: only the mock provider is wired; an existing `plaid` connection fails closed until the Phase 9 adapter is configured. Scheduled runs are tested through the window matcher, not by waiting for wall-clock windows. The scheduler thread does not yet observe sleep/wake explicitly; on wake the window matcher still applies.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -335,6 +367,10 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 No performance target has been measured yet (no ledger/dashboard). Do not treat any target as met. The 50,000-transaction encrypted benchmark is Phase 10 work.
 
 ## 9. Next phase
+
+Phase 9 (conditional) requires owner Plaid credentials and a live/sandbox Item. No account or credentials are available in this environment, so the adapter, Keychain credential handoff, Hosted Link polling, and live verification are **not claimed complete**. Phase 10 hardening continues in parallel.
+
+## 10. Superseded next-phase note
 
 Phase 8 will add the sync engine, scheduler, mock-provider integration, cursor safety/idempotency, concurrent triggers, partial failure handling, lock-during-sync, and the network allowlist/TLS/response-cap layer.
 
