@@ -116,3 +116,65 @@ mod tests {
         assert_eq!(decision(CloseBehavior::Unset), CloseDecision::Ask);
     }
 }
+
+/// Native confirmation for a destructive action. Returns true only when the
+/// action button was chosen. There is no HTML fallback.
+pub fn confirm_destructive<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    title: &'static str,
+    message: &'static str,
+    action: &'static str,
+) -> AppResult<bool> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::sync::mpsc;
+        let (tx, rx) = mpsc::sync_channel(1);
+        app.run_on_main_thread(move || {
+            let result = unsafe { present_confirm(title, message, action) };
+            let _ = tx.send(result);
+        })
+        .map_err(|_| AppError::NativeInput)?;
+        match rx.recv_timeout(std::time::Duration::from_secs(300)) {
+            Ok(Ok(value)) => Ok(value),
+            Ok(Err(())) => Err(AppError::NativeInput),
+            Err(_) => Err(AppError::NativeInput),
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, title, message, action);
+        Err(AppError::NativeInput)
+    }
+}
+
+#[cfg(target_os = "macos")]
+unsafe fn present_confirm(
+    title: &'static str,
+    message: &'static str,
+    action: &'static str,
+) -> Result<bool, ()> {
+    use objc2::rc::Retained;
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{
+        NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSWindow,
+        NSWindowSharingType,
+    };
+    use objc2_foundation::NSString;
+
+    let mtm = MainThreadMarker::new().ok_or(())?;
+    let alert = NSAlert::new(mtm);
+    alert.setMessageText(&NSString::from_str(title));
+    alert.setInformativeText(&NSString::from_str(message));
+    let _action = alert.addButtonWithTitle(&NSString::from_str(action));
+    let _cancel = alert.addButtonWithTitle(&NSString::from_str("Cancel"));
+    let window: Retained<NSWindow> = alert.window();
+    window.setSharingType(NSWindowSharingType::None);
+    let response = alert.runModal();
+    if response == NSAlertFirstButtonReturn {
+        Ok(true)
+    } else if response == NSAlertSecondButtonReturn {
+        Ok(false)
+    } else {
+        Ok(false)
+    }
+}

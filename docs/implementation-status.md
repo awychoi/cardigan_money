@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 6 exit (2026-10-23, America/New_York).
+Last updated: Phase 7 exit (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -14,7 +14,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 4 | Onboarding, accounts, settings, theme, security settings | **Complete** (native close/passphrase smoke pending owner) |
 | 5 | Demo data and read-only dashboard | **Complete** |
 | 6 | Edits, manual metadata, CSV import/export security | **Complete** |
-| 7 | Encrypted backup, restore, rotation, recovery | Not started |
+| 7 | Encrypted backup, restore, rotation, recovery | **Complete** |
 | 8 | Sync engine, scheduler, mock provider | Not started |
 | 9 | Plaid adapter and verified linking (conditional) | Not started |
 | 10 | Independent security review, performance, packaging, handoff | Not started |
@@ -253,6 +253,40 @@ Specific import/export assertions: BOM + quoted comma + parentheses import; iden
 
 Known limits to carry forward: native file dialogs are exercised by the owner smoke, not Playwright; provider-row overlap detection uses imported fingerprints only (provider rows are reviewed at sync time in Phase 8); rule reapplication is a full-table pass and will be measured at 50k rows in Phase 10.
 
+## 3f. Phase 7 — encrypted backups, restore, rotation, recovery
+
+### Completed
+- Self-contained backup container v1 (256-byte header + SQLCipher DB): embeds the vault header, DB length/SHA-256, kind, timestamps, and a DEK-derived AEAD seal over the manifest. Full format in `docs/security-architecture.md` §7.
+- Backup creation via consistent SQLite backup-API snapshot, checkpointed, verified (header decode, seal, hash), owner-only 0600, atomic write, strict filename, no plaintext temp.
+- Kinds: daily, manual, pre-migration, pre-restore, pre-change, portable. Automatic daily backup after unlock when >24 h old; pre-migration before pending migrations; pre-restore immediately before replacement; pre-change during passphrase rotation. Backup failures never prevent unlock and are recorded.
+- Retention: 7 daily, 10 manual, 5 each pre-migration/pre-restore/pre-change; strict pattern only; never the last backup.
+- Restore: native `.cmbak` picker + native passphrase sheet; full validation before install (header, seal, length, DB hash, vault ID, cipher/SQLite integrity, schema/migration compatibility); staged database rekeyed to the current DEK; metadata generation/schema reconciled; pre-restore backup; atomic file swap; post-swap verification and rollback attempt; current passphrase retained. Backup bytes are never modified. Restore requires an unlocked vault; empty-install restore is documented as unsupported.
+- Portable encrypted export: separate passphrase (native two-field sheet), fresh export DEK, snapshot rekeyed to it, embedded export header, arbitrary destination, 0600, no provider credentials. Tested restore with its own passphrase.
+- Crypto-erase: typed confirmation + native confirmation; locks the session, best-effort overwrites and deletes vault/header/journal/backups/demo/staged files, fsyncs, and returns the no-vault state. External copies are explicitly out of scope.
+- Security events for backup creation/verification/failure, restore success, export, and lock-before-erase.
+- UI: Backups & recovery panel (back up now, list, delete, restore warning, portable export, crypto-erase danger zone, last-backup status), hidden in demo.
+- Recovery guide: `docs/backup-recovery.md`.
+
+### Actual test runs
+| Suite | Result |
+| --- | --- |
+| `cargo test` | 76 lib + 3 accounts + 8 backups + 5 demo + 2 domain_fixtures + 6 imports + 8 ledger + 4 properties + 7 vault_cipher + 11 vault_flow = **130 passed**, 0 failed |
+| `pnpm test` | 23 passed |
+| `pnpm test:e2e` | 32 passed (backup create/list/restore/delete, portable export, crypto-erase gate, demo hiding) |
+| `cargo test --test backups` | 8 passed in ~43 s (tamper, wrong passphrase, wrong vault, retention 9→7, portable, pre-change, erase, locked restore) |
+| `pnpm build` + artifact scan | Passed |
+
+### Phase 7 exit gate check
+- Backup/restore/tamper/wrong-passphrase/nonempty-database tests pass: **yes** at the service level with real encrypted containers.
+- Restore leaves original on failure and creates a pre-restore backup: **yes** for validation failures and successful restore; post-swap rollback path implemented but not crash-injected.
+- Passphrase rotation journal and pre-change backup: **tested** (new passphrase works, old fails, journal recovery from earlier Phase 2 tests).
+- Old backups remain labeled/decryptable with the old passphrase and are never rewritten: **by design**; deletion is explicit.
+- Portable export separate password: **tested**.
+- Crypto-erase removes app data and cannot reopen: **tested**.
+- Admin actions audited: **yes** (backup, restore, export, lock); native dialogs are owner-smoke items.
+
+Known limits: native file pickers/sheets/confirmations are not automated; empty-install restore is not implemented; a crash between the two restore renames is a documented window mitigated by the pre-restore backup/`.restore-old`; backups exclude Keychain material by design.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -301,6 +335,10 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 No performance target has been measured yet (no ledger/dashboard). Do not treat any target as met. The 50,000-transaction encrypted benchmark is Phase 10 work.
 
 ## 9. Next phase
+
+Phase 8 will add the sync engine, scheduler, mock-provider integration, cursor safety/idempotency, concurrent triggers, partial failure handling, lock-during-sync, and the network allowlist/TLS/response-cap layer.
+
+## 10. Superseded next-phase note
 
 Phase 7 will implement the self-contained authenticated backup container, automatic retention, native restore with read-only validation, portable encrypted exports with a separate password, passphrase rotation using the journal, crypto-erase, and recovery documentation/tests.
 

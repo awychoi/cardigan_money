@@ -16,6 +16,7 @@ use crate::storage::ledger::{query_ledger, LedgerPage, LedgerQuery};
 use crate::providers::csv::CsvMapping;
 use crate::services::exports::ExportResult;
 use crate::services::imports::{self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview};
+use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
 use crate::services::dashboard::{self, Dashboard};
 use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
@@ -105,6 +106,24 @@ struct BatchListPayload {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ExportPayload {
     query: LedgerQuery,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupsView {
+    backups: Vec<BackupItem>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BackupIdPayload {
+    id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupDeletedView {
+    deleted: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -583,6 +602,58 @@ pub fn execute<R: tauri::Runtime>(
                 return Err(error);
             }
             GatewayResponse::ok(result)
+        }
+        "backup_create" => {
+            state.require_real("create a backup in demo mode")?;
+            state.rate_limit("backup_create", 5, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let result: BackupResult = backups::create_backup(
+                state,
+                app,
+                crate::services::backups::BackupKind::Manual,
+            )?;
+            GatewayResponse::ok(result)
+        }
+        "backup_list" => {
+            state.require_real("list backups in demo mode")?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let backups = backups::list_backups(state)?;
+            GatewayResponse::ok(BackupsView { backups })
+        }
+        "backup_delete" => {
+            state.require_real("delete a backup in demo mode")?;
+            let payload: BackupIdPayload = request.decode_payload()?;
+            let confirmed = crate::security::native_dialog::confirm_destructive(
+                app,
+                "Delete this encrypted backup?",
+                "The file is removed from this Mac. Copies elsewhere (Time Machine, other devices) are not affected. This cannot be undone.",
+                "Delete backup",
+            )?;
+            if !confirmed {
+                return Err(AppError::Cancelled);
+            }
+            backups::delete_backup(state, &payload.id)?;
+            GatewayResponse::ok(BackupDeletedView { deleted: true })
+        }
+        "backup_restore" => {
+            state.require_real("restore a backup in demo mode")?;
+            state.rate_limit("backup_restore", 3, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let result: RestoreResult = backups::restore(state, app)?;
+            GatewayResponse::ok(result)
+        }
+        "portable_export" => {
+            state.require_real("portable export in demo mode")?;
+            state.rate_limit("portable_export", 3, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let item: BackupItem = backups::portable_export(state, app)?;
+            GatewayResponse::ok(item)
+        }
+        "crypto_erase" => {
+            state.rate_limit("crypto_erase", 2, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let view = backups::crypto_erase(state, app)?;
+            GatewayResponse::ok(view)
         }
         "security_events_list" => {
             let payload: EventsPayload = request.decode_payload()?;

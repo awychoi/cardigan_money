@@ -22,6 +22,15 @@ pub fn create_encrypted_snapshot(
     destination: &Path,
     dek: &LockedKey,
 ) -> AppResult<()> {
+    create_encrypted_snapshot_with_key(source, destination, dek)
+}
+
+/// Snapshot encrypted with a specific target key (used for portable exports).
+pub fn create_encrypted_snapshot_with_key(
+    source: &Connection,
+    destination: &Path,
+    target_dek: &LockedKey,
+) -> AppResult<()> {
     if file_exists_no_follow(destination)? {
         return Err(AppError::VaultExists);
     }
@@ -42,7 +51,7 @@ pub fn create_encrypted_snapshot(
         .sync_all()?;
 
     let result = (|| -> AppResult<()> {
-        let (mut target, _) = open_ledger(destination, dek, false)?;
+        let (mut target, _) = open_ledger(destination, target_dek, false)?;
         {
             let backup = rusqlite::backup::Backup::new(source, &mut target)
                 .map_err(|_| AppError::Database)?;
@@ -57,7 +66,7 @@ pub fn create_encrypted_snapshot(
 
         enforce_private_file(destination)?;
         // Reopen the finished snapshot read/write and verify it.
-        let (verify, _) = open_ledger(destination, dek, false)?;
+        let (verify, _) = open_ledger(destination, target_dek, false)?;
         cipher_integrity_check(&verify)?;
         sqlite_integrity_check(&verify)?;
         verify

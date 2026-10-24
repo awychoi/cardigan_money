@@ -336,6 +336,16 @@ pub fn unlock(state: &AppState, passphrase: SecretString) -> AppResult<VaultStat
         set_generation(&opened.conn, opened.header.generation, true)?;
     }
 
+    if meta.schema_version < supported_schema_version() {
+        crate::services::backups::create_backup_inner(
+            &opened.conn,
+            &opened.header,
+            &opened.dek,
+            &state.paths.root,
+            &crate::services::backups::backups_dir(state),
+            crate::services::backups::BackupKind::PreMigration,
+        )?;
+    }
     let schema = run_migrations(&opened.conn, &opened.dek, &state.paths.root)?;
     set_schema_version(&opened.conn, schema)?;
     set_integrity_checked(&opened.conn)?;
@@ -373,6 +383,7 @@ pub fn unlock(state: &AppState, passphrase: SecretString) -> AppResult<VaultStat
         guard.settings = Some(settings);
         guard.unlocked_at = Some(std::time::Instant::now());
     }
+    crate::services::backups::maybe_daily_backup(state);
     session_state(state)
 }
 
@@ -418,6 +429,15 @@ pub fn change_passphrase<R: tauri::Runtime>(
     let header_copy = state.paths.root.join(format!("pre-rekey-{stamp}.vault-header"));
     atomic_write_private(&header_copy, &header.encode())?;
 
+    // Self-contained pre-change backup in addition to the internal raw snapshot.
+    crate::services::backups::create_backup_inner(
+        conn,
+        &header,
+        dek,
+        &state.paths.root,
+        &crate::services::backups::backups_dir(state),
+        crate::services::backups::BackupKind::PreChange,
+    )?;
     let (new_header, new_dek) = header.rotate(&new, header.params)?;
     drop(new);
     let journal = RotationJournal::new(header.generation, new_header.clone());

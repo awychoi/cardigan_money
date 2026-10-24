@@ -1,3 +1,4 @@
+pub mod backups;
 pub mod dashboard;
 pub mod exports;
 pub mod imports;

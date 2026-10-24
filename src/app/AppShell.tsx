@@ -28,6 +28,7 @@ export function AppShell({
   onExitDemo,
   onResetDemo,
   onOpenDemo,
+  onVaultChanged,
   themeControl,
   sessionNonce,
 }: {
@@ -41,6 +42,7 @@ export function AppShell({
   onExitDemo: () => Promise<void>;
   onResetDemo: () => Promise<void>;
   onOpenDemo: () => Promise<void>;
+  onVaultChanged: (vault: VaultState) => void;
   themeControl: ReactNode;
   sessionNonce: number;
 }) {
@@ -248,6 +250,7 @@ export function AppShell({
               onLock={onLock}
               onAccountsChanged={() => setRefresh((value) => value + 1)}
               onDataChanged={() => setRefresh((value) => value + 1)}
+              onVaultChanged={onVaultChanged}
               demo={demo}
               onOpenDemo={onOpenDemo}
               onResetDemo={onResetDemo}

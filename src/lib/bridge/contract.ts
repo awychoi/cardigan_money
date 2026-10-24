@@ -576,6 +576,32 @@ export type ImportResult = z.infer<typeof zImportResult>;
 export type ImportBatch = z.infer<typeof zImportBatch>;
 export type ExportResult = z.infer<typeof zExportResult>;
 
+
+export const zBackupItem = z
+  .object({
+    id: z.string(),
+    kind: z.string(),
+    createdAt: z.string(),
+    sizeBytes: z.number().int(),
+    generation: z.number().int(),
+    schemaVersion: z.number().int(),
+  })
+  .strict();
+export const zBackupResult = z
+  .object({ backup: zBackupItem, pruned: z.number().int() })
+  .strict();
+export const zRestoreResult = z
+  .object({
+    restored: z.boolean(),
+    kind: z.string(),
+    preRestoreBackupId: z.string(),
+  })
+  .strict();
+
+export type BackupItem = z.infer<typeof zBackupItem>;
+export type BackupResult = z.infer<typeof zBackupResult>;
+export type RestoreResult = z.infer<typeof zRestoreResult>;
+
 export type Settings = z.infer<typeof zSettings>;
 export type SettingsPatch = z.infer<typeof zSettingsPatch>;
 export type SecuritySummary = z.infer<typeof zSecuritySummary>;
@@ -650,6 +676,12 @@ export interface CommandDefs {
   };
   import_rollback: { request: { batchId: string }; response: ImportBatch };
   export_ledger_csv: { request: { query: LedgerQuery }; response: ExportResult };
+  backup_create: { request: Record<string, never>; response: BackupResult };
+  backup_list: { request: Record<string, never>; response: { backups: BackupItem[] } };
+  backup_delete: { request: { id: string }; response: { deleted: boolean } };
+  backup_restore: { request: Record<string, never>; response: RestoreResult };
+  portable_export: { request: Record<string, never>; response: BackupItem };
+  crypto_erase: { request: Record<string, never>; response: VaultState };
 }
 
 export type CommandName = keyof CommandDefs;
@@ -709,6 +741,12 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   import_batches_list: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
   import_rollback: z.object({ batchId: z.string().min(1).max(64) }).strict(),
   export_ledger_csv: z.object({ query: zLedgerQuery }).strict(),
+  backup_create: zEmpty,
+  backup_list: zEmpty,
+  backup_delete: z.object({ id: z.string().min(1).max(200) }).strict(),
+  backup_restore: zEmpty,
+  portable_export: zEmpty,
+  crypto_erase: zEmpty,
 };
 
 export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["response"]> } = {
@@ -750,6 +788,12 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   import_batches_list: z.object({ batches: z.array(zImportBatch) }).strict(),
   import_rollback: zImportBatch,
   export_ledger_csv: zExportResult,
+  backup_create: zBackupResult,
+  backup_list: z.object({ backups: z.array(zBackupItem) }).strict(),
+  backup_delete: z.object({ deleted: z.boolean() }).strict(),
+  backup_restore: zRestoreResult,
+  portable_export: zBackupItem,
+  crypto_erase: zVaultState,
 };
 
 export const zGatewayEnvelope = z

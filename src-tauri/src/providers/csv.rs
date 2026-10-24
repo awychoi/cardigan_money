@@ -159,7 +159,7 @@ pub fn read_bounded(path: &Path) -> AppResult<Vec<u8>> {
     if meta.len() == 0 || meta.len() > MAX_FILE_BYTES {
         return Err(AppError::Blocked("file size is outside the import limit"));
     }
-    let mut file = std::fs::File::open(path).map_err(|_| AppError::Io)?;
+    let file = std::fs::File::open(path).map_err(|_| AppError::Io)?;
     let mut bytes = Vec::with_capacity(meta.len() as usize);
     file.take(MAX_FILE_BYTES + 1)
         .read_to_end(&mut bytes)

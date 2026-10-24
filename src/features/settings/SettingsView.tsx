@@ -13,6 +13,7 @@ import { AccountManager } from "../accounts/AccountManager";
 import { MerchantRulesPanel } from "./MerchantRulesPanel";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
 import { ImportExportPanel } from "./ImportExportPanel";
+import { BackupsPanel } from "./BackupsPanel";
 
 export function SettingsView({
   vault,
@@ -20,6 +21,7 @@ export function SettingsView({
   onLock,
   onAccountsChanged,
   onDataChanged,
+  onVaultChanged,
   demo,
   onOpenDemo,
   onResetDemo,
@@ -29,6 +31,7 @@ export function SettingsView({
   onLock: () => Promise<void>;
   onAccountsChanged: () => void;
   onDataChanged: () => void;
+  onVaultChanged: (vault: VaultState) => void;
   demo: boolean;
   onOpenDemo: () => Promise<void>;
   onResetDemo: () => Promise<void>;
@@ -187,6 +190,12 @@ export function SettingsView({
 
         {!demo ? (
           <>
+            <BackupsPanel
+              onDataChanged={onDataChanged}
+              onVaultChanged={onVaultChanged}
+              lastBackupAt={settings.lastBackupAt}
+              lastBackupStatus={settings.lastBackupStatus}
+            />
             <ManualPaymentPanel onChanged={onDataChanged} />
             <MerchantRulesPanel onChanged={onDataChanged} />
             <ImportExportPanel onChanged={onDataChanged} />

@@ -55,6 +55,7 @@ function initialState() {
 }
 
 const mockState = initialState();
+let mockBackups: import("../lib/bridge/contract").BackupItem[] = [];
 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
@@ -357,6 +358,59 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       data = { rows: mockExportCount(request.query), written: true };
       break;
     }
+    case "backup_create": {
+      requireUnlocked();
+      const backup = {
+        id: `cm-backup-manual-5a17c0de-gen1-20261023T120000Z-${crypto.randomUUID().slice(0, 4)}.cmbak`,
+        kind: "manual",
+        createdAt: "2026-10-23T12:00:00Z",
+        sizeBytes: 4096,
+        generation: 1,
+        schemaVersion: 3,
+      };
+      mockBackups = [backup, ...mockBackups];
+      data = { backup, pruned: 0 };
+      break;
+    }
+    case "backup_list":
+      requireUnlocked();
+      data = { backups: structuredClone(mockBackups) };
+      break;
+    case "backup_delete": {
+      requireUnlocked();
+      const id = (payload as { id: string }).id;
+      mockBackups = mockBackups.filter((item) => item.id !== id);
+      data = { deleted: true };
+      break;
+    }
+    case "backup_restore":
+      requireUnlocked();
+      data = {
+        restored: true,
+        kind: "manual",
+        preRestoreBackupId: "cm-backup-pre-restore-5a17c0de-gen1-20261023T120000Z-0000.cmbak",
+      };
+      break;
+    case "portable_export":
+      requireUnlocked();
+      data = {
+        id: "cardigan-money-portable-2026-10-23.cmbak",
+        kind: "portable",
+        createdAt: "2026-10-23T12:00:00Z",
+        sizeBytes: 4096,
+        generation: 1,
+        schemaVersion: 3,
+      };
+      break;
+    case "crypto_erase":
+      mockState.vaultExists = false;
+      mockState.unlocked = false;
+      mockState.mode = "real";
+      mockState.events = [];
+      mockBackups = [];
+      resetMockData();
+      data = vaultState();
+      break;
     case "security_events_list": {
       requireUnlocked();
       const limit = (payload as { limit?: number }).limit ?? 20;
@@ -389,6 +443,7 @@ export function __resetMockBridge(): void {
   mockState.generation = 1;
   mockState.events = [];
   mockState.mode = "real";
+  mockBackups = [];
   mockState.dashboardVersion += 1;
   resetMockData();
   settings = { ...defaultSettings };

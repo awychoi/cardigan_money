@@ -18,6 +18,9 @@ use crate::storage::settings::CloseBehavior;
 
 const CSP_SAFE_TITLE: &str = "cardigan_money";
 
+pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle<tauri::Wry>> =
+    std::sync::OnceLock::new();
+
 /// Resolve the application-data directory. A debug-only override exists for
 /// sandboxed development/test runs; release builds always use the standard
 /// macOS Application Support directory and ignore the environment variable.
@@ -165,6 +168,7 @@ pub fn run() {
             let app_data = resolve_app_data(app.handle())?;
             let state = state::AppState::new(app_data.clone()).map_err(|e| e.code())?;
             app.manage(state);
+            let _ = APP_HANDLE.set(app.handle().clone());
 
             let lock_item = MenuItem::with_id(
                 app,

@@ -97,5 +97,8 @@ export type {
   ImportResult,
   ImportBatch,
   ExportResult,
+  BackupItem,
+  BackupResult,
+  RestoreResult,
 } from "./contract";
 export const _internals = { z } as const;

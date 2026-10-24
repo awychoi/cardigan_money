@@ -135,35 +135,31 @@ On lock: stop/cancel in-flight sync at a safe point without advancing the cursor
 
 ## 7. Backup container (format version 1)
 
-Self-contained authenticated snapshot: header + SQLCipher DB bytes.
+Self-contained authenticated snapshot: 256-byte header + SQLCipher database bytes. The header embeds a complete vault header, so a backup can be opened without the live `vault.header`.
 
 | Offset | Size | Field |
 | --- | --- | --- |
-| 0 | 8 | magic `CMBAK001` |
+| 0 | 8 | magic `CMBAK01\0` |
 | 8 | 2 | format version = 1 |
-| 10 | 1 | kind: 1 = automatic/pre-migration/pre-restore, 2 = portable export |
-| 11 | 1 | cipher id = 1 |
-| 12 | 1 | KDF id = 1 |
-| 13 | 3 | reserved zero |
-| 16 | 4 | KDF memory KiB |
-| 20 | 4 | KDF iterations |
-| 24 | 4 | KDF lanes |
-| 28 | 16 | vault UUID |
-| 44 | 4 | generation |
-| 48 | 4 | schema version |
-| 52 | 8 | created-at Unix seconds |
-| 60 | 8 | DB byte length |
-| 68 | 32 | SHA-256 of DB bytes |
-| 100 | 24 | wrap nonce |
-| 124 | 48 | wrapped DEK (backup DEK or export DEK) |
-| 172 | db_len | SQLCipher database bytes |
+| 10 | 1 | kind: 1 daily, 2 manual, 3 pre-migration, 4 pre-restore, 5 pre-change, 6 portable |
+| 11 | 1 | cipher id = 1 (SQLCipher 4) |
+| 12 | 2 | reserved |
+| 14 | 152 | embedded vault header (KDF params, salt, wrapped DEK, vault ID, generation, schema) |
+| 166 | 8 | created-at Unix seconds |
+| 174 | 8 | DB byte length |
+| 182 | 32 | SHA-256 of DB bytes |
+| 214 | 24 | XChaCha20-Poly1305 seal nonce |
+| 238 | 16 | seal tag over the header AAD (empty plaintext) |
+| 254 | 2 | reserved |
+| 256 | db_len | SQLCipher database bytes |
 
-- AAD is the entire 172-byte header. Modifying the length, hash, KDF parameters, vault ID, generation, schema, kind, timestamp, nonce, or wrapped bytes makes the unwrap fail.
-- Restore reads the header, caps `db_len`, verifies length and SHA-256, derives the KEK from the native-sheet passphrase, unwraps, opens the candidate **read-only** with `trusted_schema=OFF`, defensive mode, and `query_only`, and checks vault ID, `cipher_integrity_check`, `integrity_check`, schema compatibility, and `foreign_key_check`. It then creates an encrypted pre-restore backup, takes exclusive access, atomically replaces the DB, removes stale WAL/SHM, fsyncs, reopens, and on any failure leaves the original database intact.
-- Automatic backup creation uses the current DEK and needs no prompt. Restore always prompts through the native sheet.
-- Passphrase change uses a new DEK. Old backups retain the old wrapped DEK and require the old passphrase; they are labeled and never rewritten or deleted silently.
-- Portable export uses a separate owner-chosen passphrase and a fresh random export DEK; the snapshot is rekeyed to that DEK. It contains no provider credentials.
-- Retention: 7 daily backups plus capped pre-migration/pre-restore backups. Pruning matches only the app's strict filename pattern, never symlinks, and never the last verified backup.
+- **AAD** is bytes `0..238`. The seal key is `SHA-256("cardigan_money backup seal v1" || DEK)`. The embedded vault header is authenticated by the passphrase-derived KEK; the seal binds the public backup manifest and DB hash to the DEK. An attacker without the passphrase can modify neither validly. The DB hash is recomputed and compared before staging.
+- A backup from a different vault ID is rejected. Wrong passphrase, header tamper, seal tamper, DB tamper, truncation, or a changed file length fail before replacement.
+- **Automatic backups need no retained passphrase**: the embedded vault header is copied from the live vault, and the manifest seal uses the in-memory DEK. A backup made before a rotation opens with the old passphrase only.
+- **Portable exports** generate a fresh random export DEK and a new vault-header wrapper under the owner-chosen export passphrase; the snapshot is rekeyed to that export DEK. The vault ID is preserved, and restore validates it.
+- **Restore** requires an unlocked vault. After validation it rekeys the staged DB to the current DEK, reconciles generation/schema metadata with the current header, creates a pre-restore backup, closes the live connection, atomically swaps files, verifies integrity, reloads settings, and records a `restore_succeeded` event. A failure before the swap leaves the live files untouched; a post-swap failure restores the old file.
+- **Retention** matches only strict container filenames: 7 daily, 10 manual, 5 each pre-migration/pre-restore/pre-change, never the last remaining backup. Only regular files in the backups directory are considered; symlinks are skipped/rejected.
+- **Crypto-erase** locks the session, best-effort overwrites and deletes the vault, header mirror/journal, backups, demo database, and staged files, then fsyncs. Files outside the app-data directory and external copies are explicitly out of scope.
 
 ## 8. Keychain
 

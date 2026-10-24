@@ -223,6 +223,7 @@ export function App() {
         onExitDemo={handleDemoExit}
         onResetDemo={handleDemoReset}
         onOpenDemo={handleDemoOpen}
+        onVaultChanged={handleOpened}
         themeControl={<ThemeToggle theme={theme} onChange={handleTheme} />}
         sessionNonce={sessionNonce}
       />
