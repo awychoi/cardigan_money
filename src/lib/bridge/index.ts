@@ -106,5 +106,6 @@ export type {
   SyncSummary,
   PlaidStatus,
   PlaidLinkStatus,
+  PlaidVerificationReport,
 } from "./contract";
 export const _internals = { z } as const;

@@ -486,3 +486,73 @@ pub fn get_status(state: &AppState) -> AppResult<PlaidLinkStatus> {
 pub fn environment() -> PlaidEnvironment {
     PlaidEnvironment::Sandbox
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaidVerificationConnection {
+    pub institution_name: Option<String>,
+    pub environment: String,
+    pub status: String,
+    pub account_count: i64,
+    pub provider_transaction_count: i64,
+    pub pending_transaction_count: i64,
+    pub last_success_at: Option<String>,
+    pub cursor_present: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaidVerificationReport {
+    pub environment: String,
+    pub connections: Vec<PlaidVerificationConnection>,
+    pub latest_run_status: Option<String>,
+    pub latest_liabilities_status: Option<String>,
+    pub recent_runs: Vec<crate::services::sync::SyncRunView>,
+    pub generated_at: String,
+}
+
+/// Aggregate, non-secret evidence for the Phase 9 verification record. No tokens,
+/// credential references, account numbers, descriptions, or amounts are included.
+pub fn verification_report(state: &AppState) -> AppResult<PlaidVerificationReport> {
+    state.require_real("verify Plaid in demo mode")?;
+    let connections = state.with_db(|conn, _h, _s| {
+        let mut stmt = conn.prepare(
+            "SELECT institution_name, environment, status, last_success_at, cursor IS NOT NULL, \
+                (SELECT count(*) FROM account_sources s WHERE s.connection_id = c.id AND s.unlinked_at IS NULL), \
+                (SELECT count(*) FROM transactions t JOIN account_sources s ON s.account_id = t.account_id \
+                    WHERE s.connection_id = c.id AND s.unlinked_at IS NULL AND t.removed = 0), \
+                (SELECT count(*) FROM transactions t JOIN account_sources s ON s.account_id = t.account_id \
+                    WHERE s.connection_id = c.id AND s.unlinked_at IS NULL AND t.removed = 0 AND t.pending = 1) \
+             FROM connections c WHERE c.provider = 'plaid' AND c.status <> 'disconnected' ORDER BY c.created_at",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(PlaidVerificationConnection {
+                    institution_name: row.get(0)?,
+                    environment: row.get(1)?,
+                    status: row.get(2)?,
+                    account_count: row.get(5)?,
+                    provider_transaction_count: row.get(6)?,
+                    pending_transaction_count: row.get(7)?,
+                    last_success_at: row.get(3)?,
+                    cursor_present: row.get::<_, i64>(4)? != 0,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    })?;
+    let recent_runs = crate::services::sync::recent_runs(state, 3)?;
+    let latest_run_status = recent_runs.first().map(|run| run.status.clone());
+    let latest_liabilities_status = recent_runs
+        .first()
+        .and_then(|run| run.steps.iter().find(|step| step.stream == "liabilities"))
+        .map(|step| step.status.clone());
+    Ok(PlaidVerificationReport {
+        environment: "sandbox".into(),
+        connections,
+        latest_run_status,
+        latest_liabilities_status,
+        recent_runs,
+        generated_at: now_rfc3339(),
+    })
+}

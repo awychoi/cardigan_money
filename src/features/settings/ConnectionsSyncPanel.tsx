@@ -18,6 +18,7 @@ export function ConnectionsSyncPanel({
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [plaid, setPlaid] = useState<PlaidStatus | null>(null);
   const [link, setLink] = useState<PlaidLinkStatus | null>(null);
+  const [report, setReport] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -97,6 +98,29 @@ export function ConnectionsSyncPanel({
       setError(friendlyError(caught));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function loadVerificationReport() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await command("plaid_verification_report", {});
+      setReport(JSON.stringify(result, null, 2));
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyReport() {
+    if (!report) return;
+    try {
+      await navigator.clipboard.writeText(report);
+      setMessage("Verification report copied. It contains counts and statuses only.");
+    } catch {
+      setMessage("Select the report text below and copy it manually.");
     }
   }
 
@@ -255,6 +279,23 @@ export function ConnectionsSyncPanel({
             Capabilities requested: Transactions (required), Balance, and optional Liabilities.
             Liabilities is shown as unavailable rather than assumed when the Item or plan lacks it.
           </p>
+          {connections.length > 0 ? (
+            <div className="button-row">
+              <Button variant="ghost" onClick={loadVerificationReport} disabled={busy}>
+                Show verification report
+              </Button>
+              {report ? (
+                <Button variant="ghost" onClick={copyReport} disabled={busy}>
+                  Copy report
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {report ? (
+            <pre className="verification-report" aria-label="Plaid verification report">
+              {report}
+            </pre>
+          ) : null}
         </div>
       ) : null}
 

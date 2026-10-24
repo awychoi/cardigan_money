@@ -18,7 +18,7 @@ use crate::services::exports::ExportResult;
 use crate::services::imports::{self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview};
 use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
 use crate::services::dashboard::{self, Dashboard};
-use crate::services::plaid_link::{self, PlaidLinkStatus, PlaidStatus};
+use crate::services::plaid_link::{self, PlaidLinkStatus, PlaidStatus, PlaidVerificationReport};
 use crate::services::sync::{self, ConnectionView, SyncRunView, SyncRuntimeStatus, SyncSummary};
 use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
@@ -766,6 +766,12 @@ pub fn execute<R: tauri::Runtime>(
             let _: EmptyPayload = request.decode_payload()?;
             let link = plaid_link::start_link(state, app)?;
             GatewayResponse::ok(PlaidLinkView { link })
+        }
+        "plaid_verification_report" => {
+            state.require_real("verify Plaid in demo mode")?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let report: PlaidVerificationReport = plaid_link::verification_report(state)?;
+            GatewayResponse::ok(report)
         }
         "plaid_link_status" => {
             state.require_real("link Plaid in demo mode")?;

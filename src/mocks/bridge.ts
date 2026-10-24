@@ -503,6 +503,30 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       };
       data = { link: structuredClone(mockPlaidLink) };
       break;
+    case "plaid_verification_report":
+      requireUnlocked();
+      data = {
+        environment: "sandbox",
+        connections: mockPlaidConnection
+          ? [
+              {
+                institutionName: mockPlaidConnection.institutionName,
+                environment: "sandbox",
+                status: mockPlaidConnection.status,
+                accountCount: mockPlaidConnection.accountCount,
+                providerTransactionCount: 3,
+                pendingTransactionCount: 1,
+                lastSuccessAt: mockPlaidConnection.lastSuccessAt,
+                cursorPresent: true,
+              },
+            ]
+          : [],
+        latestRunStatus: "success",
+        latestLiabilitiesStatus: "partial",
+        recentRuns: structuredClone(mockSyncRuns),
+        generatedAt: "2026-10-24T00:00:00Z",
+      };
+      break;
     case "plaid_reconnect":
       requireUnlocked();
       mockPlaidLink = {

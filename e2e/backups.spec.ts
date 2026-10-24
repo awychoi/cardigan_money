@@ -81,4 +81,7 @@ test("configures Sandbox credentials and links a mock Plaid Item", async ({ page
   await expect(page.getByText(/Waiting for the Plaid Sandbox flow/)).toBeVisible();
   await expect(page.getByText(/Sandbox Item linked/)).toBeVisible({ timeout: 8000 });
   await expect(page.getByRole("cell", { name: "Sandbox Bank" })).toBeVisible();
+  await page.getByRole("button", { name: "Show verification report" }).click();
+  await expect(page.getByLabel("Plaid verification report")).toContainText("accountCount");
+  await expect(page.getByLabel("Plaid verification report")).toContainText("Sandbox Bank");
 });
