@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cardigan_money — UI direction</title>
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+
+<!-- ============================================================ OVERVIEW -->
+<div class="window" id="overview">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">cm</span>
+      <span class="brand-text"><b>Cardigan</b><span>Money</span></span>
+    </div>
+
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-item active" href="#" aria-current="page">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1.3"/><rect x="9" y="2" width="5" height="5" rx="1.3"/><rect x="2" y="9" width="5" height="5" rx="1.3"/><rect x="9" y="9" width="5" height="5" rx="1.3"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="13" height="9" rx="2"/><path d="M1.5 6.5h13"/></svg>
+        Cards <span class="nav-count">8</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h7"/></svg>
+        Transactions <span class="nav-count">26</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5.5h12M2 10.5h12"/><circle cx="6" cy="5.5" r="1.7"/><circle cx="10" cy="10.5" r="1.7"/></svg>
+        Settings
+      </a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="status-block">
+        <div class="status-row"><span class="dot"></span> No bank connected</div>
+        <div class="status-link">Connect a provider →</div>
+        <div class="seg" role="group" aria-label="Appearance">
+          <span>Light</span><span class="on">System</span><span>Dark</span>
+        </div>
+      </div>
+      <div class="status-row" style="padding:0 4px;color:var(--muted)">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="7" width="9" height="6" rx="1.6"/><path d="M5.5 7V5.4a2.5 2.5 0 015 0V7"/></svg>
+        Lock now
+      </div>
+      <div class="version">v0.1.0 · SQLCipher 4.6.1</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="toolbar">
+      <div class="month">
+        <button class="icon-btn" aria-label="Previous month">‹</button>
+        <div class="month-block"><b>October 2026</b><span>Oct 1 – 31 · 9 days left</span></div>
+        <button class="icon-btn" aria-label="Next month">›</button>
+      </div>
+      <button class="btn btn-ghost">This month</button>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost">Export CSV…</button>
+      <button class="btn" disabled>Sync now</button>
+      <div class="divider-v"></div>
+      <button class="icon-btn" aria-label="More actions">⋯</button>
+    </header>
+
+    <main class="content">
+      <div class="page-head">
+        <div>
+          <h1>Overview</h1>
+          <p class="page-sub">October 2026 · spending month, separate from card balances</p>
+        </div>
+      </div>
+
+      <div class="grid-hero">
+        <!-- hero -->
+        <section class="card card-pad">
+          <div class="card-head">
+            <span class="eyebrow">Net spending · October</span>
+            <span class="chip chip-ghost">18 eligible rows</span>
+          </div>
+
+          <div class="hero-num">$420.16 <span class="cur">USD</span></div>
+
+          <div class="eq">
+            <div class="eq-item"><span>Purchases</span><b>$606.94</b></div>
+            <span class="eq-op">−</span>
+            <div class="eq-item"><span>Refunds</span><b>$300.00</b></div>
+            <span class="eq-op">+</span>
+            <div class="eq-item"><span>Fees &amp; interest</span><b>$113.22</b></div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="card-head" style="margin-bottom:11px">
+            <span style="font-size:12px;font-weight:600">Where it went</span>
+            <span class="faint" style="font-size:10px">by category · USD</span>
+          </div>
+
+          <div class="comp">
+            <div class="comp-row"><span class="comp-name">Dining</span><span class="comp-track"><i class="comp-fill" style="width:100%"></i></span><span class="comp-amt">$127.07</span></div>
+            <div class="comp-row"><span class="comp-name">Groceries</span><span class="comp-track"><i class="comp-fill" style="width:83%"></i></span><span class="comp-amt">$105.84</span></div>
+            <div class="comp-row"><span class="comp-name">Travel</span><span class="comp-track"><i class="comp-fill" style="width:77%"></i></span><span class="comp-amt">$97.90</span></div>
+            <div class="comp-row"><span class="comp-name">Fees</span><span class="comp-track"><i class="comp-fill" style="width:75%"></i></span><span class="comp-amt">$95.00</span></div>
+            <div class="comp-row"><span class="comp-name">Health</span><span class="comp-track"><i class="comp-fill" style="width:71%"></i></span><span class="comp-amt">$89.96</span></div>
+            <div class="comp-row"><span class="comp-name">Gas</span><span class="comp-track"><i class="comp-fill" style="width:65%"></i></span><span class="comp-amt">$82.02</span></div>
+          </div>
+
+          <div class="comp-foot">
+            <span class="faint" style="font-size:10.5px">Electronics −$300.00 refund · 4 more categories</span>
+            <a class="link" href="#">All categories →</a>
+          </div>
+        </section>
+
+        <!-- due soon -->
+        <section class="card card-pad">
+          <div class="card-head">
+            <span class="eyebrow">Due in 14 days</span>
+            <span class="chip chip-ghost">7 payments</span>
+          </div>
+          <div class="hero-num" style="font-size:34px;margin-top:9px">$933.00</div>
+          <div class="faint" style="font-size:10.5px;margin-top:3px">known total · 1 amount not reported</div>
+
+          <div class="strip" aria-hidden="true">
+            <div class="day today"><span class="wd">F</span><span class="dn">23</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">S</span><span class="dn">24</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">S</span><span class="dn">25</span><span class="pip"></span></div>
+            <div class="day has unknown"><span class="wd">M</span><span class="dn">26</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">T</span><span class="dn">27</span><span class="pip"></span></div>
+            <div class="day has"><span class="wd">W</span><span class="dn">28</span><span class="pip"></span></div>
+            <div class="day has"><span class="wd">T</span><span class="dn">29</span><span class="pip"></span></div>
+            <div class="day has"><span class="wd">F</span><span class="dn">30</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">S</span><span class="dn">31</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">S</span><span class="dn">1</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">M</span><span class="dn">2</span><span class="pip"></span></div>
+            <div class="day has"><span class="wd">T</span><span class="dn">3</span><span class="pip"></span></div>
+            <div class="day"><span class="wd">W</span><span class="dn">4</span><span class="pip"></span></div>
+            <div class="day has"><span class="wd">T</span><span class="dn">5</span><span class="pip"></span></div>
+          </div>
+
+          <div class="due-list">
+            <div class="due-row">
+              <span class="due-date">Oct 26</span>
+              <span class="mono">SY</span>
+              <span><span class="due-name">Amazon Store Card</span><span class="due-sub">•••• 5501</span></span>
+              <span class="due-amt unknown">not reported</span>
+            </div>
+            <div class="due-row">
+              <span class="due-date">Oct 28</span>
+              <span class="mono">CH</span>
+              <span><span class="due-name">Sapphire Reserve</span><span class="due-sub">•••• 4101</span></span>
+              <span class="due-amt">$350.00</span>
+            </div>
+            <div class="due-row">
+              <span class="due-date">Oct 29</span>
+              <span class="mono">CI</span>
+              <span><span class="due-name">Double Cash</span><span class="due-sub">•••• 8801</span></span>
+              <span class="due-amt">$33.00</span>
+            </div>
+            <div class="due-row">
+              <span class="due-date">Oct 30</span>
+              <span class="mono">BI</span>
+              <span><span class="due-name">Bilt Mastercard</span><span class="due-sub">•••• 6601</span></span>
+              <span class="due-amt">$90.00</span>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+            <a class="link" href="#">3 more through Nov 5 →</a>
+            <span class="faint" style="font-size:10px">14-day window</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid-2">
+        <!-- balances -->
+        <section class="card card-pad">
+          <div class="card-head">
+            <span class="eyebrow">Card balances</span>
+            <span class="chip chip-ghost">7 of 8 reported</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px">
+            <span style="font-size:23px;font-weight:620;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">$9,498.00</span>
+            <span class="faint" style="font-size:10.5px">known total · Paypal Credit has no balance</span>
+          </div>
+
+          <div style="margin-top:10px">
+            <div class="bal-row">
+              <span class="mono">CH</span>
+              <span class="bal-name">Sapphire Reserve <span>•••• 4101</span></span>
+              <span class="chip chip-ok"><span class="dot"></span>Fresh</span>
+              <span class="bal-amt">$4,321.00</span>
+            </div>
+            <div class="bal-row">
+              <span class="mono">CH</span>
+              <span class="bal-name">Freedom Unlimited <span>•••• 4102</span></span>
+              <span class="chip chip-ok"><span class="dot"></span>Fresh</span>
+              <span class="bal-amt">$1,284.50</span>
+            </div>
+            <div class="bal-row">
+              <span class="mono">SY</span>
+              <span class="bal-name">Amazon Store Card <span>•••• 5501</span></span>
+              <span class="chip chip-warn"><span class="dot"></span>Reconnect</span>
+              <span class="bal-amt">$543.00</span>
+            </div>
+            <div class="bal-row">
+              <span class="mono">AX</span>
+              <span class="bal-name">Platinum <span>•••• 7701</span></span>
+              <span class="chip chip-warn"><span class="dot"></span>Stale · 10d</span>
+              <span class="bal-amt">$2,100.00</span>
+            </div>
+          </div>
+
+          <div style="margin-top:10px"><a class="link" href="#">4 more cards →</a></div>
+        </section>
+
+        <!-- attention -->
+        <section class="card card-pad">
+          <div class="card-head">
+            <span class="eyebrow">Needs attention</span>
+            <span class="chip chip-warn">3</span>
+          </div>
+          <div class="attn">
+            <div class="attn-item">
+              <span class="attn-ico">!</span>
+              <span>
+                <span class="attn-title">Platinum balance is 10 days old</span>
+                <span class="attn-sub">Sync error · last known $2,100.00 is kept and labeled</span>
+              </span>
+              <a class="link" href="#">Retry sync</a>
+            </div>
+            <div class="attn-item">
+              <span class="attn-ico">!</span>
+              <span>
+                <span class="attn-title">Amazon Store Card needs reconnection</span>
+                <span class="attn-sub">Statement and payment details may be incomplete</span>
+              </span>
+              <a class="link" href="#">Reconnect</a>
+            </div>
+            <div class="attn-item">
+              <span class="attn-ico">!</span>
+              <span>
+                <span class="attn-title">PayPal Credit has no balance</span>
+                <span class="attn-sub">No snapshot on record — not counted as $0.00</span>
+              </span>
+              <a class="link" href="#">Add balance</a>
+            </div>
+          </div>
+          <div class="footnote">Last-known values are preserved and clearly labeled.</div>
+        </section>
+      </div>
+
+      <div class="footnote">
+        <span class="dot"></span>
+        <span>Balances and due dates are current as of Oct 23, 2026 — they do not change with the selected spending month.</span>
+        <a href="#" style="margin-left:auto">How totals work</a>
+      </div>
+    </main>
+
+    <footer class="statusbar">
+      <span>Encrypted local ledger · no telemetry</span>
+      <span class="spacer"></span>
+      <span>Last integrity check Oct 24, 08:59</span>
+      <span>·</span>
+      <span>v0.1.0 · SQLCipher 4.6.1</span>
+    </footer>
+  </div>
+</div>
+
+<!-- =============================================================== CARDS -->
+<div class="window tall" id="cards">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">cm</span>
+      <span class="brand-text"><b>Cardigan</b><span>Money</span></span>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1.3"/><rect x="9" y="2" width="5" height="5" rx="1.3"/><rect x="2" y="9" width="5" height="5" rx="1.3"/><rect x="9" y="9" width="5" height="5" rx="1.3"/></svg>
+        Overview
+      </a>
+      <a class="nav-item active" href="#" aria-current="page">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="13" height="9" rx="2"/><path d="M1.5 6.5h13"/></svg>
+        Cards <span class="nav-count">8</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h7"/></svg>
+        Transactions <span class="nav-count">26</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5.5h12M2 10.5h12"/><circle cx="6" cy="5.5" r="1.7"/><circle cx="10" cy="10.5" r="1.7"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="side-foot">
+      <div class="status-block">
+        <div class="status-row"><span class="dot"></span> No bank connected</div>
+        <div class="status-link">Connect a provider →</div>
+        <div class="seg" role="group" aria-label="Appearance"><span>Light</span><span class="on">System</span><span>Dark</span></div>
+      </div>
+      <div class="status-row" style="padding:0 4px;color:var(--muted)">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="7" width="9" height="6" rx="1.6"/><path d="M5.5 7V5.4a2.5 2.5 0 015 0V7"/></svg>
+        Lock now
+      </div>
+      <div class="version">v0.1.0 · SQLCipher 4.6.1</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="toolbar">
+      <div class="month">
+        <button class="icon-btn" aria-label="Previous month">‹</button>
+        <div class="month-block"><b>October 2026</b><span>Oct 1 – 31 · 9 days left</span></div>
+        <button class="icon-btn" aria-label="Next month">›</button>
+      </div>
+      <button class="btn btn-ghost">This month</button>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost">Export CSV…</button>
+      <button class="btn" disabled>Sync now</button>
+      <div class="divider-v"></div>
+      <button class="icon-btn" aria-label="More actions">⋯</button>
+    </header>
+
+    <main class="content">
+      <div class="page-head">
+        <div>
+          <h1>Cards</h1>
+          <p class="page-sub">8 cards · $9,498.00 reported balance · 1 balance unknown</p>
+        </div>
+        <div style="padding-top:4px">
+          <div class="seg" style="width:150px;grid-template-columns:1fr 1fr">
+            <span class="on">Wallet</span><span>Details</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wallet">
+        <!-- Sapphire -->
+        <article class="cardface cf-chase">
+          <div class="cf-top">
+            <span class="cf-issuer">Chase</span>
+            <span class="cf-last">•••• 4101</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal">$4,321.00</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Oct 28</b> · $350.00 min</span>
+            <span class="cf-chip"><span class="dot"></span>Fresh</span>
+          </div>
+          <div class="cf-util"><i style="width:29%"></i></div>
+        </article>
+
+        <!-- Freedom -->
+        <article class="cardface cf-freedom">
+          <div class="cf-top">
+            <span class="cf-issuer">Chase</span>
+            <span class="cf-last">•••• 4102</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal">$1,284.50</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Nov 3</b> · $250.00 min</span>
+            <span class="cf-chip"><span class="dot"></span>Fresh</span>
+          </div>
+          <div class="cf-util"><i style="width:16%"></i></div>
+        </article>
+
+        <!-- Amazon -->
+        <article class="cardface cf-amazon">
+          <div class="cf-top">
+            <span class="cf-issuer">Synchrony</span>
+            <span class="cf-last">•••• 5501</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal">$543.00</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Oct 26</b> · amount not reported</span>
+            <span class="cf-chip amber"><span class="dot"></span>Reconnect</span>
+          </div>
+          <div class="cf-util"><i style="width:23%"></i></div>
+        </article>
+
+        <!-- Bilt -->
+        <article class="cardface cf-bilt">
+          <div class="cf-top">
+            <span class="cf-issuer">Bilt</span>
+            <span class="cf-last">•••• 6601</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal">$917.50</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Oct 30</b> · $90.00 min</span>
+            <span class="cf-chip"><span class="dot"></span>Fresh</span>
+          </div>
+          <div class="cf-util"><i style="width:18%"></i></div>
+        </article>
+
+        <!-- Amex stale -->
+        <article class="cardface cf-amex light stale">
+          <div class="cf-top">
+            <span class="cf-issuer">American Express</span>
+            <span class="cf-last">•••• 7701</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance · Oct 13</span>
+            <span class="cf-bal">$2,100.00</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Nov 5</b> · $210.00 min</span>
+            <span class="cf-chip amber"><span class="dot"></span>Stale · 10d</span>
+          </div>
+          <div class="cf-util"><i style="width:21%"></i></div>
+        </article>
+
+        <!-- Citi -->
+        <article class="cardface cf-citi">
+          <div class="cf-top">
+            <span class="cf-issuer">Citi</span>
+            <span class="cf-last">•••• 8801</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal">$332.00</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Oct 29</b> · $33.00 min</span>
+            <span class="cf-chip"><span class="dot"></span>Fresh</span>
+          </div>
+          <div class="cf-util"><i style="width:11%"></i></div>
+        </article>
+
+        <!-- Demo bank EUR -->
+        <article class="cardface cf-demo">
+          <div class="cf-top">
+            <span class="cf-issuer">Demo Bank</span>
+            <span class="cf-last">EUR · •••• 9901</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal">€45.00</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">No due date reported</span>
+            <span class="cf-chip">EUR · not in USD total</span>
+          </div>
+        </article>
+
+        <!-- PayPal unknown -->
+        <article class="cardface cf-paypal missing">
+          <div class="cf-top">
+            <span class="cf-issuer">Synchrony</span>
+            <span class="cf-last">•••• 5502</span>
+          </div>
+          <div class="cf-mid">
+            <span class="cf-label">Current balance</span>
+            <span class="cf-bal unknown">Unknown</span>
+            <span class="cf-note">No balance snapshot — never shown as $0.00</span>
+          </div>
+          <div class="cf-foot">
+            <span class="cf-next">Next <b>Oct 29</b> · $0.00 reported</span>
+            <span class="cf-chip amber"><span class="dot"></span>No balance</span>
+          </div>
+        </article>
+
+        <div class="addface"><span><b>+</b><br>Add account</span></div>
+      </div>
+
+      <section class="card" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px">
+          <div>
+            <div style="font-size:12.5px;font-weight:600">Card details</div>
+            <div class="faint" style="font-size:10.5px;margin-top:1px">Statement figures and due sources — the specifics that used to repeat on every tile.</div>
+          </div>
+          <a class="link" href="#">Open full details →</a>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Card</th><th class="r">Balance</th><th class="r">Limit used</th><th>Next payment</th><th class="r">Statement</th><th>Source</th><th class="r">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">CH</span>Sapphire Reserve <span class="faint">•••• 4101</span></span></td>
+              <td class="r strong">$4,321.00</td><td class="r">29%</td><td>Oct 28 · $350.00 min</td><td class="r">$4,321.00</td><td>Provider</td><td class="r faint">Oct 23</td>
+            </tr>
+            <tr>
+              <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">CH</span>Freedom Unlimited <span class="faint">•••• 4102</span></span></td>
+              <td class="r strong">$1,284.50</td><td class="r">16%</td><td>Nov 3 · $250.00 min</td><td class="r">$1,284.50</td><td>Provider</td><td class="r faint">Oct 23</td>
+            </tr>
+            <tr>
+              <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">SY</span>Amazon Store Card <span class="faint">•••• 5501</span></span></td>
+              <td class="r strong">$543.00</td><td class="r">23%</td><td>Oct 26 · not reported</td><td class="r">$543.00</td><td>Provider</td><td class="r faint">Oct 23</td>
+            </tr>
+            <tr>
+              <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">AX</span>Platinum <span class="faint">•••• 7701</span></span></td>
+              <td class="r strong">$2,100.00</td><td class="r">21%</td><td>Nov 5 · $210.00 min</td><td class="r">$2,100.00</td><td>Provider</td><td class="r faint">Oct 13</td>
+            </tr>
+            <tr>
+              <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">CI</span>Double Cash <span class="faint">•••• 8801</span></span></td>
+              <td class="r strong">$332.00</td><td class="r">11%</td><td>Oct 29 · $33.00 min</td><td class="r">$332.00</td><td>Manual</td><td class="r faint">Oct 23</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footnote" style="padding:0 18px 14px">
+          <span class="dot"></span>
+          A statement balance is not the remaining amount due. Missing values are never treated as $0.00.
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span>Encrypted local ledger · no telemetry</span>
+      <span class="spacer"></span>
+      <span>Last integrity check Oct 24, 08:59</span>
+      <span>·</span>
+      <span>v0.1.0 · SQLCipher 4.6.1</span>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================================================ SETTINGS -->
+<div class="window tall" id="settings">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">cm</span>
+      <span class="brand-text"><b>Cardigan</b><span>Money</span></span>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1.3"/><rect x="9" y="2" width="5" height="5" rx="1.3"/><rect x="2" y="9" width="5" height="5" rx="1.3"/><rect x="9" y="9" width="5" height="5" rx="1.3"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="13" height="9" rx="2"/><path d="M1.5 6.5h13"/></svg>
+        Cards <span class="nav-count">8</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h7"/></svg>
+        Transactions <span class="nav-count">26</span>
+      </a>
+      <a class="nav-item active" href="#" aria-current="page">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5.5h12M2 10.5h12"/><circle cx="6" cy="5.5" r="1.7"/><circle cx="10" cy="10.5" r="1.7"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="side-foot">
+      <div class="status-block">
+        <div class="status-row"><span class="dot"></span> No bank connected</div>
+        <div class="status-link">Connect a provider →</div>
+        <div class="seg" role="group" aria-label="Appearance"><span>Light</span><span class="on">System</span><span>Dark</span></div>
+      </div>
+      <div class="status-row" style="padding:0 4px;color:var(--muted)">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="7" width="9" height="6" rx="1.6"/><path d="M5.5 7V5.4a2.5 2.5 0 015 0V7"/></svg>
+        Lock now
+      </div>
+      <div class="version">v0.1.0 · SQLCipher 4.6.1</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="toolbar">
+      <div class="month">
+        <button class="icon-btn" aria-label="Previous month">‹</button>
+        <div class="month-block"><b>October 2026</b><span>Oct 1 – 31 · 9 days left</span></div>
+        <button class="icon-btn" aria-label="Next month">›</button>
+      </div>
+      <button class="btn btn-ghost">This month</button>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost">Export CSV…</button>
+      <button class="btn" disabled>Sync now</button>
+      <div class="divider-v"></div>
+      <button class="icon-btn" aria-label="More actions">⋯</button>
+    </header>
+
+    <main class="content">
+      <div class="page-head">
+        <div>
+          <h1>Settings</h1>
+          <p class="page-sub">Preferences live inside the encrypted database.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <nav class="set-nav" aria-label="Settings sections">
+          <a href="#">Appearance</a>
+          <a href="#">Lock &amp; idle</a>
+          <a class="active" href="#" aria-current="page">Accounts <span class="nav-count">8</span></a>
+          <a href="#">Connections &amp; sync</a>
+          <a href="#">Backups &amp; recovery</a>
+          <a href="#">Merchant rules</a>
+          <a href="#">Import &amp; export</a>
+          <div class="sep"></div>
+          <a href="#">Security events</a>
+          <a href="#">About</a>
+        </nav>
+
+        <div class="set-pane">
+          <!-- accounts -->
+          <section class="card">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:17px 18px 12px">
+              <div>
+                <div style="font-size:13.5px;font-weight:620;letter-spacing:-0.01em">Accounts</div>
+                <div class="muted" style="font-size:11px;margin-top:2px">Manual accounts work with no bank connection. Archiving keeps the full history.</div>
+              </div>
+              <button class="btn btn-primary">Add account</button>
+            </div>
+            <table class="tbl">
+              <thead>
+                <tr><th>Card</th><th>Source</th><th class="r">Balance</th><th class="actions"></th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">CH</span>Sapphire Reserve <span class="faint">•••• 4101</span></span></td>
+                  <td><span class="chip chip-ghost">Provider</span></td><td class="r strong">$4,321.00</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">CH</span>Freedom Unlimited <span class="faint">•••• 4102</span></span></td>
+                  <td><span class="chip chip-ghost">Provider</span></td><td class="r strong">$1,284.50</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">SY</span>Amazon Store Card <span class="faint">•••• 5501</span></span></td>
+                  <td><span class="chip chip-ghost">Provider</span></td><td class="r strong">$543.00</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">BI</span>Bilt Mastercard <span class="faint">•••• 6601</span></span></td>
+                  <td><span class="chip chip-ghost">Provider</span></td><td class="r strong">$917.50</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">AX</span>Platinum <span class="faint">•••• 7701</span></span></td>
+                  <td><span class="chip chip-warn">Sync error</span></td><td class="r strong">$2,100.00</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">DB</span>Euro Travel <span class="faint">•••• 9901</span></span></td>
+                  <td><span class="chip chip-ghost">Manual</span></td><td class="r strong">€45.00</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+                <tr>
+                  <td><span style="display:flex;align-items:center;gap:8px"><span class="mono">SY</span>PayPal Credit <span class="faint">•••• 5502</span></span></td>
+                  <td><span class="chip chip-ghost">Provider</span></td><td class="r faint">Unknown</td>
+                  <td class="actions"><a href="#">Edit</a><a href="#">Archive</a></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="padding:0 18px 15px"><a class="link" href="#">Show archived accounts</a></div>
+          </section>
+
+          <!-- appearance -->
+          <section class="card card-pad">
+            <div class="card-head" style="margin-bottom:12px"><span style="font-size:12.5px;font-weight:600">Appearance</span></div>
+            <div class="theme-pick">
+              <div class="theme-opt">
+                <div class="theme-prev"><span class="p-side"></span><span class="p-body"><i></i><i class="w70"></i><i class="w45"></i></span></div>
+                <span>Light</span>
+              </div>
+              <div class="theme-opt sys sel">
+                <div class="theme-prev"><span class="p-side"></span><span class="p-body"><i></i><i class="w70"></i><i class="w45"></i></span></div>
+                <span>System</span>
+              </div>
+              <div class="theme-opt dark">
+                <div class="theme-prev"><span class="p-side"></span><span class="p-body"><i></i><i class="w70"></i><i class="w45"></i></span></div>
+                <span>Dark</span>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div class="row-between">
+              <div>
+                <div class="row-title">Reduce motion</div>
+                <div class="row-sub">Uses instant transitions instead of fades for month changes and panels.</div>
+              </div>
+              <span class="switch"><i></i></span>
+            </div>
+          </section>
+
+          <!-- lock -->
+          <section class="card card-pad">
+            <div class="card-head" style="margin-bottom:12px"><span style="font-size:12.5px;font-weight:600">Lock &amp; idle</span></div>
+            <div class="row-between">
+              <div>
+                <div class="row-title">Auto-lock after</div>
+                <div class="row-sub">The vault locks in Rust after this much inactivity. Screen lock and sleep always lock.</div>
+              </div>
+              <select class="input" style="min-width:120px"><option>15 minutes</option></select>
+            </div>
+            <div class="hr"></div>
+            <div class="row-between">
+              <div>
+                <div class="row-title">Lock on system events</div>
+                <div class="row-sub">Screen lock, sleep, fast user switching, logout, and quit.</div>
+              </div>
+              <span class="chip chip-ok"><span class="dot"></span>Enforced</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="statusbar">
+      <span>Encrypted local ledger · no telemetry</span>
+      <span class="spacer"></span>
+      <span>Last integrity check Oct 24, 08:59</span>
+      <span>·</span>
+      <span>v0.1.0 · SQLCipher 4.6.1</span>
+    </footer>
+  </div>
+</div>
+
+<!-- ===================================================== DESIGN LANGUAGE -->
+<div class="window sheet" id="language">
+  <div class="sheet-main">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Cardigan Money · direction sheet</span>
+        <h1 style="margin-top:4px">Design language</h1>
+      </div>
+      <span class="chip chip-ghost">Light · dark maps to the same semantic tokens</span>
+    </div>
+
+    <div class="spec-grid">
+      <section class="card card-pad">
+        <div class="spec-title">Color · semantic, not decorative</div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:#f7f5ef"></i><span><b>Canvas</b><span>#f7f5ef</span></span></div>
+          <div class="swatch"><i style="background:#efeae0"></i><span><b>Sidebar</b><span>#efeae0</span></span></div>
+          <div class="swatch"><i style="background:#fffdf8"></i><span><b>Surface</b><span>#fffdf8</span></span></div>
+          <div class="swatch"><i style="background:#161d26"></i><span><b>Ink</b><span>#161d26</span></span></div>
+          <div class="swatch"><i style="background:#65707f"></i><span><b>Muted</b><span>#5f6a78</span></span></div>
+          <div class="swatch"><i style="background:#e3ddce"></i><span><b>Hairline</b><span>#e3ddce</span></span></div>
+          <div class="swatch"><i style="background:#2c6659"></i><span><b>Confirmed / accent</b><span>#2c6659</span></span></div>
+          <div class="swatch"><i style="background:#deece6"></i><span><b>Accent wash</b><span>#deece6</span></span></div>
+          <div class="swatch"><i style="background:#8a5c12"></i><span><b>Needs attention</b><span>#8a5c12</span></span></div>
+          <div class="swatch"><i style="background:#9c3a2e"></i><span><b>Problem / destructive</b><span>#9c3a2e</span></span></div>
+        </div>
+        <div class="footnote" style="margin-top:14px">Green means confirmed. Amber means attention. Rust means failure or destruction. Nothing informational is green.</div>
+      </section>
+
+      <section class="card card-pad">
+        <div class="spec-title">Type · system stack, tabular money</div>
+        <div class="type-row"><span style="font-size:34px;font-weight:640;letter-spacing:-0.03em">$420.16</span><span class="spec">34–50 / 600 / tnum</span></div>
+        <div class="type-row"><span style="font-size:25px;font-weight:650;letter-spacing:-0.022em">Overview</span><span class="spec">25 / 650 / -0.022</span></div>
+        <div class="type-row"><span style="font-size:12.5px">Groceries, travel, and the annual fee.</span><span class="spec">13 / 400</span></div>
+        <div class="type-row"><span style="font-size:11.5px;color:var(--muted)">1 amount not reported</span><span class="spec">11.5 / 400 muted</span></div>
+        <div class="type-row"><span class="eyebrow">Net spending</span><span class="spec">9.5 / 650 / 0.1em</span></div>
+        <div class="type-row"><span style="font-family:var(--mono);font-size:11px;color:var(--ink-2)">•••• 4101 · 2026-10-23</span><span class="spec">mono 10.5</span></div>
+      </section>
+
+      <section class="card card-pad">
+        <div class="spec-title">State · labeled, never color alone</div>
+        <div class="state-row">
+          <span class="chip chip-ok"><span class="dot"></span>Fresh</span>
+          <span class="chip chip-warn"><span class="dot"></span>Stale · 10d</span>
+          <span class="chip chip-warn"><span class="dot"></span>Reconnect</span>
+          <span class="chip chip-ghost">Balance unknown</span>
+          <span class="chip chip-ok"><span class="dot"></span>Enforced</span>
+          <span class="chip chip-ghost">Pending</span>
+          <span class="chip chip-ghost">Excluded</span>
+          <span class="chip chip-bad"><span class="dot"></span>Sync failed</span>
+        </div>
+        <div class="util-demo">
+          <div class="lbl"><span>Limit used</span><span>29% of $15,000</span></div>
+          <div class="track"><i style="width:29%"></i></div>
+        </div>
+        <div class="footnote" style="margin-top:12px">Shape carries meaning too: filled dot = confirmed, ring = unknown, dash = not reported.</div>
+      </section>
+
+      <section class="card card-pad">
+        <div class="spec-title">Components</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <button class="btn btn-primary">Add account</button>
+          <button class="btn" disabled>Sync now</button>
+          <button class="btn btn-ghost">Export CSV…</button>
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
+          <span class="switch on"><i></i></span>
+          <span class="switch"><i></i></span>
+          <span class="mono">CH</span>
+          <span class="mono lg">AX</span>
+          <span class="faint" style="font-size:10.5px">monograms stand in for issuer marks (no remote assets)</span>
+        </div>
+        <div class="row-between" style="border-top:1px solid var(--line);padding-top:12px">
+          <span style="font-size:11.5px">Every card has a “next payment” line.</span>
+          <span class="chip chip-ghost">ⓘ explains the rule once</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Theme preview only — this mockup is not wired to the app.
+  document.querySelectorAll('.seg').forEach((seg) => {
+    seg.querySelectorAll('span').forEach((option) => {
+      option.addEventListener('click', () => {
+        seg.querySelectorAll('span').forEach((o) => o.classList.remove('on'));
+        option.classList.add('on');
+        const choice = option.textContent.trim().toLowerCase();
+        const dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelectorAll('.window').forEach((w) => w.classList.toggle('dark', dark));
+      });
+    });
+  });
+</script>
+</body>
+</html>
