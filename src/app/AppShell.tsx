@@ -397,7 +397,14 @@ export function AppShell({
             </p>
           ) : dashboard ? (
             view === "overview" ? (
-              <OverviewView dashboard={dashboard} onAddAccount={addAccount} />
+              <OverviewView
+                dashboard={dashboard}
+                theme={theme}
+                onAddAccount={addAccount}
+                onOpenCards={() => setView("cards")}
+                onOpenSettings={() => setView("settings")}
+                onOpenTransactions={() => setView("transactions")}
+              />
             ) : view === "cards" ? (
               <CardsView dashboard={dashboard} theme={theme} onFilterAccount={filterAccount} />
             ) : view === "transactions" ? (

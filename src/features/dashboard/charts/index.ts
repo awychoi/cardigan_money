@@ -1,6 +1,7 @@
 export { CategoryRing } from "./CategoryRing";
 export { ChartLegend } from "./ChartLegend";
 export { ChartTable } from "./ChartTable";
+export { RankedBars } from "./RankedBars";
 export { TrendBars } from "./TrendBars";
 export {
   barScale,

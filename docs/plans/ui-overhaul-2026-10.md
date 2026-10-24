@@ -1,6 +1,6 @@
 # UI overhaul plan (2026-10)
 
-Status: **Phase 0 implemented (2026-10-24); Phase 1 next.** Written 2026-10-24.
+Status: **Phases 0–3 implemented (2026-10-24); Phase 4 next.** Written 2026-10-24.
 Scope: charts, the Overview rebuild, the Transactions re-grade, and Settings sectioning.
 This is the only live plan; the initial build plan is archived at
 [archive/2026-10-initial-build-plan.md](archive/2026-10-initial-build-plan.md).
@@ -130,6 +130,10 @@ In [schema.ts](../../src/theme/schema.ts), add to `options`:
 
 **Exit gate:** schema test green, JSON Schema regenerated, all three themes validate, docs updated.
 
+**Implemented 2026-10-24.** The schema, all three themes (with sixth colors and overview options),
+`applyTheme` data attributes, the JSON Schema, and the theming guide are in place. A new
+`applyTheme` test checks the attributes and `--chart-6` compilation.
+
 ---
 
 ## 6. Phase 2 — chart components
@@ -141,6 +145,7 @@ New folder `src/features/dashboard/charts/`:
 | `chartMath.ts` | pure helpers: shares, donut dash offsets, bar scale and zero baseline, top-N selection. No DOM. |
 | `chartMath.test.ts` | rounding sums to 100%, single segment, zero total, negative months, N > categories. |
 | `CategoryRing.tsx` | stroke-dasharray donut; 0/1/N segments; center total; `role="img"` + `aria-label`. |
+| `RankedBars.tsx` | horizontal ranked composition for themes that choose it; labels always visible. |
 | `TrendBars.tsx` | CSS-grid bars; zero baseline; negative support; current-month hatch + "so far"; selected-month emphasis. |
 | `ChartLegend.tsx` | `<ul>` of swatch, label, amount, share; shared by ring and bars. |
 | `ChartTable.tsx` | visually hidden table with exact figures for screen readers. |
@@ -150,6 +155,11 @@ meaning (labels always present); motion respects the theme and the OS setting.
 
 **Exit gate:** component tests for accessible names/labels and the 0/1/N cases; no layout
 overflow at 1100 px.
+
+**Implemented 2026-10-24.** All six files exist, plus `RankedBars.tsx` for the Graphite variant.
+Tests cover rounding (sums to 100), single/zero/N segments, negative and zero months, empty states,
+legend/table figures, and the 0/1/N accessible names. `charts.css` includes current-month hatching,
+a shared zero baseline, selected-month emphasis, and reduced-motion handling.
 
 ---
 
@@ -172,6 +182,20 @@ notice bars go; their content moves into the attention card.
 
 **Exit gate:** e2e green (no spec churn beyond the deliberate ones), ring and trend reconcile with
 the hero, 1100 × 760 clean, theme switch changes composition without a reload.
+
+**Implemented 2026-10-24.** The Overview now renders the hero (with eligible/pending/total rows),
+the 14-day due rail and four nearest payments, the theme-selected composition (ring, ranked bars,
+or hidden), the `spend_history` trend, balances with state chips, and a three-item attention card
+with actions. The old freshness panel and the two green notice bars are gone; the currency notice
+and `current as of` footnote remain. Trend loading/error states are explicit.
+
+- Deliberate e2e additions: charts are present, a theme switch swaps the ring for ranked bars
+  without a reload, month navigation changes the ring and trend while balances stay fixed, and the
+  Overview is checked at 1100 × 760.
+- The attention actions are labelled "Open connections", "Review balances", and "Open ledger"
+  rather than "Settings"/"Cards" so they do not collide with navigation accessible names.
+- 5 Overview component tests cover the layout, theme variants, hidden composition, action routing,
+  and the empty state.
 
 ---
 
