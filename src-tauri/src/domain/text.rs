@@ -113,9 +113,18 @@ mod tests {
 
     #[test]
     fn rejects_nul_controls_and_bidi() {
-        assert_eq!(clean_text("hello\u{0}world", 50, false), Err(TextError::ContainsNul));
-        assert_eq!(clean_text("hello\u{202E}world", 50, false), Err(TextError::ControlCharacters));
-        assert_eq!(clean_text("hello\u{0007}world", 50, false), Err(TextError::ControlCharacters));
+        assert_eq!(
+            clean_text("hello\u{0}world", 50, false),
+            Err(TextError::ContainsNul)
+        );
+        assert_eq!(
+            clean_text("hello\u{202E}world", 50, false),
+            Err(TextError::ControlCharacters)
+        );
+        assert_eq!(
+            clean_text("hello\u{0007}world", 50, false),
+            Err(TextError::ControlCharacters)
+        );
     }
 
     #[test]
@@ -129,13 +138,19 @@ mod tests {
 
     #[test]
     fn notes_allow_newlines_but_not_bidi() {
-        assert_eq!(clean_text("line1\nline2", MAX_NOTES_CHARS, true).unwrap(), "line1\nline2");
+        assert_eq!(
+            clean_text("line1\nline2", MAX_NOTES_CHARS, true).unwrap(),
+            "line1\nline2"
+        );
         assert!(clean_text("line1\u{2066}line2", MAX_NOTES_CHARS, true).is_err());
     }
 
     #[test]
     fn merchant_normalization_is_case_and_space_insensitive() {
-        assert_eq!(normalize_merchant("  ACME   Store  ").unwrap(), "acme store");
+        assert_eq!(
+            normalize_merchant("  ACME   Store  ").unwrap(),
+            "acme store"
+        );
         assert_eq!(normalize_merchant("Café").unwrap(), "café");
         // Full-width characters are NFKC-normalized for matching.
         assert_eq!(normalize_merchant("ＡＣＭＥ").unwrap(), "acme");

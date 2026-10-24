@@ -25,8 +25,7 @@ use crate::storage::vault_meta::{self, insert_demo_metadata};
 /// Fixed app-managed key: SHA-256("cardigan_money demo synthetic v1").
 /// This is public by design and protects nothing real; it exists only so demo
 /// data at rest is still a SQLCipher database rather than plaintext SQLite.
-const DEMO_KEY_HEX: &str =
-    "a2ceb32f7ebfe63ff306dcb0eb26326ca99c31998730f72c1446aafb2697164d";
+const DEMO_KEY_HEX: &str = "a2ceb32f7ebfe63ff306dcb0eb26326ca99c31998730f72c1446aafb2697164d";
 
 pub struct DemoPaths {
     pub root: PathBuf,
@@ -36,7 +35,10 @@ pub struct DemoPaths {
 impl DemoPaths {
     pub fn new(app_data: &Path) -> Self {
         let root = app_data.join("demo");
-        Self { database: root.join("demo.cmdb"), root }
+        Self {
+            database: root.join("demo.cmdb"),
+            root,
+        }
     }
 
     fn ensure(&self) -> AppResult<()> {
@@ -162,7 +164,10 @@ fn finish_open<R: tauri::Runtime>(
     })
 }
 
-pub fn open<R: tauri::Runtime>(state: &AppState, app: &tauri::AppHandle<R>) -> AppResult<VaultState> {
+pub fn open<R: tauri::Runtime>(
+    state: &AppState,
+    app: &tauri::AppHandle<R>,
+) -> AppResult<VaultState> {
     {
         let guard = state.session.lock().map_err(|_| AppError::Internal)?;
         if guard.is_unlocked() && guard.mode == SessionMode::Demo {
@@ -177,10 +182,7 @@ pub fn open<R: tauri::Runtime>(state: &AppState, app: &tauri::AppHandle<R>) -> A
     paths.ensure()?;
     let key = demo_key()?;
     let exists = paths.database_exists()?;
-    let (conn, _initial_cipher) = match open_ledger(&paths.database, &key, !exists) {
-        Ok(opened) => opened,
-        Err(error) => return Err(error),
-    };
+    let (conn, _initial_cipher) = open_ledger(&paths.database, &key, !exists)?;
 
     let initialized = (|| -> AppResult<(CipherInfo, Settings)> {
         let cipher = if exists {

@@ -26,9 +26,7 @@ describe("theme files", () => {
     // Count files rather than hard-coding ids, so adding a theme needs no test
     // edit. A file that fails validation is skipped by the registry and shows
     // up here as a count mismatch.
-    const files = Object.keys(
-      import.meta.glob("../themes/*.theme.json", { eager: true }),
-    ).length;
+    const files = Object.keys(import.meta.glob("../themes/*.theme.json", { eager: true })).length;
     expect(files).toBeGreaterThan(0);
     expect(THEMES).toHaveLength(files);
     expect(new Set(THEMES.map((theme) => theme.id)).size).toBe(files);
@@ -73,8 +71,10 @@ describe("theme files", () => {
         for (const [slug, art] of Object.entries(theme.issuers ?? {})) {
           const from = contrastRatio(art.ink, art.from);
           const to = contrastRatio(art.ink, art.to);
-          if (from < 4.5) failures.push(`${theme.id}/${mode}: issuer ${slug} ink/from = ${from.toFixed(2)}`);
-          if (to < 4.5) failures.push(`${theme.id}/${mode}: issuer ${slug} ink/to = ${to.toFixed(2)}`);
+          if (from < 4.5)
+            failures.push(`${theme.id}/${mode}: issuer ${slug} ink/from = ${from.toFixed(2)}`);
+          if (to < 4.5)
+            failures.push(`${theme.id}/${mode}: issuer ${slug} ink/to = ${to.toFixed(2)}`);
         }
       }
     }

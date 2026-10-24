@@ -10,12 +10,12 @@ use crate::error::{AppError, AppResult};
 use crate::security::cipher::CipherInfo;
 use crate::security::crypto::LockedKey;
 use crate::security::files::ensure_private_dir;
+use crate::security::keychain::{CredentialStore, KeychainStore};
 use crate::security::ratelimit::RateLimiter;
 use crate::security::vault::{VaultHeader, VaultPaths};
-use crate::storage::events::record_event;
 use crate::services::imports::ImportJobs;
 use crate::services::plaid_link::PlaidLinkRuntime;
-use crate::security::keychain::{CredentialStore, KeychainStore};
+use crate::storage::events::record_event;
 use crate::storage::settings::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

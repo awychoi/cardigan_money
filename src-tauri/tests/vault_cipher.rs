@@ -16,7 +16,11 @@ use cardigan_money_lib::security::vault::{write_header, VaultHeader, VaultPaths}
 const SENTINEL: &str = "PHASE0-PLAINTEXT-SENTINEL-8f3a1c";
 
 fn fast_params() -> KdfParams {
-    KdfParams { m_cost_kib: 8 * 1024, t_cost: 1, p_cost: 1 }
+    KdfParams {
+        m_cost_kib: 8 * 1024,
+        t_cost: 1,
+        p_cost: 1,
+    }
 }
 
 fn pass() -> SecretString {
@@ -32,10 +36,8 @@ fn create_vault(tmp: &Path) -> (VaultPaths, VaultHeader, LockedKey) {
 }
 
 fn seed(conn: &rusqlite::Connection) {
-    conn.execute_batch(
-        "CREATE TABLE secret_data (id INTEGER PRIMARY KEY, note TEXT NOT NULL);",
-    )
-    .unwrap();
+    conn.execute_batch("CREATE TABLE secret_data (id INTEGER PRIMARY KEY, note TEXT NOT NULL);")
+        .unwrap();
     conn.execute(
         "INSERT INTO secret_data (note) VALUES (?1)",
         [format!("{SENTINEL}-posted")],
@@ -59,9 +61,15 @@ fn sqlcipher_is_actually_active_and_reports_provider() {
     let tmp = tempfile::tempdir().unwrap();
     let (paths, _header, dek) = create_vault(tmp.path());
     let (conn, info) = open_ledger(&paths.database, &dek, true).unwrap();
-    println!("SQLCipher version={} provider={} provider_version={:?} cipher_status={}",
-        info.version, info.provider, info.provider_version, info.cipher_status_supported);
-    assert!(info.version.starts_with("4."), "expected SQLCipher 4.x, got {}", info.version);
+    println!(
+        "SQLCipher version={} provider={} provider_version={:?} cipher_status={}",
+        info.version, info.provider, info.provider_version, info.cipher_status_supported
+    );
+    assert!(
+        info.version.starts_with("4."),
+        "expected SQLCipher 4.x, got {}",
+        info.version
+    );
     assert!(!info.provider.trim().is_empty());
     assert!(info.memory_security);
     cipher_integrity_check(&conn).unwrap();
@@ -88,7 +96,9 @@ fn database_wal_and_shm_are_ciphertext_and_not_plaintext_sqlite() {
     assert!(!wal.is_empty(), "WAL should exist during/after writes");
     for (name, bytes) in [("wal", &wal), ("shm", &shm)] {
         assert!(
-            !bytes.windows(SENTINEL.len()).any(|w| w == SENTINEL.as_bytes()),
+            !bytes
+                .windows(SENTINEL.len())
+                .any(|w| w == SENTINEL.as_bytes()),
             "plaintext sentinel found in {name}"
         );
     }
@@ -98,7 +108,10 @@ fn database_wal_and_shm_are_ciphertext_and_not_plaintext_sqlite() {
         .arg("SELECT count(*) FROM sqlite_master;")
         .output()
         .expect("sqlite3 exists on macOS");
-    assert!(!out.status.success(), "plain sqlite3 opened the encrypted DB");
+    assert!(
+        !out.status.success(),
+        "plain sqlite3 opened the encrypted DB"
+    );
     let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
     assert!(
         stderr.contains("not a database") || stderr.contains("encrypted"),
@@ -114,7 +127,8 @@ fn wrong_key_is_rejected_without_modifying_the_database() {
     {
         let (conn, _) = open_ledger(&paths.database, &dek, true).unwrap();
         seed(&conn);
-        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);").unwrap();
+        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .unwrap();
     }
     let before = fs::read(&paths.database).unwrap();
     let wrong = LockedKey::new([0x42; 32]);
@@ -122,10 +136,15 @@ fn wrong_key_is_rejected_without_modifying_the_database() {
     assert!(result.is_err(), "wrong key must fail closed");
     let after = fs::read(&paths.database).unwrap();
     assert_eq!(before, after, "wrong key modified the database file");
-    assert_eq!(fs::read(&paths.database).unwrap()[..16].to_vec(), before[..16].to_vec());
+    assert_eq!(
+        fs::read(&paths.database).unwrap()[..16].to_vec(),
+        before[..16].to_vec()
+    );
     // Correct key still opens and data is intact.
     let (conn, _) = open_ledger(&paths.database, &dek, false).unwrap();
-    let count: i64 = conn.query_row("SELECT count(*) FROM secret_data", [], |r| r.get(0)).unwrap();
+    let count: i64 = conn
+        .query_row("SELECT count(*) FROM secret_data", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(count, 1);
 }
 
@@ -138,13 +157,19 @@ fn raw_key_rekey_support_is_proven() {
         seed(&conn);
         let new_dek = LockedKey::generate().unwrap();
         rekey_ledger(&conn, &new_dek).unwrap();
-        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);").unwrap();
+        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .unwrap();
         // The old key must fail now.
         let old_path = paths.database.clone();
         drop(conn);
-        assert!(open_ledger(&old_path, &dek, false).is_err(), "old key still opens after rekey");
+        assert!(
+            open_ledger(&old_path, &dek, false).is_err(),
+            "old key still opens after rekey"
+        );
         let (conn2, _) = open_ledger(&old_path, &new_dek, false).unwrap();
-        let count: i64 = conn2.query_row("SELECT count(*) FROM secret_data", [], |r| r.get(0)).unwrap();
+        let count: i64 = conn2
+            .query_row("SELECT count(*) FROM secret_data", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(count, 1);
         cipher_integrity_check(&conn2).unwrap();
         println!("raw-key PRAGMA rekey verified");
@@ -159,12 +184,21 @@ fn create_never_overwrites_and_missing_never_creates() {
     seed(&conn);
     drop(conn);
     let before = fs::read(&paths.database).unwrap();
-    assert!(matches!(open_ledger(&paths.database, &dek, true), Err(AppError::VaultExists)));
+    assert!(matches!(
+        open_ledger(&paths.database, &dek, true),
+        Err(AppError::VaultExists)
+    ));
     assert_eq!(before, fs::read(&paths.database).unwrap());
 
     let missing = tmp.path().join("does-not-exist.cmdb");
-    assert!(matches!(open_ledger(&missing, &dek, false), Err(AppError::VaultMissing)));
-    assert!(!missing.exists(), "open must not create a DB when it is missing");
+    assert!(matches!(
+        open_ledger(&missing, &dek, false),
+        Err(AppError::VaultMissing)
+    ));
+    assert!(
+        !missing.exists(),
+        "open must not create a DB when it is missing"
+    );
 }
 
 #[test]

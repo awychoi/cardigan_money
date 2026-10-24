@@ -85,9 +85,7 @@ pub fn parse_amount_to_minor(input: &str, exponent: u32) -> Result<i64, MoneyErr
     if parts.next().is_some() {
         return Err(MoneyError::InvalidFormat);
     }
-    if integer_part.is_empty()
-        && fraction_part.map(|f| f.is_empty()).unwrap_or(true)
-    {
+    if integer_part.is_empty() && fraction_part.map(|f| f.is_empty()).unwrap_or(true) {
         return Err(MoneyError::InvalidFormat);
     }
     let integer_digits = if integer_part.contains(',') {
@@ -95,7 +93,7 @@ pub fn parse_amount_to_minor(input: &str, exponent: u32) -> Result<i64, MoneyErr
         if groups.iter().any(|group| group.is_empty()) {
             return Err(MoneyError::InvalidFormat);
         }
-        if groups[0].len() < 1 || groups[0].len() > 3 {
+        if groups[0].is_empty() || groups[0].len() > 3 {
             return Err(MoneyError::InvalidFormat);
         }
         if groups.iter().skip(1).any(|group| group.len() != 3) {
@@ -141,9 +139,7 @@ pub fn parse_amount_to_minor(input: &str, exponent: u32) -> Result<i64, MoneyErr
     if !scaled.fract().is_zero() {
         return Err(MoneyError::TooMuchPrecision);
     }
-    let minor = scaled
-        .to_i64()
-        .ok_or(MoneyError::OverflowsMinorUnits)?;
+    let minor = scaled.to_i64().ok_or(MoneyError::OverflowsMinorUnits)?;
     let signed = if negative { -minor } else { minor };
     if !(-1_000_000_000_000..=1_000_000_000_000).contains(&signed) {
         return Err(MoneyError::OverflowsMinorUnits);
@@ -175,8 +171,8 @@ mod tests {
     #[test]
     fn rejects_ambiguous_or_rounded_input() {
         for bad in [
-            "1,23.45", "1.2.3", "1e3", "12,34", "NaN", "inf", "", "  ", "$", "--1.00",
-            "1.005", "0x10", "1 2", "12.3.4",
+            "1,23.45", "1.2.3", "1e3", "12,34", "NaN", "inf", "", "  ", "$", "--1.00", "1.005",
+            "0x10", "1 2", "12.3.4",
         ] {
             assert!(
                 parse_currency_amount(bad, "USD").is_err(),
@@ -203,6 +199,9 @@ mod tests {
         let a = parse_currency_amount("0.10", "USD").unwrap();
         let b = parse_currency_amount("0.20", "USD").unwrap();
         assert_eq!(a + b, 30);
-        assert_eq!(parse_currency_amount("2.675", "USD"), Err(MoneyError::TooMuchPrecision));
+        assert_eq!(
+            parse_currency_amount("2.675", "USD"),
+            Err(MoneyError::TooMuchPrecision)
+        );
     }
 }

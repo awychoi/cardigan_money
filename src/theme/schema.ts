@@ -57,11 +57,7 @@ const palette = z
     warning: hex.describe("Attention, stale, reconnect"),
     danger: hex.describe("Failure and destructive"),
     focus: hex.describe("Focus ring · ≥ 3:1 on bg"),
-    chart: z
-      .array(hex)
-      .min(3)
-      .max(5)
-      .describe("Ordered series colors for bars and charts"),
+    chart: z.array(hex).min(3).max(5).describe("Ordered series colors for bars and charts"),
     shadow: alphaColor.describe("Soft elevation color"),
     shadowStrong: alphaColor.describe("Card-face / overlay shadow color"),
   })
@@ -72,11 +68,7 @@ const type = z
     sans: fontStack.describe("UI and body font"),
     mono: fontStack.describe("Masks, dates, identifiers"),
     display: fontStack.describe("Headings and hero numbers"),
-    scale: z
-      .number()
-      .min(0.85)
-      .max(1.2)
-      .describe("Multiplier applied to structural type sizes"),
+    scale: z.number().min(0.85).max(1.2).describe("Multiplier applied to structural type sizes"),
     displayWeight: z.number().int().min(300).max(800).describe("Heading / hero weight"),
     displayTracking: z
       .number()
@@ -114,7 +106,7 @@ const motion = z
       .regex(/^[a-z0-9(),.\s-]+$/, "a CSS easing or cubic-bezier()")
       .describe("CSS timing function"),
   })
-  .describe("Motion; `options.motion: \"calm\"` disables it regardless");
+  .describe('Motion; `options.motion: "calm"` disables it regardless');
 
 const options = z
   .strictObject({
@@ -159,7 +151,9 @@ const theme = z
     issuers: z
       .record(slug, issuerArt)
       .optional()
-      .describe('Optional card art by issuer slug, e.g. "american-express"; "default" is the fallback'),
+      .describe(
+        'Optional card art by issuer slug, e.g. "american-express"; "default" is the fallback',
+      ),
   })
   .strict();
 

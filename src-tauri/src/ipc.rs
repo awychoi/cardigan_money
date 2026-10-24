@@ -38,7 +38,8 @@ impl GatewayRequest {
         {
             return Err(AppError::InvalidInput("command name charset"));
         }
-        let encoded = serde_json::to_vec(&self.payload).map_err(|_| AppError::InvalidInput("payload"))?;
+        let encoded =
+            serde_json::to_vec(&self.payload).map_err(|_| AppError::InvalidInput("payload"))?;
         if encoded.len() > MAX_REQUEST_BYTES {
             return Err(AppError::InvalidInput("payload too large"));
         }
@@ -78,7 +79,9 @@ pub fn guard_main_window(window: &WebviewWindow) -> AppResult<()> {
     if window.label() != "main" {
         return Err(AppError::PermissionDenied("window label"));
     }
-    let url = window.url().map_err(|_| AppError::PermissionDenied("window origin"))?;
+    let url = window
+        .url()
+        .map_err(|_| AppError::PermissionDenied("window origin"))?;
     let allowed = match url.scheme() {
         "tauri" => url.host_str() == Some("localhost"),
         "http" => {
@@ -117,21 +120,43 @@ mod tests {
     fn envelope_rejects_unknown_fields_and_bad_versions() {
         let json = r#"{"v":1,"command":"health_check","payload":{},"extra":1}"#;
         assert!(serde_json::from_str::<GatewayRequest>(json).is_err());
-        let req = GatewayRequest { v: 2, command: "health_check".into(), payload: serde_json::json!({}) };
+        let req = GatewayRequest {
+            v: 2,
+            command: "health_check".into(),
+            payload: serde_json::json!({}),
+        };
         assert!(req.validate_envelope().is_err());
-        let req = GatewayRequest { v: 1, command: "Bad Command".into(), payload: serde_json::json!({}) };
+        let req = GatewayRequest {
+            v: 1,
+            command: "Bad Command".into(),
+            payload: serde_json::json!({}),
+        };
         assert!(req.validate_envelope().is_err());
-        let req = GatewayRequest { v: 1, command: "health_check".into(), payload: serde_json::json!({"blob":"x".repeat(MAX_REQUEST_BYTES)}) };
+        let req = GatewayRequest {
+            v: 1,
+            command: "health_check".into(),
+            payload: serde_json::json!({"blob":"x".repeat(MAX_REQUEST_BYTES)}),
+        };
         assert!(req.validate_envelope().is_err());
     }
 
     #[test]
     fn navigation_allowlist_blocks_remote_and_file() {
-        assert!(is_allowed_navigation(&tauri::Url::parse("tauri://localhost/index.html").unwrap()));
-        assert!(!is_allowed_navigation(&tauri::Url::parse("https://example.com/").unwrap()));
-        assert!(!is_allowed_navigation(&tauri::Url::parse("http://example.com/").unwrap()));
-        assert!(!is_allowed_navigation(&tauri::Url::parse("file:///etc/passwd").unwrap()));
+        assert!(is_allowed_navigation(
+            &tauri::Url::parse("tauri://localhost/index.html").unwrap()
+        ));
+        assert!(!is_allowed_navigation(
+            &tauri::Url::parse("https://example.com/").unwrap()
+        ));
+        assert!(!is_allowed_navigation(
+            &tauri::Url::parse("http://example.com/").unwrap()
+        ));
+        assert!(!is_allowed_navigation(
+            &tauri::Url::parse("file:///etc/passwd").unwrap()
+        ));
         #[cfg(not(debug_assertions))]
-        assert!(!is_allowed_navigation(&tauri::Url::parse("http://localhost:1420/").unwrap()));
+        assert!(!is_allowed_navigation(
+            &tauri::Url::parse("http://localhost:1420/").unwrap()
+        ));
     }
 }

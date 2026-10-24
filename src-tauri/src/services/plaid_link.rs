@@ -13,8 +13,7 @@ use tauri_plugin_opener::OpenerExt;
 
 use crate::error::{AppError, AppResult};
 use crate::providers::plaid::{
-    load_access_token, load_sandbox_credentials, store_access_token, PlaidClient,
-    PlaidEnvironment,
+    load_access_token, load_sandbox_credentials, store_access_token, PlaidClient, PlaidEnvironment,
 };
 use crate::security::crypto::SecretString;
 use crate::security::network_url::validate_plaid_hosted_url;
@@ -46,7 +45,12 @@ pub struct PlaidLinkStatus {
 
 impl Default for PlaidLinkStatus {
     fn default() -> Self {
-        Self { state: "idle".into(), message: None, connection_id: None, expires_at: None }
+        Self {
+            state: "idle".into(),
+            message: None,
+            connection_id: None,
+            expires_at: None,
+        }
     }
 }
 
@@ -101,14 +105,23 @@ pub fn save_credentials(
 fn link_status(state: &AppState) -> AppResult<PlaidLinkStatus> {
     let runtime = state.plaid_link.lock().map_err(|_| AppError::Internal)?;
     Ok(PlaidLinkStatus {
-        state: if runtime.status.is_empty() { "idle".into() } else { runtime.status.clone() },
+        state: if runtime.status.is_empty() {
+            "idle".into()
+        } else {
+            runtime.status.clone()
+        },
         message: runtime.message.clone(),
         connection_id: runtime.connection_id.clone(),
         expires_at: runtime.expires_at.clone(),
     })
 }
 
-fn set_status(state: &AppState, status: &str, message: Option<String>, connection_id: Option<String>) {
+fn set_status(
+    state: &AppState,
+    status: &str,
+    message: Option<String>,
+    connection_id: Option<String>,
+) {
     if let Ok(mut runtime) = state.plaid_link.lock() {
         runtime.status = status.to_string();
         runtime.message = message;
@@ -123,7 +136,10 @@ fn provider_app_error(error: crate::providers::ProviderError) -> AppError {
     AppError::Provider(error.safe_message)
 }
 
-pub fn start_link<R: tauri::Runtime>(state: &AppState, app: &tauri::AppHandle<R>) -> AppResult<PlaidLinkStatus> {
+pub fn start_link<R: tauri::Runtime>(
+    state: &AppState,
+    app: &tauri::AppHandle<R>,
+) -> AppResult<PlaidLinkStatus> {
     state.require_real("link Plaid in demo mode")?;
     let vault_id = state.with_db(|_conn, header, _settings| {
         header
@@ -147,7 +163,8 @@ pub fn start_link<R: tauri::Runtime>(state: &AppState, app: &tauri::AppHandle<R>
         runtime.reconnect_connection_id = None;
     }
 
-    let client = PlaidClient::new(credentials, None).map_err(|_| AppError::ProviderNotConfigured)?;
+    let client =
+        PlaidClient::new(credentials, None).map_err(|_| AppError::ProviderNotConfigured)?;
     let token = match client.create_hosted_link_token(&vault_id) {
         Ok(token) => token,
         Err(error) => {
@@ -156,11 +173,21 @@ pub fn start_link<R: tauri::Runtime>(state: &AppState, app: &tauri::AppHandle<R>
         }
     };
     let Some(url) = token.hosted_link_url.clone() else {
-        set_status(state, "error", Some("Hosted Link is unavailable for this account.".into()), None);
+        set_status(
+            state,
+            "error",
+            Some("Hosted Link is unavailable for this account.".into()),
+            None,
+        );
         return Err(AppError::Blocked("Hosted Link is unavailable"));
     };
     if validate_plaid_hosted_url(&url).is_err() {
-        set_status(state, "error", Some("Plaid returned an invalid Hosted Link URL.".into()), None);
+        set_status(
+            state,
+            "error",
+            Some("Plaid returned an invalid Hosted Link URL.".into()),
+            None,
+        );
         return Err(AppError::Blocked("invalid Hosted Link URL"));
     }
     let link_token = SecretString::new(token.link_token);
@@ -173,12 +200,15 @@ pub fn start_link<R: tauri::Runtime>(state: &AppState, app: &tauri::AppHandle<R>
     }
     // The URL is a short-lived bearer: open it once through the opener and do
     // not log, persist, return, or include it in any error.
-    app.opener()
-        .open_url(url, None::<&str>)
-        .map_err(|_| {
-            set_status(state, "error", Some("Could not open the browser.".into()), None);
-            AppError::Provider("Could not open the browser.")
-        })?;
+    app.opener().open_url(url, None::<&str>).map_err(|_| {
+        set_status(
+            state,
+            "error",
+            Some("Could not open the browser.".into()),
+            None,
+        );
+        AppError::Provider("Could not open the browser.")
+    })?;
 
     let cancel = state
         .plaid_link
@@ -213,13 +243,23 @@ fn poll_link<R: tauri::Runtime>(
     loop {
         if cancel.load(Ordering::SeqCst) {
             if let Some(state) = app.try_state::<AppState>() {
-                set_status(&state, "cancelled", Some("Plaid link cancelled.".into()), None);
+                set_status(
+                    &state,
+                    "cancelled",
+                    Some("Plaid link cancelled.".into()),
+                    None,
+                );
             }
             return;
         }
         if Utc::now() > deadline || started.elapsed() > Duration::from_secs(35 * 60) {
             if let Some(state) = app.try_state::<AppState>() {
-                set_status(&state, "expired", Some("The Plaid link session expired. Start again.".into()), None);
+                set_status(
+                    &state,
+                    "expired",
+                    Some("The Plaid link session expired. Start again.".into()),
+                    None,
+                );
             }
             return;
         }
@@ -241,7 +281,12 @@ fn poll_link<R: tauri::Runtime>(
         };
         if cancel.load(Ordering::SeqCst) {
             if let Some(state) = app.try_state::<AppState>() {
-                set_status(&state, "cancelled", Some("Plaid link cancelled.".into()), None);
+                set_status(
+                    &state,
+                    "cancelled",
+                    Some("Plaid link cancelled.".into()),
+                    None,
+                );
             }
             return;
         }
@@ -275,7 +320,9 @@ fn finish_link<R: tauri::Runtime>(
     client: &PlaidClient,
     item: crate::providers::plaid::LinkedItem,
 ) {
-    let Some(state) = app.try_state::<AppState>() else { return };
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
     let exchange = match client.exchange_public_token(&item.public_token) {
         Ok(exchange) => exchange,
         Err(error) => {
@@ -313,7 +360,11 @@ fn finish_link<R: tauri::Runtime>(
         Ok(())
     });
     if let Err(error) = inserted {
-        let _ = state.credentials.delete(&crate::providers::plaid::access_token_account(&credential_ref));
+        let _ = state
+            .credentials
+            .delete(&crate::providers::plaid::access_token_account(
+                &credential_ref,
+            ));
         set_status(&state, "error", Some(AppError::safe_message(&error)), None);
         return;
     }
@@ -349,7 +400,9 @@ pub fn start_reconnect<R: tauri::Runtime>(
         return Err(AppError::Blocked("Production Plaid is disabled"));
     }
     let vault_id = state.with_db(|_conn, header, _s| {
-        header.map(|header| header.vault_id_hex()).ok_or(AppError::Locked)
+        header
+            .map(|header| header.vault_id_hex())
+            .ok_or(AppError::Locked)
     })?;
     let credentials = load_sandbox_credentials(state.credentials.as_ref())?
         .ok_or(AppError::ProviderNotConfigured)?;
@@ -369,21 +422,36 @@ pub fn start_reconnect<R: tauri::Runtime>(
         runtime.mode = "reconnect".into();
         runtime.reconnect_connection_id = Some(connection_id.to_string());
     }
-    let client = PlaidClient::new(credentials, Some(token))
-        .map_err(|_| AppError::ProviderNotConfigured)?;
+    let client =
+        PlaidClient::new(credentials, Some(token)).map_err(|_| AppError::ProviderNotConfigured)?;
     let token = match client.create_update_link_token(&vault_id) {
         Ok(token) => token,
         Err(error) => {
-            set_status(state, "error", Some(error.safe_message.into()), Some(connection_id.to_string()));
+            set_status(
+                state,
+                "error",
+                Some(error.safe_message.into()),
+                Some(connection_id.to_string()),
+            );
             return Err(provider_app_error(error));
         }
     };
     let Some(url) = token.hosted_link_url else {
-        set_status(state, "error", Some("Hosted Link update mode is unavailable.".into()), Some(connection_id.to_string()));
+        set_status(
+            state,
+            "error",
+            Some("Hosted Link update mode is unavailable.".into()),
+            Some(connection_id.to_string()),
+        );
         return Err(AppError::Blocked("Hosted Link update mode unavailable"));
     };
     if validate_plaid_hosted_url(&url).is_err() {
-        set_status(state, "error", Some("Plaid returned an invalid Hosted Link URL.".into()), Some(connection_id.to_string()));
+        set_status(
+            state,
+            "error",
+            Some("Plaid returned an invalid Hosted Link URL.".into()),
+            Some(connection_id.to_string()),
+        );
         return Err(AppError::Blocked("invalid Hosted Link URL"));
     }
     let expires_at = token.expiration;
@@ -394,12 +462,15 @@ pub fn start_reconnect<R: tauri::Runtime>(
         runtime.expires_at = Some(expires_at.clone());
         runtime.message = Some("Reconnect the Sandbox Item in your browser.".into());
     }
-    app.opener()
-        .open_url(url, None::<&str>)
-        .map_err(|_| {
-            set_status(state, "error", Some("Could not open the browser.".into()), Some(connection_id.to_string()));
-            AppError::Provider("Could not open the browser.")
-        })?;
+    app.opener().open_url(url, None::<&str>).map_err(|_| {
+        set_status(
+            state,
+            "error",
+            Some("Could not open the browser.".into()),
+            Some(connection_id.to_string()),
+        );
+        AppError::Provider("Could not open the browser.")
+    })?;
     let cancel = state
         .plaid_link
         .lock()
@@ -413,7 +484,16 @@ pub fn start_reconnect<R: tauri::Runtime>(
     let connection = connection_id.to_string();
     std::thread::Builder::new()
         .name("cm-plaid-reconnect".into())
-        .spawn(move || poll_link(app_handle, client, link_token, cancel, expires, Some(connection)))
+        .spawn(move || {
+            poll_link(
+                app_handle,
+                client,
+                link_token,
+                cancel,
+                expires,
+                Some(connection),
+            )
+        })
         .map_err(|_| AppError::Internal)?;
     link_status(state)
 }
@@ -423,7 +503,9 @@ fn finish_reconnect<R: tauri::Runtime>(
     client: &PlaidClient,
     connection_id: &str,
 ) {
-    let Some(state) = app.try_state::<AppState>() else { return };
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
     // Update mode has no new public token; verify the existing access token
     // actually works before declaring the connection healthy.
     if let Err(error) = client.accounts() {
@@ -463,7 +545,12 @@ pub fn cancel(state: &AppState) -> AppResult<PlaidLinkStatus> {
         cancel.store(true, Ordering::SeqCst);
     }
     drop(runtime);
-    set_status(state, "cancelled", Some("Plaid link cancelled.".into()), None);
+    set_status(
+        state,
+        "cancelled",
+        Some("Plaid link cancelled.".into()),
+        None,
+    );
     link_status(state)
 }
 
@@ -471,7 +558,8 @@ pub fn test_credentials(state: &AppState) -> AppResult<PlaidStatus> {
     state.require_real("test Plaid credentials in demo mode")?;
     let credentials = load_sandbox_credentials(state.credentials.as_ref())?
         .ok_or(AppError::ProviderNotConfigured)?;
-    let client = PlaidClient::new(credentials, None).map_err(|_| AppError::ProviderNotConfigured)?;
+    let client =
+        PlaidClient::new(credentials, None).map_err(|_| AppError::ProviderNotConfigured)?;
     client
         .create_hosted_link_token("cardigan-money-credential-test")
         .map_err(provider_app_error)?;

@@ -57,7 +57,9 @@ test("primary navigation is keyboard-activatable with visible focus", async ({ p
   await page.keyboard.press("Tab");
   const focused = await page.evaluate(() => {
     const element = document.activeElement;
-    return element ? element.tagName + ":" + (element.getAttribute("aria-label") ?? element.textContent ?? "") : "none";
+    return element
+      ? element.tagName + ":" + (element.getAttribute("aria-label") ?? element.textContent ?? "")
+      : "none";
   });
   expect(focused).not.toBe("none");
 });

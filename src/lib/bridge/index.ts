@@ -15,8 +15,7 @@ import { BridgeError, toBridgeError } from "./errors";
 
 /** Development/test only. The Vite config aliases @mock-bridge to a disabled
  * stub in production builds, so mock code is not shipped. */
-export const usingMockBridge =
-  import.meta.env.DEV && import.meta.env.VITE_MOCK_BRIDGE === "1";
+export const usingMockBridge = import.meta.env.DEV && import.meta.env.VITE_MOCK_BRIDGE === "1";
 
 export async function command<K extends CommandName>(
   name: K,
@@ -54,7 +53,10 @@ export async function command<K extends CommandName>(
   }
   const parsed = responseSchemas[name].safeParse(envelope.data.data);
   if (!parsed.success) {
-    throw new BridgeError("contract_error", "The desktop bridge response did not match the contract.");
+    throw new BridgeError(
+      "contract_error",
+      "The desktop bridge response did not match the contract.",
+    );
   }
   return parsed.data as CommandResponse<K>;
 }

@@ -27,10 +27,15 @@ fn credentials_round_trip_in_memory_and_tokens_are_scoped() {
     )
     .unwrap();
     assert_eq!(
-        load_access_token(&store, "credential-ref-1").unwrap().unwrap().expose(),
+        load_access_token(&store, "credential-ref-1")
+            .unwrap()
+            .unwrap()
+            .expose(),
         "access-sandbox-token-value-123456"
     );
-    assert!(load_access_token(&store, "credential-ref-2").unwrap().is_none());
+    assert!(load_access_token(&store, "credential-ref-2")
+        .unwrap()
+        .is_none());
 }
 
 #[test]

@@ -13,10 +13,10 @@ use crate::security::cipher::{
     cipher_integrity_check, cipher_summary, open_ledger, rekey_ledger, sqlite_integrity_check,
     CipherInfo,
 };
-use crate::security::crypto::{calibrate_kdf, random_vault_id, validate_new_passphrase, LockedKey, SecretString};
-use crate::security::files::{
-    atomic_write_private, file_exists_no_follow, remove_file_if_exists,
+use crate::security::crypto::{
+    calibrate_kdf, random_vault_id, validate_new_passphrase, LockedKey, SecretString,
 };
+use crate::security::files::{atomic_write_private, file_exists_no_follow, remove_file_if_exists};
 use crate::security::vault::{
     load_header, load_journal, remove_header, remove_journal, write_header, write_journal,
     RotationJournal, VaultHeader, VaultPaths,
@@ -79,7 +79,13 @@ pub fn status(state: &AppState) -> VaultState {
     let guard = match state.session.lock() {
         Ok(guard) => guard,
         Err(_) => {
-            return VaultState { exists, unlocked: false, mode: "real", settings: None, security: None }
+            return VaultState {
+                exists,
+                unlocked: false,
+                mode: "real",
+                settings: None,
+                security: None,
+            }
         }
     };
     let mode = match guard.mode() {
@@ -99,7 +105,13 @@ pub fn status(state: &AppState) -> VaultState {
             security: summary(conn, guard.header.as_ref(), cipher).ok(),
         }
     } else {
-        VaultState { exists, unlocked: false, mode: "real", settings: None, security: None }
+        VaultState {
+            exists,
+            unlocked: false,
+            mode: "real",
+            settings: None,
+            security: None,
+        }
     }
 }
 
@@ -127,8 +139,14 @@ fn session_state(state: &AppState) -> AppResult<VaultState> {
 fn cleanup_failed_create(paths: &VaultPaths) {
     let _ = remove_header(paths);
     let _ = remove_file_if_exists(&paths.database);
-    let _ = remove_file_if_exists(std::path::Path::new(&format!("{}-wal", paths.database.display())));
-    let _ = remove_file_if_exists(std::path::Path::new(&format!("{}-shm", paths.database.display())));
+    let _ = remove_file_if_exists(std::path::Path::new(&format!(
+        "{}-wal",
+        paths.database.display()
+    )));
+    let _ = remove_file_if_exists(std::path::Path::new(&format!(
+        "{}-shm",
+        paths.database.display()
+    )));
     let _ = remove_journal(paths);
 }
 
@@ -145,12 +163,8 @@ pub fn create(state: &AppState, passphrase: SecretString) -> AppResult<VaultStat
 
     let params = calibrate_kdf();
     let vault_id = random_vault_id()?;
-    let (header, dek) = VaultHeader::create(
-        &passphrase,
-        params,
-        vault_id,
-        supported_schema_version(),
-    )?;
+    let (header, dek) =
+        VaultHeader::create(&passphrase, params, vault_id, supported_schema_version())?;
     // Passphrase is no longer needed after the KEK derivation inside create().
     drop(passphrase);
 
@@ -235,7 +249,12 @@ fn try_candidate(
     if !meta.cipher_version.starts_with("4.") || meta.cipher_provider != cipher.provider {
         return Err(CandidateError::Fatal(AppError::IntegrityFailure));
     }
-    Ok(Opened { header: header.clone(), dek, conn, cipher })
+    Ok(Opened {
+        header: header.clone(),
+        dek,
+        conn,
+        cipher,
+    })
 }
 
 /// Unlock with a passphrase already collected by the native sheet. Non-destructive:
@@ -393,7 +412,9 @@ fn verify_current(
     dek: &LockedKey,
     passphrase: &SecretString,
 ) -> AppResult<()> {
-    let candidate = header.unwrap_dek(passphrase).map_err(|_| AppError::WrongPassphrase)?;
+    let candidate = header
+        .unwrap_dek(passphrase)
+        .map_err(|_| AppError::WrongPassphrase)?;
     let matches: bool = candidate.expose().ct_eq(dek.expose()).into();
     if matches {
         Ok(())
@@ -426,7 +447,10 @@ pub fn change_passphrase<R: tauri::Runtime>(
     let stamp = now_rfc3339().replace([':', '-'], "");
     let snapshot = state.paths.root.join(format!("pre-rekey-{stamp}.cmdb"));
     create_encrypted_snapshot(conn, &snapshot, dek)?;
-    let header_copy = state.paths.root.join(format!("pre-rekey-{stamp}.vault-header"));
+    let header_copy = state
+        .paths
+        .root
+        .join(format!("pre-rekey-{stamp}.vault-header"));
     atomic_write_private(&header_copy, &header.encode())?;
 
     // Self-contained pre-change backup in addition to the internal raw snapshot.
@@ -507,7 +531,16 @@ mod tests {
         let created = create(&state, pass("correct horse battery staple test")).unwrap();
         assert!(created.unlocked);
         assert!(created.settings.is_some());
-        assert_eq!(created.security.as_ref().unwrap().cipher_version.split(' ').next(), Some("4.6.1"));
+        assert_eq!(
+            created
+                .security
+                .as_ref()
+                .unwrap()
+                .cipher_version
+                .split(' ')
+                .next(),
+            Some("4.6.1")
+        );
 
         let settings = created.settings.unwrap();
         assert_eq!(settings.timezone, "America/New_York");
@@ -594,7 +627,9 @@ mod tests {
         let (_tmp, state) = state();
         create(&state, pass("correct horse battery staple test")).unwrap();
         let events = security_events(&state, 10).unwrap();
-        assert!(events.iter().any(|event| event.event_type == "vault_created"));
+        assert!(events
+            .iter()
+            .any(|event| event.event_type == "vault_created"));
         let text = serde_json::to_string(&events).unwrap().to_lowercase();
         assert!(!text.contains("passphrase"));
         assert!(!text.contains("correct horse"));

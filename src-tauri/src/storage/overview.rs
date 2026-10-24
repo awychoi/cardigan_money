@@ -121,7 +121,8 @@ struct AccountRow {
 }
 
 fn load_accounts(conn: &Connection, include_archived: bool) -> AppResult<Vec<AccountRow>> {
-    let sql = format!(
+    let sql =
+        format!(
         "SELECT id, issuer, display_name, last_four, currency, include_in_overview, source_kind \
          FROM accounts {} ORDER BY issuer COLLATE NOCASE, display_name COLLATE NOCASE, id",
         if include_archived { "" } else { "WHERE archived = 0" }
@@ -320,9 +321,8 @@ fn payment_info(
     if info.statement_balance_minor.is_none() {
         if let Some(provider) = provider {
             info.statement_balance_minor = provider.statement_balance;
-            info.statement_balance_source = provider
-                .statement_balance
-                .map(|_| "provider".to_string());
+            info.statement_balance_source =
+                provider.statement_balance.map(|_| "provider".to_string());
             info.statement_issue_date = provider.issue_date.clone();
             info.next_closing_date = provider.closing_date.clone();
             if info.retrieved_at.is_none() {
@@ -410,7 +410,11 @@ pub fn overview(conn: &Connection, today: NaiveDate) -> AppResult<Overview> {
         accounts.push(card);
     }
 
-    upcoming_entries.sort_by(|a, b| a.due_date.cmp(&b.due_date).then(a.display_name.cmp(&b.display_name)));
+    upcoming_entries.sort_by(|a, b| {
+        a.due_date
+            .cmp(&b.due_date)
+            .then(a.display_name.cmp(&b.display_name))
+    });
     let known_upcoming: i64 = upcoming_entries
         .iter()
         .filter(|e| e.currency == "USD")
@@ -469,7 +473,10 @@ mod tests {
         assert_eq!(info.due_amount_kind, "not_reported");
         assert_eq!(info.statement_balance_minor, Some(123_456));
 
-        let zero = ProviderPayment { minimum_due: Some(0), ..provider };
+        let zero = ProviderPayment {
+            minimum_due: Some(0),
+            ..provider
+        };
         let info = payment_info(today, Some(&zero), None).unwrap();
         assert_eq!(info.due_amount_minor, Some(0));
         assert_eq!(info.due_amount_kind, "reported_zero");

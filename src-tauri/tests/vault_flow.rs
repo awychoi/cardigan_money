@@ -10,9 +10,7 @@ use cardigan_money_lib::security::crypto::SecretString;
 use cardigan_money_lib::security::vault::{
     load_header, load_journal, write_journal, RotationJournal,
 };
-use cardigan_money_lib::services::vault::{
-    change_passphrase, create, status, unlock,
-};
+use cardigan_money_lib::services::vault::{change_passphrase, create, status, unlock};
 use cardigan_money_lib::state::AppState;
 
 const PASS: &str = "correct horse battery staple test";
@@ -29,7 +27,11 @@ fn mock_app() -> tauri::AppHandle<tauri::test::MockRuntime> {
     app.handle().clone()
 }
 
-fn setup() -> (tempfile::TempDir, AppState, tauri::AppHandle<tauri::test::MockRuntime>) {
+fn setup() -> (
+    tempfile::TempDir,
+    AppState,
+    tauri::AppHandle<tauri::test::MockRuntime>,
+) {
     let tmp = tempfile::tempdir().unwrap();
     let state = AppState::new(tmp.path().to_path_buf()).unwrap();
     let app = mock_app();
@@ -54,11 +56,19 @@ fn created_vault_is_private_and_reopens_after_lock() {
         0o700
     );
     assert_eq!(
-        std::fs::metadata(&vault_dir.join("vault.header")).unwrap().permissions().mode() & 0o777,
+        std::fs::metadata(vault_dir.join("vault.header"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
         0o600
     );
     assert_eq!(
-        std::fs::metadata(&vault_dir.join("ledger.cmdb")).unwrap().permissions().mode() & 0o777,
+        std::fs::metadata(vault_dir.join("ledger.cmdb"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
         0o600
     );
     for sidecar in ["-wal", "-shm"] {
@@ -107,7 +117,12 @@ fn mirrored_header_recovers_a_damaged_primary() {
     // The primary is repaired from the mirror after a successful unlock.
     let bytes = std::fs::read(&primary).unwrap();
     assert_eq!(bytes.len(), 152);
-    assert!(load_header(&cardigan_money_lib::security::vault::VaultPaths::new(tmp.path())).is_ok());
+    assert!(
+        load_header(&cardigan_money_lib::security::vault::VaultPaths::new(
+            tmp.path()
+        ))
+        .is_ok()
+    );
 }
 
 #[test]
@@ -128,7 +143,10 @@ fn tampered_or_missing_headers_fail_closed_without_touching_the_db() {
 
     std::fs::remove_file(&paths.header).unwrap();
     std::fs::remove_file(&paths.header_mirror).unwrap();
-    assert!(matches!(unlock(&state, pass(PASS)), Err(AppError::VaultMissing)));
+    assert!(matches!(
+        unlock(&state, pass(PASS)),
+        Err(AppError::VaultMissing)
+    ));
     assert_eq!(std::fs::read(&paths.database).unwrap(), db);
 }
 
@@ -142,7 +160,10 @@ fn passphrase_rotation_changes_the_dek_and_rejects_the_old_one() {
     assert_eq!(after.generation, before.generation + 1);
 
     lock(&state);
-    assert!(matches!(unlock(&state, pass(PASS)), Err(AppError::WrongPassphrase)));
+    assert!(matches!(
+        unlock(&state, pass(PASS)),
+        Err(AppError::WrongPassphrase)
+    ));
     let view = unlock(&state, pass(NEW_PASS)).unwrap();
     assert!(view.unlocked);
     assert_eq!(view.security.unwrap().generation, after.generation);
@@ -152,8 +173,12 @@ fn passphrase_rotation_changes_the_dek_and_rejects_the_old_one() {
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().to_string())
         .collect();
-    assert!(names.iter().any(|n| n.starts_with("pre-rekey-") && n.ends_with(".cmdb")));
-    assert!(names.iter().any(|n| n.starts_with("pre-rekey-") && n.ends_with(".vault-header")));
+    assert!(names
+        .iter()
+        .any(|n| n.starts_with("pre-rekey-") && n.ends_with(".cmdb")));
+    assert!(names
+        .iter()
+        .any(|n| n.starts_with("pre-rekey-") && n.ends_with(".vault-header")));
     assert!(!names.iter().any(|n| n == "rotation.journal"));
 }
 
@@ -174,9 +199,13 @@ fn rotation_journal_recovers_a_crash_after_rekey() {
         // Do not update metadata or the header; this is the crash window.
     }
     lock(&state);
-    assert!(load_journal(&cardigan_money_lib::security::vault::VaultPaths::new(tmp.path()))
+    assert!(
+        load_journal(&cardigan_money_lib::security::vault::VaultPaths::new(
+            tmp.path()
+        ))
         .unwrap()
-        .is_some());
+        .is_some()
+    );
 
     // The old passphrase cannot open the rekeyed DB; the journal header uses
     // the new passphrase.
@@ -231,7 +260,9 @@ fn lock_closes_connections_zeroizes_session_and_records_the_event() {
     assert!(view.unlocked);
     let events = cardigan_money_lib::services::vault::security_events(&state, 20).unwrap();
     assert!(events.iter().any(|event| event.event_type == "lock"));
-    assert!(events.iter().any(|event| event.event_type == "unlock_success"));
+    assert!(events
+        .iter()
+        .any(|event| event.event_type == "unlock_success"));
 }
 
 #[test]
@@ -273,7 +304,10 @@ fn settings_survive_lock_and_unlock() {
     lock(&state);
     let view = unlock(&state, pass(PASS)).unwrap();
     let settings = view.settings.unwrap();
-    assert_eq!(settings.theme, cardigan_money_lib::storage::settings::Theme::Dark);
+    assert_eq!(
+        settings.theme,
+        cardigan_money_lib::storage::settings::Theme::Dark
+    );
     assert_eq!(settings.auto_lock_minutes, 30);
     assert_eq!(
         settings.close_behavior,

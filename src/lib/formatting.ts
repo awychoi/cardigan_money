@@ -44,11 +44,7 @@ export function monthLabel(month: string): string {
   });
 }
 
-export function dueAmountLabel(
-  kind: string,
-  amountMinor: number | null,
-  currency: string,
-): string {
+export function dueAmountLabel(kind: string, amountMinor: number | null, currency: string): string {
   switch (kind) {
     case "minimum_due":
       return `${formatMoney(amountMinor ?? 0, currency)} minimum`;

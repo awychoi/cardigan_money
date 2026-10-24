@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { command, type AppInfo, type Dashboard, type Settings, type SyncStatus, type VaultState } from "../lib/bridge";
+import {
+  command,
+  type AppInfo,
+  type Dashboard,
+  type Settings,
+  type SyncStatus,
+  type VaultState,
+} from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { OverviewView } from "../features/dashboard/OverviewView";
 import { CardsView } from "../features/dashboard/CardsView";
@@ -62,7 +69,11 @@ export function AppShell({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
-  const [preset, setPreset] = useState<{ accountId: string | null; search: string | null; nonce: number }>({
+  const [preset, setPreset] = useState<{
+    accountId: string | null;
+    search: string | null;
+    nonce: number;
+  }>({
     accountId: null,
     search: null,
     nonce: 0,
@@ -150,7 +161,9 @@ export function AppShell({
       } else {
         const added = summary.results.reduce((sum, result) => sum + result.transactionsAdded, 0);
         const failed = summary.results.filter((result) => result.status === "failed").length;
-        setSyncNote(`Sync complete: ${added} new transaction(s)${failed ? `, ${failed} failed` : ""}.`);
+        setSyncNote(
+          `Sync complete: ${added} new transaction(s)${failed ? `, ${failed} failed` : ""}.`,
+        );
       }
       setRefresh((value) => value + 1);
     } catch (caught) {
@@ -185,7 +198,13 @@ export function AppShell({
           onClick={() => setView(item.id)}
         >
           {sidebar ? (
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
               <path d={NAV_ICONS[item.id]} />
             </svg>
           ) : null}
@@ -209,7 +228,10 @@ export function AppShell({
           {navigation}
           <div className="side-foot">
             <div className="side-status">
-              <span className={connectionError && !demo ? "dot sync-dot-warn" : "dot dot-muted"} aria-hidden="true" />
+              <span
+                className={connectionError && !demo ? "dot sync-dot-warn" : "dot dot-muted"}
+                aria-hidden="true"
+              />
               <span className="side-status-label">{demo ? "Demo ledger" : "Encrypted ledger"}</span>
             </div>
             {themeControl}
@@ -290,7 +312,10 @@ export function AppShell({
         {demo ? (
           <div className="demo-banner demo-banner-strong" role="status">
             <strong>Demo mode — synthetic data.</strong>
-            <span> Separate database. No real ledger, provider, Keychain, import, backup, or export.</span>
+            <span>
+              {" "}
+              Separate database. No real ledger, provider, Keychain, import, backup, or export.
+            </span>
             <span className="banner-actions">
               {resetConfirm ? (
                 <>
@@ -305,16 +330,28 @@ export function AppShell({
                   >
                     Reset
                   </button>
-                  <button type="button" className="btn btn-small btn-ghost" onClick={() => setResetConfirm(false)}>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-ghost"
+                    onClick={() => setResetConfirm(false)}
+                  >
                     Cancel
                   </button>
                 </>
               ) : (
                 <>
-                  <button type="button" className="btn btn-small btn-ghost" onClick={() => setResetConfirm(true)}>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-ghost"
+                    onClick={() => setResetConfirm(true)}
+                  >
                     Reset demo
                   </button>
-                  <button type="button" className="btn btn-small btn-ghost" onClick={() => void onExitDemo()}>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-ghost"
+                    onClick={() => void onExitDemo()}
+                  >
                     Exit demo
                   </button>
                 </>
@@ -332,7 +369,12 @@ export function AppShell({
         {notice ? (
           <div className="notice-bar" role="status">
             <span>{notice}</span>
-            <button type="button" className="icon-btn" aria-label="Dismiss notice" onClick={onDismissNotice}>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Dismiss notice"
+              onClick={onDismissNotice}
+            >
               ×
             </button>
           </div>

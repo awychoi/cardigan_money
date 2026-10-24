@@ -29,9 +29,7 @@ export function CardsView({
   onFilterAccount: (accountId: string) => void;
 }) {
   const spendFor = (accountId: string, currency: string) =>
-    dashboard.accountSpend.find(
-      (row) => row.accountId === accountId && row.currency === currency,
-    );
+    dashboard.accountSpend.find((row) => row.accountId === accountId && row.currency === currency);
 
   const dueText = (account: AccountCard, compact = false): string => {
     const payment = account.payment;
@@ -63,8 +61,8 @@ export function CardsView({
         <div>
           <h1 id="cards-title">Cards</h1>
           <p className="muted">
-            {monthLabel(dashboard.month)} · monthly spending plus current balance and reported payment
-            metadata
+            {monthLabel(dashboard.month)} · monthly spending plus current balance and reported
+            payment metadata
           </p>
         </div>
       </header>

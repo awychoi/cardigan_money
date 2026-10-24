@@ -31,7 +31,9 @@ const SENSITIVE_PATTERNS = [
   /private.?key/i,
 ];
 
-export function sanitizeMeta(meta: Record<string, unknown>): Record<string, string | number | boolean | null> {
+export function sanitizeMeta(
+  meta: Record<string, unknown>,
+): Record<string, string | number | boolean | null> {
   const out: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of Object.entries(meta)) {
     if (!ALLOWED_FIELDS.has(key)) continue;

@@ -11,7 +11,7 @@ This plan maps the specification's required tests (§16) to commands and phases.
 | Plain-SQLite negative build | `./scripts/verify-plain-sqlite-reject.sh` | Builds a separate binary linking plain SQLite and proves the exact app check rejects it |
 | Frontend unit/component | `pnpm test` | Vitest + React Testing Library |
 | Type checking | `pnpm typecheck` | `tsc -b` |
-| Lint/format | `pnpm lint`, `pnpm format:check` | ESLint flat config + Prettier |
+| Lint/format | `pnpm lint`, `pnpm format:check`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` | ESLint flat config + Prettier + rustfmt + clippy (warnings are errors) |
 | Browser UI | `pnpm test:e2e` | Playwright against the dev-only mock bridge |
 | CSP/capability assertions | `pnpm test:e2e --grep security` and Rust tests | No external requests, blocked navigation, no forbidden capability permissions |
 | Dependency audit | `cargo audit`, `cargo deny check`, `pnpm audit` | Recorded in Phase 0 and Phase 10 |

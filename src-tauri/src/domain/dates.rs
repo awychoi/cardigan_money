@@ -77,7 +77,10 @@ impl Month {
     }
 
     pub fn from_date(date: NaiveDate) -> Self {
-        Self { year: date.year(), month: date.month() }
+        Self {
+            year: date.year(),
+            month: date.month(),
+        }
     }
 
     pub fn parse(value: &str) -> Result<Self, DateError> {
@@ -90,9 +93,8 @@ impl Month {
     }
 
     pub fn start(self) -> NaiveDate {
-        NaiveDate::from_ymd_opt(self.year, self.month, 1).unwrap_or_else(|| {
-            NaiveDate::from_ymd_opt(1970, 1, 1).expect("epoch is valid")
-        })
+        NaiveDate::from_ymd_opt(self.year, self.month, 1)
+            .unwrap_or_else(|| NaiveDate::from_ymd_opt(1970, 1, 1).expect("epoch is valid"))
     }
 
     /// Exclusive first day of the next month.
@@ -106,17 +108,29 @@ impl Month {
 
     pub fn previous(self) -> Self {
         if self.month == 1 {
-            Self { year: self.year - 1, month: 12 }
+            Self {
+                year: self.year - 1,
+                month: 12,
+            }
         } else {
-            Self { year: self.year, month: self.month - 1 }
+            Self {
+                year: self.year,
+                month: self.month - 1,
+            }
         }
     }
 
     pub fn next(self) -> Self {
         if self.month == 12 {
-            Self { year: self.year + 1, month: 1 }
+            Self {
+                year: self.year + 1,
+                month: 1,
+            }
         } else {
-            Self { year: self.year, month: self.month + 1 }
+            Self {
+                year: self.year,
+                month: self.month + 1,
+            }
         }
     }
 
@@ -149,7 +163,10 @@ pub fn current_month(tz_name: &str) -> Result<Month, DateError> {
     Ok(Month::from_date(now.date_naive()))
 }
 
-pub fn month_for_instant(tz_name: &str, instant: chrono::DateTime<Utc>) -> Result<Month, DateError> {
+pub fn month_for_instant(
+    tz_name: &str,
+    instant: chrono::DateTime<Utc>,
+) -> Result<Month, DateError> {
     let tz = timezone(tz_name)?;
     let _ = tz.from_utc_datetime(&instant.naive_utc());
     Ok(Month::from_date(instant.with_timezone(&tz).date_naive()))
@@ -189,7 +206,10 @@ mod tests {
 
     #[test]
     fn strict_date_only_parsing() {
-        assert_eq!(parse_date("2024-02-29").unwrap(), NaiveDate::from_ymd_opt(2024, 2, 29).unwrap());
+        assert_eq!(
+            parse_date("2024-02-29").unwrap(),
+            NaiveDate::from_ymd_opt(2024, 2, 29).unwrap()
+        );
         assert!(parse_date("2026-02-29").is_err());
         assert!(parse_date("2026-02-30").is_err());
         assert!(parse_date("2026-2-03").is_err());
@@ -228,9 +248,18 @@ mod tests {
     fn reporting_date_prefers_authorization_then_posted_then_manual() {
         let auth = NaiveDate::from_ymd_opt(2026, 1, 31).unwrap();
         let posted = NaiveDate::from_ymd_opt(2026, 2, 2).unwrap();
-        assert_eq!(choose_reporting_date(Some(auth), Some(posted), None).unwrap(), (auth, DateSource::Authorized));
-        assert_eq!(choose_reporting_date(None, Some(posted), None).unwrap(), (posted, DateSource::Posted));
-        assert_eq!(choose_reporting_date(None, None, Some(auth)).unwrap(), (auth, DateSource::Manual));
+        assert_eq!(
+            choose_reporting_date(Some(auth), Some(posted), None).unwrap(),
+            (auth, DateSource::Authorized)
+        );
+        assert_eq!(
+            choose_reporting_date(None, Some(posted), None).unwrap(),
+            (posted, DateSource::Posted)
+        );
+        assert_eq!(
+            choose_reporting_date(None, None, Some(auth)).unwrap(),
+            (auth, DateSource::Manual)
+        );
         assert!(choose_reporting_date(None, None, None).is_err());
     }
 

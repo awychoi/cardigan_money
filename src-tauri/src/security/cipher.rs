@@ -82,7 +82,10 @@ fn configure(conn: &Connection) -> AppResult<()> {
         return Err(AppError::Database);
     }
     // Defensive mode rejects writing to schema objects from untrusted SQL.
-    if conn.set_db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true).is_err() {
+    if conn
+        .set_db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true)
+        .is_err()
+    {
         return Err(AppError::Database);
     }
     let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0))?;
@@ -166,12 +169,10 @@ pub fn cipher_integrity_check(conn: &Connection) -> AppResult<()> {
         .query_map([], |row| row.get::<_, Option<String>>(0))
         .map_err(|_| AppError::IntegrityFailure)?;
     let mut errors = Vec::new();
-    for row in rows.flatten() {
-        if let Some(value) = row {
-            let value = value.trim().to_string();
-            if !value.is_empty() && !value.eq_ignore_ascii_case("ok") {
-                errors.push(value);
-            }
+    for value in rows.flatten().flatten() {
+        let value = value.trim().to_string();
+        if !value.is_empty() && !value.eq_ignore_ascii_case("ok") {
+            errors.push(value);
         }
     }
     if errors.is_empty() {

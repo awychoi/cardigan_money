@@ -46,25 +46,37 @@ fn count(state: &AppState, sql: &str) -> i64 {
 fn mock_sync_pages_accounts_transactions_balances_and_is_idempotent() {
     let (_tmp, state, connection) = setup();
     let provider = MockProvider::new(NaiveDate::from_ymd_opt(2026, 10, 23).unwrap());
-    let result = sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
+    let result =
+        sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
     assert_eq!(result.transactions_added, 3);
     assert_eq!(result.transactions_removed, 0);
     assert_eq!(result.balances_written, 2);
     assert_eq!(result.status, "partial", "liabilities are unsupported");
 
-    assert_eq!(count(&state, "SELECT count(*) FROM accounts WHERE source_kind = 'provider'"), 2);
+    assert_eq!(
+        count(
+            &state,
+            "SELECT count(*) FROM accounts WHERE source_kind = 'provider'"
+        ),
+        2
+    );
     assert_eq!(count(&state, "SELECT count(*) FROM transactions"), 3);
     assert_eq!(count(&state, "SELECT count(*) FROM balance_snapshots"), 2);
     let cursor: String = state
         .with_db(|conn, _h, _s| {
-            conn.query_row("SELECT cursor FROM connections WHERE id = ?1", [&connection], |row| row.get(0))
-                .map_err(|_| cardigan_money_lib::error::AppError::Database)
+            conn.query_row(
+                "SELECT cursor FROM connections WHERE id = ?1",
+                [&connection],
+                |row| row.get(0),
+            )
+            .map_err(|_| cardigan_money_lib::error::AppError::Database)
         })
         .unwrap();
     assert_eq!(cursor, "done");
 
     // Replaying from the saved cursor is a no-op.
-    let again = sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
+    let again =
+        sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
     assert_eq!(again.transactions_added, 0);
     assert_eq!(count(&state, "SELECT count(*) FROM transactions"), 3);
 
@@ -102,14 +114,20 @@ impl ProviderClient for MockProviderWithBalance {
 #[test]
 fn provider_failure_does_not_advance_past_the_committed_page() {
     let (_tmp, state, connection) = setup();
-    let failing = MockProvider::with_failure(NaiveDate::from_ymd_opt(2026, 10, 23).unwrap(), "page-2");
-    let result = sync_connection_by_id_with_client(&state, &connection, &failing, "manual").unwrap();
+    let failing =
+        MockProvider::with_failure(NaiveDate::from_ymd_opt(2026, 10, 23).unwrap(), "page-2");
+    let result =
+        sync_connection_by_id_with_client(&state, &connection, &failing, "manual").unwrap();
     assert_eq!(result.status, "failed");
     assert_eq!(result.transactions_added, 1);
     let cursor: String = state
         .with_db(|conn, _h, _s| {
-            conn.query_row("SELECT cursor FROM connections WHERE id = ?1", [&connection], |row| row.get(0))
-                .map_err(|_| cardigan_money_lib::error::AppError::Database)
+            conn.query_row(
+                "SELECT cursor FROM connections WHERE id = ?1",
+                [&connection],
+                |row| row.get(0),
+            )
+            .map_err(|_| cardigan_money_lib::error::AppError::Database)
         })
         .unwrap();
     assert_eq!(cursor, "page-2", "only the committed page advanced");
@@ -163,8 +181,12 @@ fn vault_lock_mid_sync_stops_without_advancing_and_can_resume() {
     vault::unlock(&state, SecretString::new(PASS.into())).unwrap();
     let cursor: String = state
         .with_db(|conn, _h, _s| {
-            conn.query_row("SELECT cursor FROM connections WHERE id = ?1", [&connection], |row| row.get(0))
-                .map_err(|_| cardigan_money_lib::error::AppError::Database)
+            conn.query_row(
+                "SELECT cursor FROM connections WHERE id = ?1",
+                [&connection],
+                |row| row.get(0),
+            )
+            .map_err(|_| cardigan_money_lib::error::AppError::Database)
         })
         .unwrap();
     assert_eq!(cursor, "page-2");
@@ -211,14 +233,21 @@ impl ProviderClient for PendingThenPosted {
                 next_cursor: Some("done".into()),
                 has_more: false,
             }),
-            _ => Ok(TransactionsPage { changes: vec![], next_cursor: Some("done".into()), has_more: false }),
+            _ => Ok(TransactionsPage {
+                changes: vec![],
+                next_cursor: Some("done".into()),
+                has_more: false,
+            }),
         }
     }
     fn balances(&self) -> ProviderResult<Vec<ProviderBalance>> {
         Ok(vec![])
     }
     fn liabilities(&self) -> ProviderResult<LiabilitiesResult> {
-        Ok(LiabilitiesResult { capability: Capability::Unsupported, rows: vec![] })
+        Ok(LiabilitiesResult {
+            capability: Capability::Unsupported,
+            rows: vec![],
+        })
     }
 }
 
@@ -230,7 +259,11 @@ fn tx(id: &str, amount: i64, pending: bool, pending_id: Option<&str>) -> Provide
         currency: "USD".into(),
         description: "Synthetic Pending".into(),
         authorized_date: Some("2026-10-20".into()),
-        posted_date: if pending { None } else { Some("2026-10-22".into()) },
+        posted_date: if pending {
+            None
+        } else {
+            Some("2026-10-22".into())
+        },
         pending,
         removed: false,
         pending_transaction_id: pending_id.map(str::to_string),
@@ -242,11 +275,19 @@ fn tx(id: &str, amount: i64, pending: bool, pending_id: Option<&str>) -> Provide
 #[test]
 fn pending_to_posted_does_not_double_count() {
     let (_tmp, state, connection) = setup();
-    let provider = PendingThenPosted { calls: std::cell::Cell::new(0) };
+    let provider = PendingThenPosted {
+        calls: std::cell::Cell::new(0),
+    };
     sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
     sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
     assert_eq!(count(&state, "SELECT count(*) FROM transactions"), 2);
-    assert_eq!(count(&state, "SELECT count(*) FROM transactions WHERE removed = 1"), 1);
+    assert_eq!(
+        count(
+            &state,
+            "SELECT count(*) FROM transactions WHERE removed = 1"
+        ),
+        1
+    );
     assert_eq!(
         count(&state, "SELECT count(*) FROM transactions WHERE provider_transaction_id = 'posted-1' AND pending_link_id IS NOT NULL"),
         1
@@ -290,9 +331,14 @@ fn liabilities_available_but_null_preserves_previous_values() {
             Ok(())
         })
         .unwrap();
-    let result = sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
+    let result =
+        sync_connection_by_id_with_client(&state, &connection, &provider, "manual").unwrap();
     assert_eq!(result.liabilities_status, "available_but_null");
-    assert_eq!(count(&state, "SELECT count(*) FROM payment_snapshots"), 1, "prior value preserved");
+    assert_eq!(
+        count(&state, "SELECT count(*) FROM payment_snapshots"),
+        1,
+        "prior value preserved"
+    );
 }
 
 #[test]
@@ -332,6 +378,12 @@ fn one_failed_connection_does_not_block_another() {
     let summary = sync::sync_now(&state, "manual").unwrap();
     assert!(summary.accepted);
     assert_eq!(summary.results.len(), 2);
-    assert!(summary.results.iter().any(|r| r.connection_id == mock_connection && r.transactions_added == 3));
-    assert!(summary.results.iter().any(|r| r.connection_id == plaid_connection && r.status == "failed"));
+    assert!(summary
+        .results
+        .iter()
+        .any(|r| r.connection_id == mock_connection && r.transactions_added == 3));
+    assert!(summary
+        .results
+        .iter()
+        .any(|r| r.connection_id == plaid_connection && r.status == "failed"));
 }

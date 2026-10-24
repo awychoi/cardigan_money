@@ -31,7 +31,9 @@ pub struct SecretString {
 
 impl SecretString {
     pub fn new(value: String) -> Self {
-        Self { inner: zeroize::Zeroizing::new(value) }
+        Self {
+            inner: zeroize::Zeroizing::new(value),
+        }
     }
 
     /// Exact bytes as typed: no trimming, case folding, or Unicode normalization.
@@ -56,7 +58,10 @@ impl LockedKey {
         // Best effort: mlock can fail under memory pressure or sandbox limits.
         let locked = unsafe { libc::mlock(boxed.as_ptr() as *const libc::c_void, KEK_LEN) == 0 };
         // `bytes` was moved into the box; no plaintext stack copy outlives this.
-        Self { bytes: boxed, locked }
+        Self {
+            bytes: boxed,
+            locked,
+        }
     }
 
     pub fn generate() -> AppResult<Self> {
@@ -111,7 +116,11 @@ impl Default for KdfParams {
     fn default() -> Self {
         // Spec default: 64 MiB, 3 iterations, 1 lane. Calibrated at creation
         // within the hard bounds below.
-        Self { m_cost_kib: 65_536, t_cost: 3, p_cost: 1 }
+        Self {
+            m_cost_kib: 65_536,
+            t_cost: 3,
+            p_cost: 1,
+        }
     }
 }
 
@@ -156,8 +165,13 @@ pub fn derive_kek(
     params: &KdfParams,
 ) -> AppResult<LockedKey> {
     params.validate()?;
-    let argon_params = Params::new(params.m_cost_kib, params.t_cost, params.p_cost, Some(KEK_LEN))
-        .map_err(|_| AppError::KdfOutOfBounds)?;
+    let argon_params = Params::new(
+        params.m_cost_kib,
+        params.t_cost,
+        params.p_cost,
+        Some(KEK_LEN),
+    )
+    .map_err(|_| AppError::KdfOutOfBounds)?;
     let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon_params);
     let mut out = [0u8; KEK_LEN];
     argon
@@ -213,17 +227,32 @@ pub fn estimate_entropy_bits(value: &str) -> u32 {
     let has_lower = value.chars().any(|c| c.is_ascii_lowercase());
     let has_upper = value.chars().any(|c| c.is_ascii_uppercase());
     let has_digit = value.chars().any(|c| c.is_ascii_digit());
-    let has_symbol = value.chars().any(|c| !c.is_alphanumeric() && !c.is_whitespace());
+    let has_symbol = value
+        .chars()
+        .any(|c| !c.is_alphanumeric() && !c.is_whitespace());
     let has_space = value.chars().any(char::is_whitespace);
     let mut pool = 0f64;
-    if has_lower { pool += 26.0; }
-    if has_upper { pool += 26.0; }
-    if has_digit { pool += 10.0; }
-    if has_symbol { pool += 33.0; }
-    if has_space { pool += 1.0; }
+    if has_lower {
+        pool += 26.0;
+    }
+    if has_upper {
+        pool += 26.0;
+    }
+    if has_digit {
+        pool += 10.0;
+    }
+    if has_symbol {
+        pool += 33.0;
+    }
+    if has_space {
+        pool += 1.0;
+    }
     let pool = pool.max(2.0);
     let len = value.chars().count() as f64;
-    let unique = value.chars().collect::<std::collections::HashSet<_>>().len() as f64;
+    let unique = value
+        .chars()
+        .collect::<std::collections::HashSet<_>>()
+        .len() as f64;
     let repetition_penalty = (unique / len).clamp(0.25, 1.0);
     (len * pool.log2() * repetition_penalty).floor() as u32
 }
@@ -236,7 +265,13 @@ pub fn seal(
 ) -> AppResult<Vec<u8>> {
     let cipher = XChaCha20Poly1305::new_from_slice(key.expose()).map_err(|_| AppError::Internal)?;
     cipher
-        .encrypt(XNonce::from_slice(nonce), Payload { msg: plaintext, aad })
+        .encrypt(
+            XNonce::from_slice(nonce),
+            Payload {
+                msg: plaintext,
+                aad,
+            },
+        )
         .map_err(|_| AppError::Internal)
 }
 
@@ -248,7 +283,13 @@ pub fn open_sealed(
 ) -> AppResult<zeroize::Zeroizing<Vec<u8>>> {
     let cipher = XChaCha20Poly1305::new_from_slice(key.expose()).map_err(|_| AppError::Internal)?;
     let plaintext = cipher
-        .decrypt(XNonce::from_slice(nonce), Payload { msg: ciphertext, aad })
+        .decrypt(
+            XNonce::from_slice(nonce),
+            Payload {
+                msg: ciphertext,
+                aad,
+            },
+        )
         .map_err(|_| AppError::WrongPassphrase)?;
     Ok(zeroize::Zeroizing::new(plaintext))
 }
@@ -274,12 +315,33 @@ mod tests {
     #[test]
     fn kdf_bounds_reject_absurd_params() {
         let salt = [1u8; SALT_LEN];
-        let p = KdfParams { m_cost_kib: 4 * 1024 * 1024, t_cost: 3, p_cost: 1 };
-        assert!(matches!(derive_kek(&pass("x"), &salt, &p), Err(AppError::KdfOutOfBounds)));
-        let p = KdfParams { m_cost_kib: 65_536, t_cost: 1000, p_cost: 1 };
-        assert!(matches!(derive_kek(&pass("x"), &salt, &p), Err(AppError::KdfOutOfBounds)));
-        let p = KdfParams { m_cost_kib: 65_536, t_cost: 3, p_cost: 0 };
-        assert!(matches!(derive_kek(&pass("x"), &salt, &p), Err(AppError::KdfOutOfBounds)));
+        let p = KdfParams {
+            m_cost_kib: 4 * 1024 * 1024,
+            t_cost: 3,
+            p_cost: 1,
+        };
+        assert!(matches!(
+            derive_kek(&pass("x"), &salt, &p),
+            Err(AppError::KdfOutOfBounds)
+        ));
+        let p = KdfParams {
+            m_cost_kib: 65_536,
+            t_cost: 1000,
+            p_cost: 1,
+        };
+        assert!(matches!(
+            derive_kek(&pass("x"), &salt, &p),
+            Err(AppError::KdfOutOfBounds)
+        ));
+        let p = KdfParams {
+            m_cost_kib: 65_536,
+            t_cost: 3,
+            p_cost: 0,
+        };
+        assert!(matches!(
+            derive_kek(&pass("x"), &salt, &p),
+            Err(AppError::KdfOutOfBounds)
+        ));
     }
 
     #[test]
@@ -303,13 +365,23 @@ mod tests {
         assert_eq!(&pt[..], b"dek-material");
         let mut bad = ct.clone();
         bad[0] ^= 1;
-        assert!(matches!(open_sealed(&key, &nonce, aad, &bad), Err(AppError::WrongPassphrase)));
-        assert!(matches!(open_sealed(&key, &nonce, b"other-aad", &ct), Err(AppError::WrongPassphrase)));
+        assert!(matches!(
+            open_sealed(&key, &nonce, aad, &bad),
+            Err(AppError::WrongPassphrase)
+        ));
+        assert!(matches!(
+            open_sealed(&key, &nonce, b"other-aad", &ct),
+            Err(AppError::WrongPassphrase)
+        ));
     }
 
     #[test]
     fn kdf_is_deterministic_and_salt_sensitive() {
-        let p = KdfParams { m_cost_kib: 8 * 1024, t_cost: 1, p_cost: 1 };
+        let p = KdfParams {
+            m_cost_kib: 8 * 1024,
+            t_cost: 1,
+            p_cost: 1,
+        };
         let a = derive_kek(&pass("passphrase-with-enough-length"), &[1u8; 16], &p).unwrap();
         let b = derive_kek(&pass("passphrase-with-enough-length"), &[1u8; 16], &p).unwrap();
         let c = derive_kek(&pass("passphrase-with-enough-length"), &[2u8; 16], &p).unwrap();

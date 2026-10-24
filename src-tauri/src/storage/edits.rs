@@ -59,10 +59,18 @@ fn validate_type(value: &str) -> AppResult<()> {
     }
 }
 
-pub fn set_override(conn: &Connection, id: &str, input: OverrideInput) -> AppResult<TransactionDetail> {
+pub fn set_override(
+    conn: &Connection,
+    id: &str,
+    input: OverrideInput,
+) -> AppResult<TransactionDetail> {
     uuid::Uuid::parse_str(id).map_err(|_| AppError::InvalidInput("transaction id"))?;
     let exists: i64 = conn
-        .query_row("SELECT count(*) FROM transactions WHERE id = ?1", [id], |row| row.get(0))
+        .query_row(
+            "SELECT count(*) FROM transactions WHERE id = ?1",
+            [id],
+            |row| row.get(0),
+        )
         .map_err(|_| AppError::Database)?;
     if exists == 0 {
         return Err(AppError::NotFound);
@@ -98,8 +106,11 @@ pub fn set_override(conn: &Connection, id: &str, input: OverrideInput) -> AppRes
         && input.excluded.is_none()
         && notes.is_none()
     {
-        conn.execute("DELETE FROM transaction_overrides WHERE transaction_id = ?1", [id])
-            .map_err(|_| AppError::Database)?;
+        conn.execute(
+            "DELETE FROM transaction_overrides WHERE transaction_id = ?1",
+            [id],
+        )
+        .map_err(|_| AppError::Database)?;
     } else {
         conn.execute(
             "INSERT INTO transaction_overrides (transaction_id, merchant_alias, category, type_correction, excluded, notes, edited_at) \
@@ -123,8 +134,11 @@ pub fn set_override(conn: &Connection, id: &str, input: OverrideInput) -> AppRes
 }
 
 pub fn clear_override(conn: &Connection, id: &str) -> AppResult<TransactionDetail> {
-    conn.execute("DELETE FROM transaction_overrides WHERE transaction_id = ?1", [id])
-        .map_err(|_| AppError::Database)?;
+    conn.execute(
+        "DELETE FROM transaction_overrides WHERE transaction_id = ?1",
+        [id],
+    )
+    .map_err(|_| AppError::Database)?;
     get_detail(conn, id)
 }
 
@@ -300,7 +314,11 @@ pub fn create_rule(conn: &Connection, input: &MerchantRuleInput) -> AppResult<Me
     get_rule(conn, &id)
 }
 
-pub fn update_rule(conn: &Connection, id: &str, input: &MerchantRuleInput) -> AppResult<MerchantRule> {
+pub fn update_rule(
+    conn: &Connection,
+    id: &str,
+    input: &MerchantRuleInput,
+) -> AppResult<MerchantRule> {
     uuid::Uuid::parse_str(id).map_err(|_| AppError::InvalidInput("rule id"))?;
     let (match_text, canonical, category) = validate_rule(input)?;
     let changed = conn
@@ -370,7 +388,8 @@ fn get_rule(conn: &Connection, id: &str) -> AppResult<MerchantRule> {
 /// are never modified; user overrides still take precedence in queries.
 pub fn apply_rules(conn: &Connection) -> AppResult<usize> {
     let rules = list_rules(conn)?;
-    let mut stmt = conn.prepare("SELECT id, merchant_normalized, raw_description FROM transactions")?;
+    let mut stmt =
+        conn.prepare("SELECT id, merchant_normalized, raw_description FROM transactions")?;
     let rows = stmt
         .query_map([], |row| {
             Ok((
@@ -467,7 +486,11 @@ pub fn set_manual_payment(
     input: &ManualPaymentInput,
 ) -> AppResult<Option<ManualPayment>> {
     let currency: String = conn
-        .query_row("SELECT currency FROM accounts WHERE id = ?1", [account_id], |row| row.get(0))
+        .query_row(
+            "SELECT currency FROM accounts WHERE id = ?1",
+            [account_id],
+            |row| row.get(0),
+        )
         .map_err(|error| match error {
             rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
             other => AppError::from(other),
@@ -505,8 +528,11 @@ pub fn set_manual_payment(
         }
     };
     if statement.is_none() && minimum.is_none() && next_due.is_none() {
-        conn.execute("DELETE FROM manual_payment_metadata WHERE account_id = ?1", [account_id])
-            .map_err(|_| AppError::Database)?;
+        conn.execute(
+            "DELETE FROM manual_payment_metadata WHERE account_id = ?1",
+            [account_id],
+        )
+        .map_err(|_| AppError::Database)?;
         return Ok(None);
     }
     let now = now_rfc3339();
@@ -530,7 +556,10 @@ mod tests {
     fn match_type_parsing_is_closed() {
         assert_eq!(MatchType::parse("exact").unwrap(), MatchType::Exact);
         assert_eq!(MatchType::parse("contains").unwrap(), MatchType::Contains);
-        assert_eq!(MatchType::parse("starts_with").unwrap(), MatchType::StartsWith);
+        assert_eq!(
+            MatchType::parse("starts_with").unwrap(),
+            MatchType::StartsWith
+        );
         assert!(MatchType::parse("regex").is_err());
     }
 

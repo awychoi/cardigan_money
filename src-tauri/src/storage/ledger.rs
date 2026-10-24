@@ -188,8 +188,8 @@ struct Filters {
 
 fn build_filters(query: &LedgerQuery) -> AppResult<Filters> {
     let start = parse_date(&query.start_date).map_err(|_| AppError::InvalidInput("start date"))?;
-    let end = parse_date(&query.end_date_exclusive)
-        .map_err(|_| AppError::InvalidInput("end date"))?;
+    let end =
+        parse_date(&query.end_date_exclusive).map_err(|_| AppError::InvalidInput("end date"))?;
     if start >= end {
         return Err(AppError::InvalidInput("date range"));
     }
@@ -216,8 +216,7 @@ fn build_filters(query: &LedgerQuery) -> AppResult<Filters> {
          JOIN accounts a ON a.id = t.account_id \
          LEFT JOIN transaction_overrides o ON o.transaction_id = t.id \
          WHERE t.removed = 0 AND t.reporting_date >= ? AND t.reporting_date < ?",
-    )
-    .replace('?', "?");
+    );
     let mut params: Vec<Value> = vec![start.to_string().into(), end.to_string().into()];
 
     if !query.account_ids.is_empty() {
@@ -228,8 +227,8 @@ fn build_filters(query: &LedgerQuery) -> AppResult<Filters> {
         }
     }
     if let Some(category) = &query.category {
-        let category = clean_text(category, 80, false)
-            .map_err(|_| AppError::InvalidInput("category"))?;
+        let category =
+            clean_text(category, 80, false).map_err(|_| AppError::InvalidInput("category"))?;
         sql.push_str(&format!(" AND {EFFECTIVE_CATEGORY} = ?"));
         params.push(category.into());
     }
@@ -255,7 +254,10 @@ fn build_filters(query: &LedgerQuery) -> AppResult<Filters> {
         params.push(pattern.clone().into());
         params.push(pattern.into());
     }
-    Ok(Filters { where_sql: sql, params })
+    Ok(Filters {
+        where_sql: sql,
+        params,
+    })
 }
 
 /// All matching rows (bounded) for CSV export. Filters are identical to the
@@ -367,11 +369,10 @@ pub fn query_ledger(conn: &Connection, query: &LedgerQuery) -> AppResult<LedgerP
     let count_sql = format!("SELECT count(*), \
         COALESCE(SUM(CASE WHEN t.pending = 0 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN t.amount_minor ELSE 0 END), 0), \
         COALESCE(SUM(CASE WHEN t.pending = 1 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN t.amount_minor ELSE 0 END), 0){}", filters.where_sql);
-    let (row_count, eligible_subtotal_minor, pending_subtotal_minor): (i64, i64, i64) = conn.query_row(
-        &count_sql,
-        params_from_iter(filters.params),
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-    )?;
+    let (row_count, eligible_subtotal_minor, pending_subtotal_minor): (i64, i64, i64) = conn
+        .query_row(&count_sql, params_from_iter(filters.params), |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?;
 
     Ok(LedgerPage {
         rows,

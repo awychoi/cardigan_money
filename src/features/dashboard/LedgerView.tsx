@@ -5,12 +5,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  command,
-  type Dashboard,
-  type LedgerPage,
-  type LedgerRow,
-} from "../../lib/bridge";
+import { command, type Dashboard, type LedgerPage, type LedgerRow } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { formatDateOnly, formatMoney, formatMonthRange, monthLabel } from "../../lib/formatting";
 import { Button } from "../../components/Button";
@@ -87,15 +82,17 @@ export function LedgerView({
           category: category || null,
           status,
           txType: txType
-            ? (txType as "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other")
+            ? (txType as
+                | "purchase"
+                | "refund"
+                | "fee"
+                | "interest"
+                | "payment"
+                | "transfer"
+                | "other")
             : undefined,
           search: search || null,
-          sort: sort as
-            | "date_desc"
-            | "date_asc"
-            | "amount_desc"
-            | "amount_asc"
-            | "merchant_asc",
+          sort: sort as "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "merchant_asc",
           page,
           pageSize,
         });
@@ -112,7 +109,19 @@ export function LedgerView({
     return () => {
       cancelled = true;
     };
-  }, [dashboard.startDate, dashboard.endDateExclusive, account, category, status, txType, search, sort, page, pageSize, reloadToken]);
+  }, [
+    dashboard.startDate,
+    dashboard.endDateExclusive,
+    account,
+    category,
+    status,
+    txType,
+    search,
+    sort,
+    page,
+    pageSize,
+    reloadToken,
+  ]);
 
   const columns = useMemo(
     () => [
@@ -137,7 +146,8 @@ export function LedgerView({
       columnHelper.accessor("pending", {
         header: "Status",
         cell: (info) => {
-          if (info.row.original.excluded) return <span className="status-pill status-warn">Excluded</span>;
+          if (info.row.original.excluded)
+            return <span className="status-pill status-warn">Excluded</span>;
           return info.getValue() ? (
             <span className="status-pill status-warn">Pending</span>
           ) : (
@@ -195,7 +205,14 @@ export function LedgerView({
           category: category || null,
           status,
           txType: txType
-            ? (txType as "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other")
+            ? (txType as
+                | "purchase"
+                | "refund"
+                | "fee"
+                | "interest"
+                | "payment"
+                | "transfer"
+                | "other")
             : undefined,
           search: search || null,
           sort: sort as "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "merchant_asc",
@@ -205,7 +222,9 @@ export function LedgerView({
       });
       setExportConfirm(false);
       setExportMessage(
-        response.rows === 1 ? "Exported 1 row as plaintext CSV." : `Exported ${response.rows} rows as plaintext CSV.`,
+        response.rows === 1
+          ? "Exported 1 row as plaintext CSV."
+          : `Exported ${response.rows} rows as plaintext CSV.`,
       );
     } catch (caught) {
       setError(friendlyError(caught));
@@ -216,9 +235,12 @@ export function LedgerView({
     <section className="dashboard" aria-labelledby="transactions-title">
       <header className="page-heading">
         <div>
-          <h1 id="transactions-title">{mode === "transactions" ? "Transactions" : "By supplier"}</h1>
+          <h1 id="transactions-title">
+            {mode === "transactions" ? "Transactions" : "By supplier"}
+          </h1>
           <p className="muted">
-            {monthLabel(dashboard.month)} · {formatMonthRange(dashboard.startDate, dashboard.endDateExclusive)}
+            {monthLabel(dashboard.month)} ·{" "}
+            {formatMonthRange(dashboard.startDate, dashboard.endDateExclusive)}
           </p>
         </div>
         <div className="heading-actions">
@@ -228,20 +250,20 @@ export function LedgerView({
             </Button>
           ) : null}
           <div className="segmented" role="group" aria-label="Ledger view">
-          <button
-            type="button"
-            aria-pressed={mode === "transactions"}
-            className={mode === "transactions" ? "segment segment-active" : "segment"}
-            onClick={() => setMode("transactions")}
-          >
-            Transactions
-          </button>
-          <button
-            type="button"
-            aria-pressed={mode === "suppliers"}
-            className={mode === "suppliers" ? "segment segment-active" : "segment"}
-            onClick={() => setMode("suppliers")}
-          >
+            <button
+              type="button"
+              aria-pressed={mode === "transactions"}
+              className={mode === "transactions" ? "segment segment-active" : "segment"}
+              onClick={() => setMode("transactions")}
+            >
+              Transactions
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "suppliers"}
+              className={mode === "suppliers" ? "segment segment-active" : "segment"}
+              onClick={() => setMode("suppliers")}
+            >
               By supplier
             </button>
           </div>
@@ -403,7 +425,9 @@ export function LedgerView({
           <div className={selected ? "ledger-layout" : "ledger-layout ledger-layout-full"}>
             <div className="table-wrap">
               <table className="ledger-table">
-                <caption className="sr-only">Transactions for {monthLabel(dashboard.month)}</caption>
+                <caption className="sr-only">
+                  Transactions for {monthLabel(dashboard.month)}
+                </caption>
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>

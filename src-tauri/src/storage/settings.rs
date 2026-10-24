@@ -171,7 +171,9 @@ fn valid_theme_id(id: &str) -> bool {
         return false;
     }
     let mut chars = id.chars();
-    let first_ok = chars.next().is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit());
+    let first_ok = chars
+        .next()
+        .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit());
     first_ok && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
@@ -199,8 +201,12 @@ pub fn validate_settings(settings: &Settings) -> AppResult<()> {
         if hour.len() != 2 || minute.len() != 2 {
             return Err(AppError::InvalidInput("sync window"));
         }
-        let hour: u32 = hour.parse().map_err(|_| AppError::InvalidInput("sync window"))?;
-        let minute: u32 = minute.parse().map_err(|_| AppError::InvalidInput("sync window"))?;
+        let hour: u32 = hour
+            .parse()
+            .map_err(|_| AppError::InvalidInput("sync window"))?;
+        let minute: u32 = minute
+            .parse()
+            .map_err(|_| AppError::InvalidInput("sync window"))?;
         if hour > 23 || minute > 59 {
             return Err(AppError::InvalidInput("sync window"));
         }
@@ -245,16 +251,26 @@ pub fn save_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
     validate_settings(settings)?;
     let now = now_rfc3339();
     let pairs: [(&str, String); 13] = [
-        ("timezone", serde_json::to_string(&settings.timezone).map_err(|_| AppError::Internal)?),
-        ("theme", serde_json::to_string(&settings.theme).map_err(|_| AppError::Internal)?),
-        ("themeId", serde_json::to_string(&settings.theme_id).map_err(|_| AppError::Internal)?),
+        (
+            "timezone",
+            serde_json::to_string(&settings.timezone).map_err(|_| AppError::Internal)?,
+        ),
+        (
+            "theme",
+            serde_json::to_string(&settings.theme).map_err(|_| AppError::Internal)?,
+        ),
+        (
+            "themeId",
+            serde_json::to_string(&settings.theme_id).map_err(|_| AppError::Internal)?,
+        ),
         (
             "closeBehavior",
             serde_json::to_string(&settings.close_behavior).map_err(|_| AppError::Internal)?,
         ),
         (
             "onboardingCompleted",
-            serde_json::to_string(&settings.onboarding_completed).map_err(|_| AppError::Internal)?,
+            serde_json::to_string(&settings.onboarding_completed)
+                .map_err(|_| AppError::Internal)?,
         ),
         (
             "autoLockMinutes",
@@ -323,22 +339,35 @@ mod tests {
         let s = Settings::default();
         let too_low = apply_patch(
             &s,
-            SettingsPatch { auto_lock_minutes: Some(0), ..Default::default() },
+            SettingsPatch {
+                auto_lock_minutes: Some(0),
+                ..Default::default()
+            },
         );
         assert!(too_low.is_err());
         let too_high = apply_patch(
             &s,
-            SettingsPatch { auto_lock_minutes: Some(241), ..Default::default() },
+            SettingsPatch {
+                auto_lock_minutes: Some(241),
+                ..Default::default()
+            },
         );
         assert!(too_high.is_err());
         let bad_tz = apply_patch(
             &s,
-            SettingsPatch { timezone: Some("Mars/Olympus".into()), ..Default::default() },
+            SettingsPatch {
+                timezone: Some("Mars/Olympus".into()),
+                ..Default::default()
+            },
         );
         assert!(bad_tz.is_err());
         let ok = apply_patch(
             &s,
-            SettingsPatch { theme: Some(Theme::Dark), auto_lock_minutes: Some(30), ..Default::default() },
+            SettingsPatch {
+                theme: Some(Theme::Dark),
+                auto_lock_minutes: Some(30),
+                ..Default::default()
+            },
         )
         .unwrap();
         assert_eq!(ok.theme, Theme::Dark);
@@ -349,17 +378,30 @@ mod tests {
     fn theme_ids_are_validated_as_slugs() {
         let s = Settings::default();
         let long = "a".repeat(41);
-        for bad in ["", "Ledger", "../theme", "theme id", "ledger!", long.as_str()] {
+        for bad in [
+            "",
+            "Ledger",
+            "../theme",
+            "theme id",
+            "ledger!",
+            long.as_str(),
+        ] {
             assert!(apply_patch(
                 &s,
-                SettingsPatch { theme_id: Some(bad.to_string()), ..Default::default() }
+                SettingsPatch {
+                    theme_id: Some(bad.to_string()),
+                    ..Default::default()
+                }
             )
             .is_err());
         }
         for good in ["ledger", "graphite-2", "editorial", "x"] {
             assert!(apply_patch(
                 &s,
-                SettingsPatch { theme_id: Some(good.to_string()), ..Default::default() }
+                SettingsPatch {
+                    theme_id: Some(good.to_string()),
+                    ..Default::default()
+                }
             )
             .is_ok());
         }
@@ -371,7 +413,10 @@ mod tests {
         for bad in [vec!["8:00"], vec!["24:00"], vec!["08:60"], vec!["nope"]] {
             assert!(apply_patch(
                 &s,
-                SettingsPatch { sync_windows: Some(bad.into_iter().map(String::from).collect()), ..Default::default() }
+                SettingsPatch {
+                    sync_windows: Some(bad.into_iter().map(String::from).collect()),
+                    ..Default::default()
+                }
             )
             .is_err());
         }

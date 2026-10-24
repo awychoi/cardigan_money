@@ -99,7 +99,9 @@ export function BackupsPanel({
     setMessage(null);
     try {
       const result = await command("portable_export", {});
-      setMessage(`Portable encrypted export written: ${result.id}. Store its separate password safely.`);
+      setMessage(
+        `Portable encrypted export written: ${result.id}. Store its separate password safely.`,
+      );
     } catch (caught) {
       setError(friendlyError(caught));
     } finally {
@@ -124,15 +126,18 @@ export function BackupsPanel({
       <h2 id="backups-title">Backups &amp; recovery</h2>
       <p className="fine-print">
         Backups are self-contained authenticated SQLCipher containers. Automatic daily backups are
-        kept (7), plus capped pre-migration, pre-restore, and pre-change backups. Losing the passphrase
-        and every backup passphrase makes the data unrecoverable. Backups exclude provider tokens and
-        the Plaid client secret. Restore is validated before the live ledger is replaced.
+        kept (7), plus capped pre-migration, pre-restore, and pre-change backups. Losing the
+        passphrase and every backup passphrase makes the data unrecoverable. Backups exclude
+        provider tokens and the Plaid client secret. Restore is validated before the live ledger is
+        replaced.
       </p>
       <p className="fine-print">
         Last backup:{" "}
-        {lastBackupAt ? `${formatDateOnly(lastBackupAt.slice(0, 10))} (${lastBackupStatus ?? "unknown"})` : "None recorded"}.
-        {" "}Auto-lock and scheduled sync may mean a backup is older than the last edit; use “Back up now”
-        after important changes.
+        {lastBackupAt
+          ? `${formatDateOnly(lastBackupAt.slice(0, 10))} (${lastBackupStatus ?? "unknown"})`
+          : "None recorded"}
+        . Auto-lock and scheduled sync may mean a backup is older than the last edit; use “Back up
+        now” after important changes.
       </p>
 
       {error ? (
@@ -215,8 +220,8 @@ export function BackupsPanel({
       <div className="danger-zone">
         <h3>Crypto-erase</h3>
         <p className="fine-print">
-          Deletes the encrypted ledger, header, backups, demo database, and staged files. There is no
-          recovery. Exports, Time Machine snapshots, and other devices are outside this action.
+          Deletes the encrypted ledger, header, backups, demo database, and staged files. There is
+          no recovery. Exports, Time Machine snapshots, and other devices are outside this action.
         </p>
         {eraseOpen ? (
           <div className="export-warning" role="alert">

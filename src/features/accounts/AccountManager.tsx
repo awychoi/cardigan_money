@@ -4,12 +4,15 @@ import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { AccountForm } from "./AccountForm";
 
-type Mode =
-  | { kind: "list" }
-  | { kind: "create" }
-  | { kind: "edit"; account: Account };
+type Mode = { kind: "list" } | { kind: "create" } | { kind: "edit"; account: Account };
 
-export function AccountManager({ onChanged, readOnly = false }: { onChanged?: () => void; readOnly?: boolean }) {
+export function AccountManager({
+  onChanged,
+  readOnly = false,
+}: {
+  onChanged?: () => void;
+  readOnly?: boolean;
+}) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -99,8 +102,8 @@ export function AccountManager({ onChanged, readOnly = false }: { onChanged?: ()
 
       {readOnly ? (
         <p className="fine-print">
-          Demo accounts are read-only. They come from synthetic fixtures and are recreated by
-          “Reset demo”.
+          Demo accounts are read-only. They come from synthetic fixtures and are recreated by “Reset
+          demo”.
         </p>
       ) : null}
 
@@ -160,7 +163,11 @@ export function AccountManager({ onChanged, readOnly = false }: { onChanged?: ()
                           >
                             Archive
                           </Button>{" "}
-                          <Button variant="ghost" className="btn-small" onClick={() => setArchiving(null)}>
+                          <Button
+                            variant="ghost"
+                            className="btn-small"
+                            onClick={() => setArchiving(null)}
+                          >
                             Cancel
                           </Button>
                         </span>

@@ -97,18 +97,32 @@ impl AppError {
     /// A short message safe to show in the renderer. Static text only.
     pub fn safe_message(&self) -> String {
         match self {
-            AppError::HeaderInvalid(_) => "The vault header is damaged or has been tampered with.".into(),
-            AppError::CipherUnavailable(_) => "The encrypted database engine is not available; refusing to continue.".into(),
-            AppError::PlaintextDatabase => "This file is not an encrypted ledger. Refusing to open it.".into(),
+            AppError::HeaderInvalid(_) => {
+                "The vault header is damaged or has been tampered with.".into()
+            }
+            AppError::CipherUnavailable(_) => {
+                "The encrypted database engine is not available; refusing to continue.".into()
+            }
+            AppError::PlaintextDatabase => {
+                "This file is not an encrypted ledger. Refusing to open it.".into()
+            }
             AppError::IntegrityFailure => "The encrypted ledger failed its integrity check.".into(),
             AppError::Database => "The ledger could not be read or written.".into(),
             AppError::Io => "A local file operation failed.".into(),
-            AppError::PermissionDenied(_) => "A local file or folder has unsafe permissions.".into(),
+            AppError::PermissionDenied(_) => {
+                "A local file or folder has unsafe permissions.".into()
+            }
             AppError::InvalidInput(_) => "One or more values were invalid.".into(),
             AppError::Blocked(m) => format!("This action is unavailable: {m}"),
-            AppError::ProviderNotConfigured => "No provider credentials are configured. Add Sandbox credentials in Settings first.".into(),
+            AppError::ProviderNotConfigured => {
+                "No provider credentials are configured. Add Sandbox credentials in Settings first."
+                    .into()
+            }
             AppError::Provider(message) => message.to_string(),
-            AppError::SchemaTooNew => "This ledger was created by a newer app version. Update the app before opening it.".into(),
+            AppError::SchemaTooNew => {
+                "This ledger was created by a newer app version. Update the app before opening it."
+                    .into()
+            }
             other => other.to_string(),
         }
     }
@@ -135,7 +149,10 @@ pub struct ErrorPayload {
 
 impl From<&AppError> for ErrorPayload {
     fn from(e: &AppError) -> Self {
-        Self { code: e.code().to_string(), message: e.safe_message() }
+        Self {
+            code: e.code().to_string(),
+            message: e.safe_message(),
+        }
     }
 }
 

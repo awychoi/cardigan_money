@@ -5,8 +5,8 @@ use std::os::unix::fs::PermissionsExt;
 use cardigan_money_lib::security::cipher::open_ledger;
 use cardigan_money_lib::security::crypto::{LockedKey, SecretString};
 use cardigan_money_lib::services::backups::{
-    self, BackupKind, create_backup, create_backup_inner, crypto_erase_confirmed, install_restore_confirmed,
-    list_backups, portable_export_to, prepare_restore, prune_backups,
+    self, create_backup, crypto_erase_confirmed, install_restore_confirmed, list_backups,
+    portable_export_to, prepare_restore, prune_backups, BackupKind,
 };
 use cardigan_money_lib::services::vault;
 use cardigan_money_lib::state::AppState;
@@ -22,7 +22,12 @@ fn mock_app() -> tauri::AppHandle<tauri::test::MockRuntime> {
     app.handle().clone()
 }
 
-fn setup() -> (tempfile::TempDir, AppState, tauri::AppHandle<tauri::test::MockRuntime>, String) {
+fn setup() -> (
+    tempfile::TempDir,
+    AppState,
+    tauri::AppHandle<tauri::test::MockRuntime>,
+    String,
+) {
     let tmp = tempfile::tempdir().unwrap();
     let state = AppState::new(tmp.path().to_path_buf()).unwrap();
     vault::create(&state, SecretString::new(PASS.into())).unwrap();
@@ -65,7 +70,11 @@ fn marker(state: &AppState) -> Option<String> {
     state
         .with_db(|conn, _h, _s| {
             let value: Option<String> = conn
-                .query_row("SELECT value FROM settings WHERE key = 'marker'", [], |row| row.get(0))
+                .query_row(
+                    "SELECT value FROM settings WHERE key = 'marker'",
+                    [],
+                    |row| row.get(0),
+                )
                 .ok();
             Ok(value)
         })
@@ -94,7 +103,11 @@ fn backup_is_self_contained_private_and_tamper_evident() {
     std::fs::remove_file(&plan.staged_path).unwrap();
 
     // Wrong passphrase fails before staging.
-    let wrong = prepare_restore(&state, &path, &SecretString::new("wrong passphrase long enough".into()));
+    let wrong = prepare_restore(
+        &state,
+        &path,
+        &SecretString::new("wrong passphrase long enough".into()),
+    );
     assert!(wrong.is_err());
     assert!(!backups::backups_dir(&state).join("restore-staged").exists());
 
@@ -152,27 +165,23 @@ fn portable_export_uses_its_own_password_and_can_be_restored() {
     let (tmp, state, app, _account) = setup();
     add_marker(&state, "portable-before");
     let destination = tmp.path().join("portable.cmbak");
-    let item = portable_export_to(
-        &state,
-        &destination,
-        SecretString::new(EXPORT_PASS.into()),
-    )
-    .unwrap();
+    let item =
+        portable_export_to(&state, &destination, SecretString::new(EXPORT_PASS.into())).unwrap();
     assert_eq!(item.kind, "portable");
     assert!(destination.exists());
     assert_eq!(
-        std::fs::metadata(&destination).unwrap().permissions().mode() & 0o777,
+        std::fs::metadata(&destination)
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
         0o600
     );
     add_marker(&state, "portable-after");
     // The ledger passphrase does not open the portable export.
     assert!(prepare_restore(&state, &destination, &SecretString::new(PASS.into())).is_err());
-    let plan = prepare_restore(
-        &state,
-        &destination,
-        &SecretString::new(EXPORT_PASS.into()),
-    )
-    .unwrap();
+    let plan =
+        prepare_restore(&state, &destination, &SecretString::new(EXPORT_PASS.into())).unwrap();
     install_restore_confirmed(&state, plan).unwrap();
     assert_eq!(marker(&state), Some("\"portable-before\"".to_string()));
     let _ = app;
@@ -186,7 +195,10 @@ fn backup_from_a_different_vault_is_rejected() {
 
     let (_tmp2, state2, _app2, _account2) = setup();
     let result = prepare_restore(&state2, &path1, &SecretString::new(PASS.into()));
-    assert!(matches!(result, Err(cardigan_money_lib::error::AppError::Blocked(_))));
+    assert!(matches!(
+        result,
+        Err(cardigan_money_lib::error::AppError::Blocked(_))
+    ));
 }
 
 #[test]
@@ -197,7 +209,10 @@ fn restore_requires_an_unlocked_vault() {
     let plan = prepare_restore(&state, &path, &SecretString::new(PASS.into())).unwrap();
     state.session.lock().unwrap().clear();
     let result = install_restore_confirmed(&state, plan);
-    assert!(matches!(result, Err(cardigan_money_lib::error::AppError::Locked)));
+    assert!(matches!(
+        result,
+        Err(cardigan_money_lib::error::AppError::Locked)
+    ));
     assert!(!state.session.lock().unwrap().is_unlocked());
 }
 
@@ -259,7 +274,11 @@ fn crypto_erase_removes_ledger_header_backups_and_demo_data() {
     ));
     // A stale key cannot open a removed database.
     let _ = LockedKey::generate().unwrap();
-    let _ = open_ledger(&tmp.path().join("vault/ledger.cmdb"), &LockedKey::generate().unwrap(), false);
+    let _ = open_ledger(
+        &tmp.path().join("vault/ledger.cmdb"),
+        &LockedKey::generate().unwrap(),
+        false,
+    );
 }
 
 #[test]
@@ -270,6 +289,11 @@ fn restore_rechecks_mode_after_a_native_prompt_gap() {
     let plan = prepare_restore(&state, &path, &SecretString::new(PASS.into())).unwrap();
     state.session.lock().unwrap().mode = cardigan_money_lib::state::SessionMode::Demo;
     let result = install_restore_confirmed(&state, plan);
-    assert!(matches!(result, Err(cardigan_money_lib::error::AppError::Blocked(_))));
-    assert!(!backups::backups_dir(&state).join("restore-staged-").exists());
+    assert!(matches!(
+        result,
+        Err(cardigan_money_lib::error::AppError::Blocked(_))
+    ));
+    assert!(!backups::backups_dir(&state)
+        .join("restore-staged-")
+        .exists());
 }

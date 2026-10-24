@@ -119,7 +119,10 @@ export function createMockAccount(input: {
   return structuredClone(created);
 }
 
-export function updateMockAccount(id: string, input: Parameters<typeof createMockAccount>[0]): Account {
+export function updateMockAccount(
+  id: string,
+  input: Parameters<typeof createMockAccount>[0],
+): Account {
   const existing = accounts.find((item) => item.id === id);
   if (!existing) throw new BridgeError("not_found", "Account not found.");
   const updated: Account = {
@@ -195,8 +198,12 @@ function seedTransactions(): MockTx[] {
   for (const card of ["1", "2", "3", "4", "5", "6"]) {
     for (const month of ["08", "09", "10"]) {
       for (const offset of [0, 1]) {
-        const [merchant, category] = merchants[(Number(card) + Number(month) + offset) % merchants.length];
-        const day = String(4 + (Number(card) * 3 + Number(month) + offset * 7) % 19).padStart(2, "0");
+        const [merchant, category] =
+          merchants[(Number(card) + Number(month) + offset) % merchants.length];
+        const day = String(4 + ((Number(card) * 3 + Number(month) + offset * 7) % 19)).padStart(
+          2,
+          "0",
+        );
         const amount = 500 + ((Number(card) * 397 + Number(month) * 211 + offset * 997) % 18_000);
         rows.push(
           makeTx(
@@ -214,31 +221,129 @@ function seedTransactions(): MockTx[] {
   }
   // Month boundary: authorized Sep 30, posted Oct 2.
   rows.push(
-    makeTx("mock-boundary", accountId(2), "2026-09-30", 21_540, "purchase", "Delta Air Lines", "Travel", {
-      authorizedDate: "2026-09-30",
-      postedDate: "2026-10-02",
-    }),
+    makeTx(
+      "mock-boundary",
+      accountId(2),
+      "2026-09-30",
+      21_540,
+      "purchase",
+      "Delta Air Lines",
+      "Travel",
+      {
+        authorizedDate: "2026-09-30",
+        postedDate: "2026-10-02",
+      },
+    ),
   );
   // Later-month refund.
-  rows.push(makeTx("mock-refund-buy", accountId(2), "2026-08-12", 30_000, "purchase", "Apple Store", "Electronics"));
-  rows.push(makeTx("mock-refund", accountId(2), "2026-10-03", -30_000, "refund", "Apple Store", "Electronics"));
+  rows.push(
+    makeTx(
+      "mock-refund-buy",
+      accountId(2),
+      "2026-08-12",
+      30_000,
+      "purchase",
+      "Apple Store",
+      "Electronics",
+    ),
+  );
+  rows.push(
+    makeTx(
+      "mock-refund",
+      accountId(2),
+      "2026-10-03",
+      -30_000,
+      "refund",
+      "Apple Store",
+      "Electronics",
+    ),
+  );
   // Pending + posted pair.
   rows.push(
-    makeTx("mock-pending", accountId(1), "2026-10-22", 4_250, "purchase", "Blue Bottle Coffee", "Dining", {
-      pending: true,
-      postedDate: null,
-      authorizedDate: "2026-10-22",
-    }),
+    makeTx(
+      "mock-pending",
+      accountId(1),
+      "2026-10-22",
+      4_250,
+      "purchase",
+      "Blue Bottle Coffee",
+      "Dining",
+      {
+        pending: true,
+        postedDate: null,
+        authorizedDate: "2026-10-22",
+      },
+    ),
   );
-  rows.push(makeTx("mock-posted", accountId(1), "2026-10-23", 4_250, "purchase", "Blue Bottle Coffee", "Dining"));
+  rows.push(
+    makeTx(
+      "mock-posted",
+      accountId(1),
+      "2026-10-23",
+      4_250,
+      "purchase",
+      "Blue Bottle Coffee",
+      "Dining",
+    ),
+  );
   // Identical purchases.
-  rows.push(makeTx("mock-dup-1", accountId(2), "2026-10-12", 1_234, "purchase", "Blue Bottle Coffee", "Dining"));
-  rows.push(makeTx("mock-dup-2", accountId(1), "2026-10-12", 1_234, "purchase", "Blue Bottle Coffee", "Dining"));
+  rows.push(
+    makeTx(
+      "mock-dup-1",
+      accountId(2),
+      "2026-10-12",
+      1_234,
+      "purchase",
+      "Blue Bottle Coffee",
+      "Dining",
+    ),
+  );
+  rows.push(
+    makeTx(
+      "mock-dup-2",
+      accountId(1),
+      "2026-10-12",
+      1_234,
+      "purchase",
+      "Blue Bottle Coffee",
+      "Dining",
+    ),
+  );
   // Payments/transfers/exclusion/fees/interest.
-  rows.push(makeTx("mock-payment", accountId(1), "2026-10-15", -100_000, "payment", "Payment Thank You", null));
-  rows.push(makeTx("mock-transfer", accountId(2), "2026-10-16", 50_000, "transfer", "Balance Transfer", null));
+  rows.push(
+    makeTx(
+      "mock-payment",
+      accountId(1),
+      "2026-10-15",
+      -100_000,
+      "payment",
+      "Payment Thank You",
+      null,
+    ),
+  );
+  rows.push(
+    makeTx(
+      "mock-transfer",
+      accountId(2),
+      "2026-10-16",
+      50_000,
+      "transfer",
+      "Balance Transfer",
+      null,
+    ),
+  );
   rows.push(makeTx("mock-fee", accountId(1), "2026-10-01", 9_500, "fee", "Annual Fee", "Fees"));
-  rows.push(makeTx("mock-interest", accountId(6), "2026-10-05", 1_822, "interest", "Interest Charge", "Interest"));
+  rows.push(
+    makeTx(
+      "mock-interest",
+      accountId(6),
+      "2026-10-05",
+      1_822,
+      "interest",
+      "Interest Charge",
+      "Interest",
+    ),
+  );
   rows.push(
     makeTx("mock-excluded", accountId(3), "2026-10-09", 7_999, "purchase", "Amazon", "Shopping", {
       excluded: true,
@@ -247,9 +352,18 @@ function seedTransactions(): MockTx[] {
   // Non-USD rows.
   for (let i = 0; i < 4; i += 1) {
     rows.push(
-      makeTx(`mock-eur-${i}`, accountId(7), `2026-10-${String(4 + i * 4).padStart(2, "0")}`, 2_100 + i * 900, "purchase", "Café de Flore", "Dining", {
-        currency: "EUR",
-      }),
+      makeTx(
+        `mock-eur-${i}`,
+        accountId(7),
+        `2026-10-${String(4 + i * 4).padStart(2, "0")}`,
+        2_100 + i * 900,
+        "purchase",
+        "Café de Flore",
+        "Dining",
+        {
+          currency: "EUR",
+        },
+      ),
     );
   }
   return rows;
@@ -333,7 +447,9 @@ function summaryFor(month: string): MonthSummary {
     eligibleCount: spend.length,
     pendingCount: usd.filter((tx) => tx.pending).length,
     rowCount: usd.length,
-    otherCurrencyRowCount: transactions.filter((tx) => tx.currency !== "USD" && inMonth(tx.date, month)).length,
+    otherCurrencyRowCount: transactions.filter(
+      (tx) => tx.currency !== "USD" && inMonth(tx.date, month),
+    ).length,
     suppliers,
     categories,
     reconciliation: {
@@ -358,14 +474,26 @@ const BALANCES: Record<string, { minor: number; retrieved: string; stale?: boole
 
 const PAYMENTS: Record<
   string,
-  { due: string | null; minimum: number | null; statement: number | null; source: string; manual?: boolean }
+  {
+    due: string | null;
+    minimum: number | null;
+    statement: number | null;
+    source: string;
+    manual?: boolean;
+  }
 > = {
   [accountId(1)]: { due: "2026-10-28", minimum: 35_000, statement: 432_100, source: "provider" },
   [accountId(2)]: { due: "2026-11-03", minimum: 25_000, statement: 128_450, source: "provider" },
   [accountId(3)]: { due: "2026-10-26", minimum: null, statement: 54_300, source: "provider" },
   [accountId(4)]: { due: "2026-10-30", minimum: 9_000, statement: 91_750, source: "provider" },
   [accountId(5)]: { due: "2026-11-05", minimum: 21_000, statement: 210_000, source: "provider" },
-  [accountId(6)]: { due: "2026-10-29", minimum: 3_300, statement: 33_200, source: "manual", manual: true },
+  [accountId(6)]: {
+    due: "2026-10-29",
+    minimum: 3_300,
+    statement: 33_200,
+    source: "manual",
+    manual: true,
+  },
   [accountId(8)]: { due: "2026-10-29", minimum: 0, statement: 0, source: "provider" },
 };
 
@@ -448,7 +576,10 @@ function overviewFor(): Overview {
   const cards = accountCards();
   const includedUsd = cards.filter((card) => card.included && card.currency === "USD");
   const withBalance = includedUsd.filter((card) => card.currentBalanceMinor !== null);
-  const knownTotalMinor = withBalance.reduce((sum, card) => sum + (card.currentBalanceMinor ?? 0), 0);
+  const knownTotalMinor = withBalance.reduce(
+    (sum, card) => sum + (card.currentBalanceMinor ?? 0),
+    0,
+  );
   const entries: UpcomingPayment[] = [];
   for (const card of cards) {
     if (!card.included || !card.payment.nextDueDate) continue;
@@ -473,7 +604,9 @@ function overviewFor(): Overview {
       accountsMissingBalance: includedUsd.length - withBalance.length,
       complete: includedUsd.length > 0 && includedUsd.length === withBalance.length,
       otherCurrency: cards
-        .filter((card) => card.included && card.currency !== "USD" && card.currentBalanceMinor !== null)
+        .filter(
+          (card) => card.included && card.currency !== "USD" && card.currentBalanceMinor !== null,
+        )
         .map((card) => [card.currency, card.currentBalanceMinor ?? 0] as [string, number]),
     },
     upcoming: {
@@ -557,7 +690,9 @@ function toRow(tx: MockTx): LedgerRow {
 export function mockLedger(query: LedgerQuery): LedgerPage {
   const page = query.page ?? 0;
   const pageSize = query.pageSize ?? 50;
-  let rows = transactions.filter((tx) => tx.date >= query.startDate && tx.date < query.endDateExclusive);
+  let rows = transactions.filter(
+    (tx) => tx.date >= query.startDate && tx.date < query.endDateExclusive,
+  );
   if (query.accountIds && query.accountIds.length > 0) {
     rows = rows.filter((tx) => query.accountIds?.includes(tx.accountId));
   }
@@ -611,7 +746,15 @@ export function mockLedger(query: LedgerQuery): LedgerPage {
 interface MockOverride {
   merchantAlias: string | null;
   category: string | null;
-  typeCorrection: "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other" | null;
+  typeCorrection:
+    | "purchase"
+    | "refund"
+    | "fee"
+    | "interest"
+    | "payment"
+    | "transfer"
+    | "other"
+    | null;
   excluded: boolean | null;
   notes: string | null;
 }
@@ -824,13 +967,35 @@ export function mockValidateImport(jobId: string) {
     reviewCount: 1,
     rejectedCount: 0,
     sampleRows: [
-      { rowNumber: 1, date: "2026-10-02", merchant: "Imported Coffee", amountMinor: 1234, category: "Dining", status: "insert", reason: null },
-      { rowNumber: 2, date: "2026-10-03", merchant: "Imported Books", amountMinor: 4500, category: "Shopping", status: "insert", reason: null },
-      { rowNumber: 3, date: "2026-10-04", merchant: "Imported Coffee", amountMinor: 1234, category: "Dining", status: "review", reason: "possible duplicate; review before importing" },
+      {
+        rowNumber: 1,
+        date: "2026-10-02",
+        merchant: "Imported Coffee",
+        amountMinor: 1234,
+        category: "Dining",
+        status: "insert",
+        reason: null,
+      },
+      {
+        rowNumber: 2,
+        date: "2026-10-03",
+        merchant: "Imported Books",
+        amountMinor: 4500,
+        category: "Shopping",
+        status: "insert",
+        reason: null,
+      },
+      {
+        rowNumber: 3,
+        date: "2026-10-04",
+        merchant: "Imported Coffee",
+        amountMinor: 1234,
+        category: "Dining",
+        status: "review",
+        reason: "possible duplicate; review before importing",
+      },
     ],
-    months: [
-      { month: "2026-10", purchasesMinor: 5734, refundsMinor: 0, netMinor: 5734, count: 2 },
-    ],
+    months: [{ month: "2026-10", purchasesMinor: 5734, refundsMinor: 0, netMinor: 5734, count: 2 }],
     reviewMonths: [
       { month: "2026-10", purchasesMinor: 1234, refundsMinor: 0, netMinor: 1234, count: 1 },
     ],
@@ -859,8 +1024,24 @@ export function mockCommitImport(jobId: string, acceptReview: boolean) {
   importBatches.unshift(batch);
   transactions = [
     ...transactions,
-    makeTx(`mock-import-${batch.id}-1`, importJob.accountId, "2026-10-02", 1234, "purchase", "Imported Coffee", "Dining"),
-    makeTx(`mock-import-${batch.id}-2`, importJob.accountId, "2026-10-03", 4500, "purchase", "Imported Books", "Shopping"),
+    makeTx(
+      `mock-import-${batch.id}-1`,
+      importJob.accountId,
+      "2026-10-02",
+      1234,
+      "purchase",
+      "Imported Coffee",
+      "Dining",
+    ),
+    makeTx(
+      `mock-import-${batch.id}-2`,
+      importJob.accountId,
+      "2026-10-03",
+      4500,
+      "purchase",
+      "Imported Books",
+      "Shopping",
+    ),
   ];
   importJob = null;
   return {

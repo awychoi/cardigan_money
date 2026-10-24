@@ -148,6 +148,12 @@ fn fifty_thousand_transactions_meet_targets() {
     println!("50k dashboard: {dashboard_time:?}");
     println!("unlock (KDF): {unlock:?}");
     println!("cached startup after unlock (dashboard): {startup:?}");
-    assert!(search < Duration::from_millis(200), "search target missed: {search:?}");
-    assert!(month < Duration::from_millis(200), "month target missed: {month:?}");
+    assert!(
+        search < Duration::from_millis(200),
+        "search target missed: {search:?}"
+    );
+    assert!(
+        month < Duration::from_millis(200),
+        "month target missed: {month:?}"
+    );
 }

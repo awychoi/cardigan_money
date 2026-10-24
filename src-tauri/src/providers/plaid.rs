@@ -12,9 +12,7 @@ use crate::providers::{
     ProviderTransaction, TransactionsPage,
 };
 use crate::security::crypto::SecretString;
-use crate::security::keychain::{
-    CredentialStore, ACCOUNT_CLIENT_ID, ACCOUNT_SECRET,
-};
+use crate::security::keychain::{CredentialStore, ACCOUNT_CLIENT_ID, ACCOUNT_SECRET};
 
 pub const ACCESS_TOKEN_PREFIX: &str = "plaid-access-token-";
 pub const SANDBOX_BASE: &str = "https://sandbox.plaid.com";
@@ -41,7 +39,9 @@ pub struct PlaidCredentials {
     pub environment: PlaidEnvironment,
 }
 
-pub fn load_sandbox_credentials(store: &dyn CredentialStore) -> AppResult<Option<PlaidCredentials>> {
+pub fn load_sandbox_credentials(
+    store: &dyn CredentialStore,
+) -> AppResult<Option<PlaidCredentials>> {
     let Some(client_id) = store.get(ACCOUNT_CLIENT_ID)? else {
         return Ok(None);
     };
@@ -73,7 +73,9 @@ fn validate_client_id(client_id: &SecretString) -> AppResult<()> {
     let value = client_id.expose();
     if value.len() < 8
         || value.len() > 128
-        || !value.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+        || !value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
     {
         return Err(AppError::InvalidInput("Plaid client ID"));
     }
@@ -150,7 +152,9 @@ pub struct LinkedItem {
 impl LinkTokenGetResponse {
     pub fn first_linked_item(&self) -> Option<LinkedItem> {
         for session in &self.link_sessions {
-            let Some(results) = session.results.as_ref() else { continue };
+            let Some(results) = session.results.as_ref() else {
+                continue;
+            };
             for item in results.item_add_results.iter() {
                 if !item.public_token.is_empty() {
                     return Some(LinkedItem {
@@ -218,28 +222,28 @@ impl PlaidClient {
         let url = self
             .policy
             .validate_url(&format!("{}{}", self.base_url, path))
-            .map_err(|_| ProviderError::new(ProviderErrorKind::Permanent, "provider URL rejected"))?;
+            .map_err(|_| {
+                ProviderError::new(ProviderErrorKind::Permanent, "provider URL rejected")
+            })?;
         let object = body
             .as_object_mut()
             .ok_or_else(|| ProviderError::new(ProviderErrorKind::Permanent, "provider body"))?;
-        object.insert("client_id".into(), Value::String(self.client_id.expose().into()));
+        object.insert(
+            "client_id".into(),
+            Value::String(self.client_id.expose().into()),
+        );
         object.insert("secret".into(), Value::String(self.secret.expose().into()));
         if let Some(token) = &self.access_token {
             object.insert("access_token".into(), Value::String(token.expose().into()));
         }
-        let response = self
-            .client
-            .post(url)
-            .json(&body)
-            .send()
-            .map_err(|error| {
-                let kind = if error.is_timeout() {
-                    ProviderErrorKind::Transient
-                } else {
-                    ProviderErrorKind::Network
-                };
-                ProviderError::new(kind, "Plaid could not be reached.")
-            })?;
+        let response = self.client.post(url).json(&body).send().map_err(|error| {
+            let kind = if error.is_timeout() {
+                ProviderErrorKind::Transient
+            } else {
+                ProviderErrorKind::Network
+            };
+            ProviderError::new(kind, "Plaid could not be reached.")
+        })?;
         let status = response.status();
         let declared = response.content_length().unwrap_or(0);
         if declared > MAX_RESPONSE_BYTES {
@@ -249,8 +253,9 @@ impl PlaidClient {
             ));
         }
         let mut response = response;
-        let bytes = read_bounded(&mut response, MAX_RESPONSE_BYTES)
-            .map_err(|_| ProviderError::new(ProviderErrorKind::Network, "Plaid response failed."))?;
+        let bytes = read_bounded(&mut response, MAX_RESPONSE_BYTES).map_err(|_| {
+            ProviderError::new(ProviderErrorKind::Network, "Plaid response failed.")
+        })?;
         if !status.is_success() {
             let code = serde_json::from_slice::<PlaidErrorResponse>(&bytes)
                 .ok()
@@ -258,11 +263,17 @@ impl PlaidClient {
             return Err(map_plaid_error(code.as_deref()));
         }
         serde_json::from_slice(&bytes).map_err(|_| {
-            ProviderError::new(ProviderErrorKind::Permanent, "Plaid returned an invalid response.")
+            ProviderError::new(
+                ProviderErrorKind::Permanent,
+                "Plaid returned an invalid response.",
+            )
         })
     }
 
-    pub fn create_hosted_link_token(&self, client_user_id: &str) -> ProviderResult<LinkTokenResponse> {
+    pub fn create_hosted_link_token(
+        &self,
+        client_user_id: &str,
+    ) -> ProviderResult<LinkTokenResponse> {
         self.post(
             "/link/token/create",
             json!({
@@ -277,7 +288,10 @@ impl PlaidClient {
         )
     }
 
-    pub fn create_update_link_token(&self, client_user_id: &str) -> ProviderResult<LinkTokenResponse> {
+    pub fn create_update_link_token(
+        &self,
+        client_user_id: &str,
+    ) -> ProviderResult<LinkTokenResponse> {
         self.post(
             "/link/token/create",
             json!({
@@ -290,12 +304,24 @@ impl PlaidClient {
         )
     }
 
-    pub fn link_token_get(&self, link_token: &SecretString) -> ProviderResult<LinkTokenGetResponse> {
-        self.post("/link/token/get", json!({ "link_token": link_token.expose() }))
+    pub fn link_token_get(
+        &self,
+        link_token: &SecretString,
+    ) -> ProviderResult<LinkTokenGetResponse> {
+        self.post(
+            "/link/token/get",
+            json!({ "link_token": link_token.expose() }),
+        )
     }
 
-    pub fn exchange_public_token(&self, public_token: &SecretString) -> ProviderResult<ExchangeResponse> {
-        self.post("/item/public_token/exchange", json!({ "public_token": public_token.expose() }))
+    pub fn exchange_public_token(
+        &self,
+        public_token: &SecretString,
+    ) -> ProviderResult<ExchangeResponse> {
+        self.post(
+            "/item/public_token/exchange",
+            json!({ "public_token": public_token.expose() }),
+        )
     }
 
     pub fn accounts(&self) -> ProviderResult<AccountsResponse> {
@@ -309,7 +335,10 @@ impl PlaidClient {
         self.post("/accounts/get", json!({}))
     }
 
-    pub fn transactions_sync(&self, cursor: Option<&str>) -> ProviderResult<TransactionsSyncResponse> {
+    pub fn transactions_sync(
+        &self,
+        cursor: Option<&str>,
+    ) -> ProviderResult<TransactionsSyncResponse> {
         let mut body = json!({ "count": 500 });
         if let Some(cursor) = cursor {
             body["cursor"] = Value::String(cursor.to_string());
@@ -441,21 +470,40 @@ struct PlaidErrorResponse {
 
 fn map_plaid_error(code: Option<&str>) -> ProviderError {
     match code.unwrap_or("") {
-        "ITEM_LOGIN_REQUIRED" | "INVALID_ACCESS_TOKEN" | "ITEM_NOT_FOUND" | "ACCESS_NOT_GRANTED" => {
-            ProviderError::new(ProviderErrorKind::ReauthRequired, "The bank connection needs to be reconnected.")
-        }
-        "RATE_LIMIT_EXCEEDED" => ProviderError::new(ProviderErrorKind::RateLimited, "Plaid rate-limited this request."),
-        "PRODUCT_NOT_READY" | "PRODUCTS_NOT_SUPPORTED" | "NO_LIABILITIES" | "PRODUCT_NOT_ENABLED" => {
-            ProviderError::new(ProviderErrorKind::Unsupported, "This Plaid product is unavailable for the Item.")
-        }
-        "INSTITUTION_NOT_RESPONDING" | "INTERNAL_SERVER_ERROR" | "PLANNED_MAINTENANCE" | "INSTITUTION_DOWN" => {
-            ProviderError::new(ProviderErrorKind::Transient, "Plaid is temporarily unavailable.")
-        }
-        "INVALID_LINK_TOKEN" | "INVALID_PUBLIC_TOKEN" | "LINK_TOKEN_EXPIRED" => {
-            ProviderError::new(ProviderErrorKind::Permanent, "The linking session expired or was already used.")
-        }
+        "ITEM_LOGIN_REQUIRED"
+        | "INVALID_ACCESS_TOKEN"
+        | "ITEM_NOT_FOUND"
+        | "ACCESS_NOT_GRANTED" => ProviderError::new(
+            ProviderErrorKind::ReauthRequired,
+            "The bank connection needs to be reconnected.",
+        ),
+        "RATE_LIMIT_EXCEEDED" => ProviderError::new(
+            ProviderErrorKind::RateLimited,
+            "Plaid rate-limited this request.",
+        ),
+        "PRODUCT_NOT_READY"
+        | "PRODUCTS_NOT_SUPPORTED"
+        | "NO_LIABILITIES"
+        | "PRODUCT_NOT_ENABLED" => ProviderError::new(
+            ProviderErrorKind::Unsupported,
+            "This Plaid product is unavailable for the Item.",
+        ),
+        "INSTITUTION_NOT_RESPONDING"
+        | "INTERNAL_SERVER_ERROR"
+        | "PLANNED_MAINTENANCE"
+        | "INSTITUTION_DOWN" => ProviderError::new(
+            ProviderErrorKind::Transient,
+            "Plaid is temporarily unavailable.",
+        ),
+        "INVALID_LINK_TOKEN" | "INVALID_PUBLIC_TOKEN" | "LINK_TOKEN_EXPIRED" => ProviderError::new(
+            ProviderErrorKind::Permanent,
+            "The linking session expired or was already used.",
+        ),
         "INVALID_API_KEYS" | "INVALID_CLIENT_ID" | "INVALID_SECRET" | "UNAUTHORIZED" => {
-            ProviderError::new(ProviderErrorKind::Permanent, "Plaid rejected the configured credentials.")
+            ProviderError::new(
+                ProviderErrorKind::Permanent,
+                "Plaid rejected the configured credentials.",
+            )
         }
         _ => ProviderError::new(ProviderErrorKind::Permanent, "Plaid rejected the request."),
     }
@@ -516,7 +564,11 @@ pub fn map_provider_transaction(tx: &PlaidTransaction) -> ProviderTransaction {
         .personal_finance_category
         .as_ref()
         .and_then(|pfc| pfc.detailed.clone().or_else(|| pfc.primary.clone()))
-        .or_else(|| tx.category.as_ref().and_then(|values| values.first().cloned()));
+        .or_else(|| {
+            tx.category
+                .as_ref()
+                .and_then(|values| values.first().cloned())
+        });
     let primary = tx
         .personal_finance_category
         .as_ref()

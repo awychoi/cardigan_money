@@ -121,10 +121,15 @@ pub fn export_filtered(
     }
     let bytes = writer.into_inner().map_err(|_| AppError::Internal)?;
     write_atomic_0600(destination, &bytes)?;
-    Ok(ExportResult { rows: rows.len(), written: true })
+    Ok(ExportResult {
+        rows: rows.len(),
+        written: true,
+    })
 }
 
-pub fn choose_destination<R: tauri::Runtime>(app: &AppHandle<R>) -> AppResult<Option<std::path::PathBuf>> {
+pub fn choose_destination<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+) -> AppResult<Option<std::path::PathBuf>> {
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
     app.run_on_main_thread(move || {
         let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
@@ -141,7 +146,10 @@ pub fn choose_destination<R: tauri::Runtime>(app: &AppHandle<R>) -> AppResult<Op
 }
 
 pub fn default_filename() -> String {
-    format!("cardigan-money-ledger-{}.csv", now_rfc3339().get(0..10).unwrap_or("export"))
+    format!(
+        "cardigan-money-ledger-{}.csv",
+        now_rfc3339().get(0..10).unwrap_or("export")
+    )
 }
 
 #[cfg(test)]
@@ -150,8 +158,19 @@ mod tests {
 
     #[test]
     fn formula_injection_is_escaped_after_leading_whitespace() {
-        for value in ["=cmd", " +sum", "-1+2", "@foo", "\t=1", "\r=1", "   =hidden"] {
-            assert!(escape_field(value).starts_with('\''), "not escaped: {value:?}");
+        for value in [
+            "=cmd",
+            " +sum",
+            "-1+2",
+            "@foo",
+            "\t=1",
+            "\r=1",
+            "   =hidden",
+        ] {
+            assert!(
+                escape_field(value).starts_with('\''),
+                "not escaped: {value:?}"
+            );
         }
         assert_eq!(escape_field("Coffee"), "Coffee");
         assert_eq!(escape_field("2026-10-01"), "2026-10-01");

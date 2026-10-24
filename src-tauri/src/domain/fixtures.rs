@@ -31,30 +31,222 @@ struct FixtureTx {
 
 const FIXTURE_TX: &[FixtureTx] = &[
     // Leap day.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2024-02-29", amount: 1_111, kind: "purchase", merchant: "Leap Shop", category: Some("Leap"), pending: false, excluded: false, currency: "USD", authorized: None, posted: Some("2024-02-29") },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2024-02-29",
+        amount: 1_111,
+        kind: "purchase",
+        merchant: "Leap Shop",
+        category: Some("Leap"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: Some("2024-02-29"),
+    },
     // New York DST spring-forward and fall-back calendar days.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-03-08", amount: 2_222, kind: "purchase", merchant: "DST Spring", category: Some("DST"), pending: false, excluded: false, currency: "USD", authorized: None, posted: Some("2026-03-08") },
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-11-01", amount: 3_333, kind: "purchase", merchant: "DST Fall", category: Some("DST"), pending: false, excluded: false, currency: "USD", authorized: None, posted: Some("2026-11-01") },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-03-08",
+        amount: 2_222,
+        kind: "purchase",
+        merchant: "DST Spring",
+        category: Some("DST"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: Some("2026-03-08"),
+    },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-11-01",
+        amount: 3_333,
+        kind: "purchase",
+        merchant: "DST Fall",
+        category: Some("DST"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: Some("2026-11-01"),
+    },
     // Year boundary: authorized Dec 31, posted Jan 2.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-12-31", amount: 4_444, kind: "purchase", merchant: "Year End", category: Some("Holiday"), pending: false, excluded: false, currency: "USD", authorized: Some("2026-12-31"), posted: Some("2027-01-02") },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-12-31",
+        amount: 4_444,
+        kind: "purchase",
+        merchant: "Year End",
+        category: Some("Holiday"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: Some("2026-12-31"),
+        posted: Some("2027-01-02"),
+    },
     // Refund received in a later month than the purchase.
-    FixtureTx { account: ACCOUNT_TRAVEL, reporting: "2026-09-20", amount: 9_000, kind: "purchase", merchant: "Refundable Co", category: Some("Travel"), pending: false, excluded: false, currency: "USD", authorized: None, posted: Some("2026-09-20") },
-    FixtureTx { account: ACCOUNT_TRAVEL, reporting: "2026-10-05", amount: -2_500, kind: "refund", merchant: "Refundable Co", category: Some("Travel"), pending: false, excluded: false, currency: "USD", authorized: None, posted: Some("2026-10-05") },
+    FixtureTx {
+        account: ACCOUNT_TRAVEL,
+        reporting: "2026-09-20",
+        amount: 9_000,
+        kind: "purchase",
+        merchant: "Refundable Co",
+        category: Some("Travel"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: Some("2026-09-20"),
+    },
+    FixtureTx {
+        account: ACCOUNT_TRAVEL,
+        reporting: "2026-10-05",
+        amount: -2_500,
+        kind: "refund",
+        merchant: "Refundable Co",
+        category: Some("Travel"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: Some("2026-10-05"),
+    },
     // Pending plus posted replacement; only the posted row contributes.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-18", amount: 7_500, kind: "purchase", merchant: "Pending Pair", category: Some("Shopping"), pending: true, excluded: false, currency: "USD", authorized: Some("2026-10-18"), posted: None },
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-19", amount: 7_500, kind: "purchase", merchant: "Pending Pair", category: Some("Shopping"), pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-18",
+        amount: 7_500,
+        kind: "purchase",
+        merchant: "Pending Pair",
+        category: Some("Shopping"),
+        pending: true,
+        excluded: false,
+        currency: "USD",
+        authorized: Some("2026-10-18"),
+        posted: None,
+    },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-19",
+        amount: 7_500,
+        kind: "purchase",
+        merchant: "Pending Pair",
+        category: Some("Shopping"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
     // Fees and interest are spending; payments and transfers are not.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-10", amount: 500, kind: "fee", merchant: "Annual Fee", category: Some("Fees"), pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-11", amount: 200, kind: "interest", merchant: "Interest Charge", category: Some("Interest"), pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-05", amount: -5_000, kind: "payment", merchant: "Payment Thank You", category: None, pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-06", amount: 1_000, kind: "transfer", merchant: "Balance Transfer", category: None, pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-10",
+        amount: 500,
+        kind: "fee",
+        merchant: "Annual Fee",
+        category: Some("Fees"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-11",
+        amount: 200,
+        kind: "interest",
+        merchant: "Interest Charge",
+        category: Some("Interest"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-05",
+        amount: -5_000,
+        kind: "payment",
+        merchant: "Payment Thank You",
+        category: None,
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-06",
+        amount: 1_000,
+        kind: "transfer",
+        merchant: "Balance Transfer",
+        category: None,
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
     // Explicit exclusion.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-12", amount: 4_000, kind: "purchase", merchant: "Excluded Shop", category: Some("Other"), pending: false, excluded: true, currency: "USD", authorized: None, posted: None },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-12",
+        amount: 4_000,
+        kind: "purchase",
+        merchant: "Excluded Shop",
+        category: Some("Other"),
+        pending: false,
+        excluded: true,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
     // Two legitimate identical purchases.
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-15", amount: 2_000, kind: "purchase", merchant: "Corner Cafe", category: Some("Dining"), pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
-    FixtureTx { account: ACCOUNT_EVERYDAY, reporting: "2026-10-15", amount: 2_000, kind: "purchase", merchant: "Corner Cafe", category: Some("Dining"), pending: false, excluded: false, currency: "USD", authorized: None, posted: None },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-15",
+        amount: 2_000,
+        kind: "purchase",
+        merchant: "Corner Cafe",
+        category: Some("Dining"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
+    FixtureTx {
+        account: ACCOUNT_EVERYDAY,
+        reporting: "2026-10-15",
+        amount: 2_000,
+        kind: "purchase",
+        merchant: "Corner Cafe",
+        category: Some("Dining"),
+        pending: false,
+        excluded: false,
+        currency: "USD",
+        authorized: None,
+        posted: None,
+    },
     // Synthetic non-USD row, kept separate.
-    FixtureTx { account: ACCOUNT_EURO, reporting: "2026-10-15", amount: 5_000, kind: "purchase", merchant: "Euro Shop", category: Some("Dining"), pending: false, excluded: false, currency: "EUR", authorized: None, posted: None },
+    FixtureTx {
+        account: ACCOUNT_EURO,
+        reporting: "2026-10-15",
+        amount: 5_000,
+        kind: "purchase",
+        merchant: "Euro Shop",
+        category: Some("Dining"),
+        pending: false,
+        excluded: false,
+        currency: "EUR",
+        authorized: None,
+        posted: None,
+    },
 ];
 
 pub fn seed(conn: &Connection) -> AppResult<()> {
@@ -148,10 +340,8 @@ mod tests {
         // only checks the fixture table shape. The encrypted integration test
         // exercises summary reconciliation.
         let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(
-            "CREATE TABLE accounts (id TEXT); CREATE TABLE transactions (id TEXT);",
-        )
-        .unwrap();
+        conn.execute_batch("CREATE TABLE accounts (id TEXT); CREATE TABLE transactions (id TEXT);")
+            .unwrap();
         conn
     }
 
@@ -162,8 +352,16 @@ mod tests {
         assert!(FIXTURE_TX.iter().any(|tx| tx.reporting == "2026-11-01"));
         assert!(FIXTURE_TX.iter().any(|tx| tx.pending));
         assert!(FIXTURE_TX.iter().any(|tx| tx.excluded));
-        assert!(FIXTURE_TX.iter().any(|tx| tx.kind == "refund" && tx.reporting.starts_with("2026-10")));
-        assert!(FIXTURE_TX.iter().filter(|tx| tx.merchant == "Corner Cafe").count() == 2);
+        assert!(FIXTURE_TX
+            .iter()
+            .any(|tx| tx.kind == "refund" && tx.reporting.starts_with("2026-10")));
+        assert!(
+            FIXTURE_TX
+                .iter()
+                .filter(|tx| tx.merchant == "Corner Cafe")
+                .count()
+                == 2
+        );
         assert!(FIXTURE_TX.iter().any(|tx| tx.currency == "EUR"));
         assert_eq!(ACCOUNT_EVERYDAY.len(), 36);
         let _ = seeded();

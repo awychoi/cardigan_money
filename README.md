@@ -47,11 +47,14 @@ pnpm test                 # Vitest + React Testing Library
 pnpm test:e2e             # Playwright against the mock bridge
 pnpm typecheck
 pnpm lint
+pnpm verify:all           # full gate: typecheck, lint, format, unit, build, e2e, Rust fmt/clippy/test
 pnpm theme:check          # validate every theme: schema + contrast
 pnpm theme:schema         # regenerate the editor JSON Schema
 
 # Rust
 cd src-tauri
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
 cargo test
 cargo audit
 cargo deny check

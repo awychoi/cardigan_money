@@ -59,15 +59,27 @@ impl Default for MockProvider {
 
 impl MockProvider {
     pub fn new(today: NaiveDate) -> Self {
-        Self { today, fail_cursor: None, liabilities: Capability::Unsupported }
+        Self {
+            today,
+            fail_cursor: None,
+            liabilities: Capability::Unsupported,
+        }
     }
 
     pub fn with_failure(today: NaiveDate, cursor: &str) -> Self {
-        Self { today, fail_cursor: Some(cursor.to_string()), liabilities: Capability::Unsupported }
+        Self {
+            today,
+            fail_cursor: Some(cursor.to_string()),
+            liabilities: Capability::Unsupported,
+        }
     }
 
     pub fn with_liabilities(today: NaiveDate, capability: Capability) -> Self {
-        Self { today, fail_cursor: None, liabilities: capability }
+        Self {
+            today,
+            fail_cursor: None,
+            liabilities: capability,
+        }
     }
 
     fn mock_accounts(&self) -> Vec<ProviderAccount> {
@@ -140,7 +152,10 @@ impl MockProvider {
     fn page(&self, cursor: Option<&str>) -> ProviderResult<TransactionsPage> {
         if let Some(fail) = &self.fail_cursor {
             if cursor == Some(fail.as_str()) {
-                return Err(ProviderError::new(ProviderErrorKind::Transient, "provider temporarily unavailable"));
+                return Err(ProviderError::new(
+                    ProviderErrorKind::Transient,
+                    "provider temporarily unavailable",
+                ));
             }
         }
         let all = self.mock_transactions();
@@ -165,7 +180,10 @@ impl MockProvider {
                 next_cursor: Some("done".into()),
                 has_more: false,
             }),
-            _ => Err(ProviderError::new(ProviderErrorKind::Permanent, "invalid cursor")),
+            _ => Err(ProviderError::new(
+                ProviderErrorKind::Permanent,
+                "invalid cursor",
+            )),
         }
     }
 }
@@ -243,13 +261,24 @@ mod tests {
         assert_eq!(provider.accounts().unwrap().len(), 2);
         assert_eq!(provider.transactions_page(None).unwrap().changes.len(), 1);
         assert_eq!(provider.balances().unwrap().len(), 2);
-        assert!(provider.transactions_page(Some("page-2")).unwrap().changes.iter().any(|tx| tx.pending));
+        assert!(provider
+            .transactions_page(Some("page-2"))
+            .unwrap()
+            .changes
+            .iter()
+            .any(|tx| tx.pending));
         assert_eq!(provider.accounts().unwrap(), provider.accounts().unwrap());
     }
 
     #[test]
     fn provider_never_contains_real_credentials() {
-        let json = serde_json::to_string(&MockProvider::default().transactions_page(None).unwrap().changes).unwrap();
+        let json = serde_json::to_string(
+            &MockProvider::default()
+                .transactions_page(None)
+                .unwrap()
+                .changes,
+        )
+        .unwrap();
         for forbidden in ["token", "secret", "passphrase", "access_key"] {
             assert!(!json.contains(forbidden));
         }

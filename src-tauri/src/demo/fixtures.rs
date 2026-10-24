@@ -37,9 +37,21 @@ fn tx_id(index: usize) -> String {
 const CONNECTIONS: &[(&str, &str, &str, &str, &str)] = &[
     // provider, environment, institution id, institution name, status
     ("mock", "demo", "demo-chase", "Chase (demo)", "healthy"),
-    ("mock", "demo", "demo-synchrony", "Synchrony (demo)", "reconnect_required"),
+    (
+        "mock",
+        "demo",
+        "demo-synchrony",
+        "Synchrony (demo)",
+        "reconnect_required",
+    ),
     ("mock", "demo", "demo-bilt", "Bilt (demo)", "healthy"),
-    ("mock", "demo", "demo-amex", "American Express (demo)", "error"),
+    (
+        "mock",
+        "demo",
+        "demo-amex",
+        "American Express (demo)",
+        "error",
+    ),
     ("mock", "demo", "demo-citi", "Citi (demo)", "healthy"),
 ];
 
@@ -48,11 +60,29 @@ const ACCOUNTS: &[(&str, &str, &str, &str, Option<usize>)] = &[
     ("Chase", "Sapphire Reserve (demo)", "4101", "USD", Some(0)),
     ("Chase", "Freedom Unlimited (demo)", "4102", "USD", Some(0)),
     ("Chase", "Amazon Visa (demo)", "4103", "USD", Some(0)),
-    ("Synchrony", "Amazon Store Card (demo)", "5501", "USD", Some(1)),
+    (
+        "Synchrony",
+        "Amazon Store Card (demo)",
+        "5501",
+        "USD",
+        Some(1),
+    ),
     ("Synchrony", "PayPal Credit (demo)", "5502", "USD", Some(1)),
     ("Bilt", "Bilt Mastercard (demo)", "6601", "USD", Some(2)),
-    ("American Express", "Platinum (demo)", "7701", "USD", Some(3)),
-    ("American Express", "Blue Cash Everyday (demo)", "7702", "USD", Some(3)),
+    (
+        "American Express",
+        "Platinum (demo)",
+        "7701",
+        "USD",
+        Some(3),
+    ),
+    (
+        "American Express",
+        "Blue Cash Everyday (demo)",
+        "7702",
+        "USD",
+        Some(3),
+    ),
     ("Citi", "Double Cash (demo)", "8801", "USD", Some(4)),
     ("Citi", "Custom Cash (demo)", "8802", "USD", Some(4)),
     ("Demo Bank", "Euro Travel Card (demo)", "9901", "EUR", None),
@@ -84,21 +114,109 @@ struct PaymentFixture {
 }
 
 const PAYMENTS: &[PaymentFixture] = &[
-    PaymentFixture { account: 0, due: Some("2026-10-28"), minimum: Some(35_000), statement: Some(432_100), issue: Some("2026-10-05"), closing: Some("2026-11-05"), provenance: "provider" },
-    PaymentFixture { account: 1, due: Some("2026-11-03"), minimum: Some(25_000), statement: Some(128_450), issue: Some("2026-10-10"), closing: None, provenance: "provider" },
-    PaymentFixture { account: 2, due: Some("2026-11-12"), minimum: Some(15_000), statement: Some(76_200), issue: Some("2026-10-12"), closing: None, provenance: "provider" },
+    PaymentFixture {
+        account: 0,
+        due: Some("2026-10-28"),
+        minimum: Some(35_000),
+        statement: Some(432_100),
+        issue: Some("2026-10-05"),
+        closing: Some("2026-11-05"),
+        provenance: "provider",
+    },
+    PaymentFixture {
+        account: 1,
+        due: Some("2026-11-03"),
+        minimum: Some(25_000),
+        statement: Some(128_450),
+        issue: Some("2026-10-10"),
+        closing: None,
+        provenance: "provider",
+    },
+    PaymentFixture {
+        account: 2,
+        due: Some("2026-11-12"),
+        minimum: Some(15_000),
+        statement: Some(76_200),
+        issue: Some("2026-10-12"),
+        closing: None,
+        provenance: "provider",
+    },
     // Due date reported, minimum amount NOT reported: must never display $0.
-    PaymentFixture { account: 3, due: Some("2026-10-26"), minimum: None, statement: Some(54_300), issue: Some("2026-10-03"), closing: None, provenance: "provider" },
+    PaymentFixture {
+        account: 3,
+        due: Some("2026-10-26"),
+        minimum: None,
+        statement: Some(54_300),
+        issue: Some("2026-10-03"),
+        closing: None,
+        provenance: "provider",
+    },
     // Explicitly reported zero due.
-    PaymentFixture { account: 4, due: Some("2026-10-29"), minimum: Some(0), statement: Some(0), issue: Some("2026-10-02"), closing: None, provenance: "provider" },
-    PaymentFixture { account: 5, due: Some("2026-10-30"), minimum: Some(9_000), statement: Some(91_750), issue: Some("2026-10-06"), closing: Some("2026-11-01"), provenance: "provider" },
-    PaymentFixture { account: 6, due: Some("2026-11-05"), minimum: Some(21_000), statement: Some(210_000), issue: Some("2026-10-08"), closing: None, provenance: "provider" },
-    PaymentFixture { account: 7, due: Some("2026-10-27"), minimum: Some(6_500), statement: Some(65_400), issue: Some("2026-10-04"), closing: None, provenance: "provider" },
-    PaymentFixture { account: 9, due: Some("2026-10-31"), minimum: Some(1_200), statement: None, issue: None, closing: None, provenance: "provider" },
+    PaymentFixture {
+        account: 4,
+        due: Some("2026-10-29"),
+        minimum: Some(0),
+        statement: Some(0),
+        issue: Some("2026-10-02"),
+        closing: None,
+        provenance: "provider",
+    },
+    PaymentFixture {
+        account: 5,
+        due: Some("2026-10-30"),
+        minimum: Some(9_000),
+        statement: Some(91_750),
+        issue: Some("2026-10-06"),
+        closing: Some("2026-11-01"),
+        provenance: "provider",
+    },
+    PaymentFixture {
+        account: 6,
+        due: Some("2026-11-05"),
+        minimum: Some(21_000),
+        statement: Some(210_000),
+        issue: Some("2026-10-08"),
+        closing: None,
+        provenance: "provider",
+    },
+    PaymentFixture {
+        account: 7,
+        due: Some("2026-10-27"),
+        minimum: Some(6_500),
+        statement: Some(65_400),
+        issue: Some("2026-10-04"),
+        closing: None,
+        provenance: "provider",
+    },
+    PaymentFixture {
+        account: 9,
+        due: Some("2026-10-31"),
+        minimum: Some(1_200),
+        statement: None,
+        issue: None,
+        closing: None,
+        provenance: "provider",
+    },
     // Manual, still valid.
-    PaymentFixture { account: 8, due: Some("2026-10-29"), minimum: Some(3_300), statement: Some(33_200), issue: None, closing: None, provenance: "manual" },
+    PaymentFixture {
+        account: 8,
+        due: Some("2026-10-29"),
+        minimum: Some(3_300),
+        statement: Some(33_200),
+        issue: None,
+        closing: None,
+        provenance: "manual",
+    },
     // Manual but expired: must fall back to whatever the provider reports (here: nothing).
-    PaymentFixture { account: 3, due: Some("2026-10-24"), minimum: Some(5_000), statement: Some(50_000), issue: None, closing: None, provenance: "manual-expired" },
+    PaymentFixture {
+        account: 3,
+        due: Some("2026-10-24"),
+        minimum: Some(5_000),
+        statement: Some(50_000),
+        issue: None,
+        closing: None,
+        provenance: "manual-expired",
+    },
 ];
 
 const MERCHANTS: &[(&str, &str, &str)] = &[
@@ -120,7 +238,10 @@ fn insert_connection(conn: &Connection, index: usize) -> AppResult<()> {
     let (last_success, error) = match status {
         "healthy" => (Some("2026-10-23T08:00:00Z"), None),
         "reconnect_required" => (Some("2026-09-30T08:00:00Z"), Some("reconnect_required")),
-        "error" => (Some("2026-10-13T08:00:00Z"), Some("provider_temporarily_unavailable")),
+        "error" => (
+            Some("2026-10-13T08:00:00Z"),
+            Some("provider_temporarily_unavailable"),
+        ),
         _ => (None, None),
     };
     conn.execute(
@@ -146,6 +267,7 @@ fn insert_connection(conn: &Connection, index: usize) -> AppResult<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn insert_transaction(
     conn: &Connection,
     index: usize,
@@ -204,7 +326,9 @@ pub fn seed(conn: &Connection) -> AppResult<DemoManifest> {
     for index in 0..CONNECTIONS.len() {
         insert_connection(conn, index)?;
     }
-    for (index, (issuer, display_name, last_four, currency, connection)) in ACCOUNTS.iter().enumerate() {
+    for (index, (issuer, display_name, last_four, currency, connection)) in
+        ACCOUNTS.iter().enumerate()
+    {
         conn.execute(
             "INSERT INTO accounts (id, issuer, display_name, last_four, account_type, currency, \
                 credit_limit_minor, include_in_overview, archived, source_kind, created_at, updated_at) \
@@ -310,10 +434,15 @@ pub fn seed(conn: &Connection) -> AppResult<DemoManifest> {
             let month = 8 + month_offset;
             for row in 0..5usize {
                 let day = 3 + (card * 3 + month_offset * 5 + row * 7) % 20;
-                let day = if month == 10 { day.min(23) } else { day.min(28) };
+                let day = if month == 10 {
+                    day.min(23)
+                } else {
+                    day.min(28)
+                };
                 let (merchant, canonical, category) =
                     MERCHANTS[(card * 5 + month_offset * 3 + row) % MERCHANTS.len()];
-                let amount = 500 + (((card * 37 + month_offset * 311 + row * 97) % 175) as i64) * 100
+                let amount = 500
+                    + (((card * 37 + month_offset * 311 + row * 97) % 175) as i64) * 100
                     + ((card + row) as i64 % 100);
                 let kind = if row == 4 && month_offset == 1 {
                     "refund"
@@ -382,35 +511,255 @@ pub fn seed(conn: &Connection) -> AppResult<DemoManifest> {
     };
 
     // Month-boundary authorization/posting pairs.
-    scenario(0, "2026-08-31", 8_999, "purchase", "Whole Foods Market", "Groceries", false, false, Some("2026-08-31"), Some("2026-09-02"))?;
-    scenario(1, "2026-09-30", 21_540, "purchase", "Delta Air Lines", "Travel", false, false, Some("2026-09-30"), Some("2026-10-02"))?;
+    scenario(
+        0,
+        "2026-08-31",
+        8_999,
+        "purchase",
+        "Whole Foods Market",
+        "Groceries",
+        false,
+        false,
+        Some("2026-08-31"),
+        Some("2026-09-02"),
+    )?;
+    scenario(
+        1,
+        "2026-09-30",
+        21_540,
+        "purchase",
+        "Delta Air Lines",
+        "Travel",
+        false,
+        false,
+        Some("2026-09-30"),
+        Some("2026-10-02"),
+    )?;
     // Refund received in a later month.
-    scenario(0, "2026-08-12", 30_000, "purchase", "Apple Store", "Electronics", false, false, None, Some("2026-08-12"))?;
-    scenario(0, "2026-09-08", -30_000, "refund", "Apple Store", "Electronics", false, false, None, Some("2026-09-08"))?;
-    scenario(5, "2026-09-14", 4_500, "purchase", "Spotify", "Subscriptions", false, false, None, Some("2026-09-14"))?;
-    scenario(5, "2026-10-03", -4_500, "refund", "Spotify", "Subscriptions", false, false, None, Some("2026-10-03"))?;
+    scenario(
+        0,
+        "2026-08-12",
+        30_000,
+        "purchase",
+        "Apple Store",
+        "Electronics",
+        false,
+        false,
+        None,
+        Some("2026-08-12"),
+    )?;
+    scenario(
+        0,
+        "2026-09-08",
+        -30_000,
+        "refund",
+        "Apple Store",
+        "Electronics",
+        false,
+        false,
+        None,
+        Some("2026-09-08"),
+    )?;
+    scenario(
+        5,
+        "2026-09-14",
+        4_500,
+        "purchase",
+        "Spotify",
+        "Subscriptions",
+        false,
+        false,
+        None,
+        Some("2026-09-14"),
+    )?;
+    scenario(
+        5,
+        "2026-10-03",
+        -4_500,
+        "refund",
+        "Spotify",
+        "Subscriptions",
+        false,
+        false,
+        None,
+        Some("2026-10-03"),
+    )?;
     // Pending plus linked posted replacement.
-    let pending_id = scenario(0, "2026-10-22", 4_250, "purchase", "Blue Bottle Coffee", "Dining", true, false, Some("2026-10-22"), None)?;
-    let posted_id = scenario(0, "2026-10-23", 4_250, "purchase", "Blue Bottle Coffee", "Dining", false, false, None, Some("2026-10-23"))?;
+    let pending_id = scenario(
+        0,
+        "2026-10-22",
+        4_250,
+        "purchase",
+        "Blue Bottle Coffee",
+        "Dining",
+        true,
+        false,
+        Some("2026-10-22"),
+        None,
+    )?;
+    let posted_id = scenario(
+        0,
+        "2026-10-23",
+        4_250,
+        "purchase",
+        "Blue Bottle Coffee",
+        "Dining",
+        false,
+        false,
+        None,
+        Some("2026-10-23"),
+    )?;
     conn.execute(
         "UPDATE transactions SET pending_link_id = ?1 WHERE id = ?2",
         rusqlite::params![pending_id, posted_id],
     )
     .map_err(|_| AppError::Database)?;
     // Two legitimate identical purchases.
-    scenario(1, "2026-10-12", 1_234, "purchase", "Blue Bottle Coffee", "Dining", false, false, None, Some("2026-10-12"))?;
-    scenario(0, "2026-10-12", 1_234, "purchase", "Blue Bottle Coffee", "Dining", false, false, None, Some("2026-10-12"))?;
+    scenario(
+        1,
+        "2026-10-12",
+        1_234,
+        "purchase",
+        "Blue Bottle Coffee",
+        "Dining",
+        false,
+        false,
+        None,
+        Some("2026-10-12"),
+    )?;
+    scenario(
+        0,
+        "2026-10-12",
+        1_234,
+        "purchase",
+        "Blue Bottle Coffee",
+        "Dining",
+        false,
+        false,
+        None,
+        Some("2026-10-12"),
+    )?;
     // Payment, transfer, fee, interest, exclusion.
-    scenario(0, "2026-10-15", -100_000, "payment", "Payment Thank You", "Payments", false, false, None, Some("2026-10-15"))?;
-    scenario(1, "2026-10-16", 50_000, "transfer", "Balance Transfer", "Transfers", false, false, None, Some("2026-10-16"))?;
-    scenario(0, "2026-10-01", 9_500, "fee", "Chase Annual Fee", "Fees", false, false, None, Some("2026-10-01"))?;
-    scenario(8, "2026-10-05", 1_822, "interest", "Citi Interest Charge", "Interest", false, false, None, Some("2026-10-05"))?;
-    scenario(3, "2026-10-09", 7_999, "purchase", "Amazon", "Shopping", false, true, None, Some("2026-10-09"))?;
-    scenario(6, "2026-09-20", 60_000, "purchase", "Delta Air Lines", "Travel", false, false, None, Some("2026-09-20"))?;
-    scenario(7, "2026-10-18", 5_410, "purchase", "Whole Foods Market", "Groceries", false, false, None, Some("2026-10-18"))?;
-    scenario(8, "2026-10-21", 2_875, "purchase", "CVS Pharmacy", "Health", false, false, None, Some("2026-10-21"))?;
-    scenario(9, "2026-10-19", 6_420, "purchase", "Trader Joe's", "Groceries", false, false, None, Some("2026-10-19"))?;
-    scenario(4, "2026-10-08", -15_000, "payment", "PayPal Payment", "Payments", false, false, None, Some("2026-10-08"))?;
+    scenario(
+        0,
+        "2026-10-15",
+        -100_000,
+        "payment",
+        "Payment Thank You",
+        "Payments",
+        false,
+        false,
+        None,
+        Some("2026-10-15"),
+    )?;
+    scenario(
+        1,
+        "2026-10-16",
+        50_000,
+        "transfer",
+        "Balance Transfer",
+        "Transfers",
+        false,
+        false,
+        None,
+        Some("2026-10-16"),
+    )?;
+    scenario(
+        0,
+        "2026-10-01",
+        9_500,
+        "fee",
+        "Chase Annual Fee",
+        "Fees",
+        false,
+        false,
+        None,
+        Some("2026-10-01"),
+    )?;
+    scenario(
+        8,
+        "2026-10-05",
+        1_822,
+        "interest",
+        "Citi Interest Charge",
+        "Interest",
+        false,
+        false,
+        None,
+        Some("2026-10-05"),
+    )?;
+    scenario(
+        3,
+        "2026-10-09",
+        7_999,
+        "purchase",
+        "Amazon",
+        "Shopping",
+        false,
+        true,
+        None,
+        Some("2026-10-09"),
+    )?;
+    scenario(
+        6,
+        "2026-09-20",
+        60_000,
+        "purchase",
+        "Delta Air Lines",
+        "Travel",
+        false,
+        false,
+        None,
+        Some("2026-09-20"),
+    )?;
+    scenario(
+        7,
+        "2026-10-18",
+        5_410,
+        "purchase",
+        "Whole Foods Market",
+        "Groceries",
+        false,
+        false,
+        None,
+        Some("2026-10-18"),
+    )?;
+    scenario(
+        8,
+        "2026-10-21",
+        2_875,
+        "purchase",
+        "CVS Pharmacy",
+        "Health",
+        false,
+        false,
+        None,
+        Some("2026-10-21"),
+    )?;
+    scenario(
+        9,
+        "2026-10-19",
+        6_420,
+        "purchase",
+        "Trader Joe's",
+        "Groceries",
+        false,
+        false,
+        None,
+        Some("2026-10-19"),
+    )?;
+    scenario(
+        4,
+        "2026-10-08",
+        -15_000,
+        "payment",
+        "PayPal Payment",
+        "Payments",
+        false,
+        false,
+        None,
+        Some("2026-10-08"),
+    )?;
 
     // Non-USD account rows, displayed separately.
     for (offset, (date, amount, merchant, category)) in [
@@ -517,7 +866,11 @@ pub fn seed(conn: &Connection) -> AppResult<DemoManifest> {
         .query_row("SELECT count(*) FROM transactions", [], |row| row.get(0))
         .map_err(|_| AppError::Database)?;
     let pending: i64 = conn
-        .query_row("SELECT count(*) FROM transactions WHERE pending = 1", [], |row| row.get(0))
+        .query_row(
+            "SELECT count(*) FROM transactions WHERE pending = 1",
+            [],
+            |row| row.get(0),
+        )
         .map_err(|_| AppError::Database)?;
 
     Ok(DemoManifest {
@@ -548,16 +901,26 @@ mod tests {
     #[test]
     fn fixture_has_enough_transactions_and_scenarios() {
         let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(include_str!("../../migrations/0001_initial.sql")).unwrap();
-        conn.execute_batch(include_str!("../../migrations/0002_domain.sql")).unwrap();
+        conn.execute_batch(include_str!("../../migrations/0001_initial.sql"))
+            .unwrap();
+        conn.execute_batch(include_str!("../../migrations/0002_domain.sql"))
+            .unwrap();
         let manifest = seed(&conn).unwrap();
-        assert!(manifest.transactions >= 150, "only {} transactions", manifest.transactions);
+        assert!(
+            manifest.transactions >= 150,
+            "only {} transactions",
+            manifest.transactions
+        );
         assert_eq!(manifest.accounts, 11);
         assert_eq!(manifest.connections, 5);
         assert!(manifest.pending >= 1);
         assert_eq!(manifest.records.len(), 11);
         let eur: i64 = conn
-            .query_row("SELECT count(*) FROM transactions WHERE currency = 'EUR'", [], |row| row.get(0))
+            .query_row(
+                "SELECT count(*) FROM transactions WHERE currency = 'EUR'",
+                [],
+                |row| row.get(0),
+            )
             .unwrap();
         assert!(eur >= 6);
     }

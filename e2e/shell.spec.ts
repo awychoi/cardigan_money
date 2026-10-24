@@ -11,7 +11,10 @@ test.describe("secure shell (browser mock)", () => {
   test("renders the app identity and honest empty state after unlock", async ({ page }) => {
     await openUnlocked(page);
     await expect(page.getByText("Mock desktop bridge")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("button", { name: "Overview" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await expect(page.getByRole("button", { name: "Sync now" })).toBeDisabled();
     await expect(page.getByText(/No provider connected/)).toBeVisible();
     await expect(page.getByText(/no telemetry/i)).toBeVisible();
@@ -71,7 +74,10 @@ test.describe("secure shell (browser mock)", () => {
     await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
     await page.getByRole("button", { name: "By supplier" }).click();
     await expect(page.getByRole("heading", { name: "By supplier" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "By supplier" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "By supplier" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await page.getByRole("button", { name: "Settings" }).click();
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await expect(page.getByText(/4\.6\.1 community/).first()).toBeVisible();
@@ -104,7 +110,9 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByLabel(/Last four/).fill("4321");
     await page.getByRole("button", { name: "Add account" }).click();
     await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
-    const row = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
+    const row = page
+      .getByRole("row")
+      .filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
     await row.getByRole("button", { name: "Archive" }).click();
     await row.getByRole("button", { name: "Archive", exact: true }).click();
     await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toHaveCount(0);

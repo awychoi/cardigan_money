@@ -61,9 +61,8 @@ unsafe fn present_close_alert() -> Result<CloseChoice, ()> {
     use objc2::rc::Retained;
     use objc2::{MainThreadMarker, MainThreadOnly};
     use objc2_app_kit::{
-        NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertThirdButtonReturn,
-        NSButton, NSButtonType, NSControlStateValueOff, NSControlStateValueOn, NSView,
-        NSWindow, NSWindowSharingType,
+        NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSButton, NSButtonType,
+        NSControlStateValueOff, NSControlStateValueOn, NSView, NSWindow, NSWindowSharingType,
     };
     use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
@@ -83,9 +82,14 @@ unsafe fn present_close_alert() -> Result<CloseChoice, ()> {
     );
     let remember: Retained<NSButton> = NSButton::new(mtm);
     remember.setButtonType(NSButtonType::Switch);
-    remember.setTitle(&NSString::from_str("Remember this choice (change it in Settings)"));
+    remember.setTitle(&NSString::from_str(
+        "Remember this choice (change it in Settings)",
+    ));
     remember.setState(NSControlStateValueOff);
-    remember.setFrame(NSRect::new(NSPoint::new(0.0, 4.0), NSSize::new(380.0, 24.0)));
+    remember.setFrame(NSRect::new(
+        NSPoint::new(0.0, 4.0),
+        NSSize::new(380.0, 24.0),
+    ));
     container.addSubview(&remember);
     alert.setAccessoryView(Some(&container));
     let window: Retained<NSWindow> = alert.window();
@@ -96,25 +100,11 @@ unsafe fn present_close_alert() -> Result<CloseChoice, ()> {
         CloseAction::Hide
     } else if response == NSAlertSecondButtonReturn {
         CloseAction::Quit
-    } else if response == NSAlertThirdButtonReturn {
-        CloseAction::Cancel
     } else {
         CloseAction::Cancel
     };
     let remember = remember.state() == NSControlStateValueOn;
     Ok(CloseChoice { action, remember })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn close_decisions_follow_settings() {
-        assert_eq!(decision(CloseBehavior::Hide), CloseDecision::Hide);
-        assert_eq!(decision(CloseBehavior::Quit), CloseDecision::Quit);
-        assert_eq!(decision(CloseBehavior::Unset), CloseDecision::Ask);
-    }
 }
 
 /// Native confirmation for a destructive action. Returns true only when the
@@ -155,10 +145,7 @@ unsafe fn present_confirm(
 ) -> Result<bool, ()> {
     use objc2::rc::Retained;
     use objc2::MainThreadMarker;
-    use objc2_app_kit::{
-        NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSWindow,
-        NSWindowSharingType,
-    };
+    use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSWindow, NSWindowSharingType};
     use objc2_foundation::NSString;
 
     let mtm = MainThreadMarker::new().ok_or(())?;
@@ -170,11 +157,17 @@ unsafe fn present_confirm(
     let window: Retained<NSWindow> = alert.window();
     window.setSharingType(NSWindowSharingType::None);
     let response = alert.runModal();
-    if response == NSAlertFirstButtonReturn {
-        Ok(true)
-    } else if response == NSAlertSecondButtonReturn {
-        Ok(false)
-    } else {
-        Ok(false)
+    Ok(response == NSAlertFirstButtonReturn)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn close_decisions_follow_settings() {
+        assert_eq!(decision(CloseBehavior::Hide), CloseDecision::Hide);
+        assert_eq!(decision(CloseBehavior::Quit), CloseDecision::Quit);
+        assert_eq!(decision(CloseBehavior::Unset), CloseDecision::Ask);
     }
 }

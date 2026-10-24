@@ -115,7 +115,11 @@ export function ManualPaymentPanel({ onChanged }: { onChanged: () => void }) {
       <div className="form-grid">
         <label>
           <span className="field-label">Account</span>
-          <select aria-label="Manual metadata account" value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+          <select
+            aria-label="Manual metadata account"
+            value={accountId}
+            onChange={(event) => setAccountId(event.target.value)}
+          >
             {accounts.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.displayName}

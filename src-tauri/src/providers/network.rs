@@ -24,7 +24,9 @@ pub struct NetworkPolicy {
 
 impl Default for NetworkPolicy {
     fn default() -> Self {
-        Self { allowed_hosts: ALLOWED_HOSTS.to_vec() }
+        Self {
+            allowed_hosts: ALLOWED_HOSTS.to_vec(),
+        }
     }
 }
 
@@ -43,8 +45,10 @@ impl NetworkPolicy {
         if url.port().is_some() && url.port() != Some(443) {
             return Err(AppError::Blocked("provider URL port"));
         }
-        let host = url.host_str().ok_or(AppError::Blocked("provider URL host"))?;
-        if !self.allowed_hosts.iter().any(|allowed| *allowed == host) {
+        let host = url
+            .host_str()
+            .ok_or(AppError::Blocked("provider URL host"))?;
+        if !self.allowed_hosts.contains(&host) {
             return Err(AppError::Blocked("provider host is not allowlisted"));
         }
         Ok(url)
@@ -83,8 +87,12 @@ mod tests {
     #[test]
     fn allowlist_is_exact_and_https_only() {
         let policy = NetworkPolicy::default();
-        assert!(policy.validate_url("https://sandbox.plaid.com/link/token/create").is_ok());
-        assert!(policy.validate_url("https://production.plaid.com/item/get").is_ok());
+        assert!(policy
+            .validate_url("https://sandbox.plaid.com/link/token/create")
+            .is_ok());
+        assert!(policy
+            .validate_url("https://production.plaid.com/item/get")
+            .is_ok());
         for bad in [
             "http://sandbox.plaid.com/x",
             "https://sandbox.plaid.com.evil.example/x",

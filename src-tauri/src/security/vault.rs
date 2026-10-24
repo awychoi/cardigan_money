@@ -213,12 +213,8 @@ impl VaultHeader {
         self.params.validate()?;
         let kek = derive_kek(passphrase, &self.salt, &self.params)?;
         let aad = self.public_bytes();
-        let plaintext = crypto::open_sealed(
-            &kek,
-            &self.wrap_nonce,
-            &aad[..AAD_LEN],
-            &self.wrapped_dek,
-        )?;
+        let plaintext =
+            crypto::open_sealed(&kek, &self.wrap_nonce, &aad[..AAD_LEN], &self.wrapped_dek)?;
         if plaintext.len() != crypto::DEK_LEN {
             return Err(AppError::HeaderInvalid("dek length"));
         }
@@ -330,7 +326,10 @@ impl RotationJournal {
     const LEN: usize = 8 + 4 + HEADER_LEN;
 
     pub fn new(previous_generation: u32, new_header: VaultHeader) -> Self {
-        Self { previous_generation, new_header }
+        Self {
+            previous_generation,
+            new_header,
+        }
     }
 
     pub fn encode(&self) -> [u8; Self::LEN] {
@@ -347,7 +346,10 @@ impl RotationJournal {
         }
         let previous_generation = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
         let new_header = VaultHeader::decode(&bytes[12..])?;
-        Ok(Self { previous_generation, new_header })
+        Ok(Self {
+            previous_generation,
+            new_header,
+        })
     }
 }
 
@@ -376,7 +378,11 @@ mod tests {
     }
 
     fn fast_params() -> KdfParams {
-        KdfParams { m_cost_kib: 8 * 1024, t_cost: 1, p_cost: 1 }
+        KdfParams {
+            m_cost_kib: 8 * 1024,
+            t_cost: 1,
+            p_cost: 1,
+        }
     }
 
     #[test]
@@ -392,7 +398,9 @@ mod tests {
         let decoded = VaultHeader::decode(&bytes).unwrap();
         assert_eq!(decoded.vault_id, [9u8; 16]);
         assert_eq!(decoded.generation, 1);
-        let unwrapped = decoded.unwrap_dek(&p("correct horse battery staple")).unwrap();
+        let unwrapped = decoded
+            .unwrap_dek(&p("correct horse battery staple"))
+            .unwrap();
         assert_eq!(unwrapped.expose(), dek.expose());
         assert_eq!(bytes.len(), HEADER_LEN);
         assert!(matches!(
@@ -403,7 +411,13 @@ mod tests {
 
     #[test]
     fn every_header_byte_is_authenticated_or_validated() {
-        let (header, _) = VaultHeader::create(&p("correct horse battery staple"), fast_params(), [3u8; 16], 1).unwrap();
+        let (header, _) = VaultHeader::create(
+            &p("correct horse battery staple"),
+            fast_params(),
+            [3u8; 16],
+            1,
+        )
+        .unwrap();
         let base = header.encode();
         // Flipping any byte in the public AAD region must fail decode or unwrap.
         for i in 0..AAD_LEN {
@@ -428,12 +442,21 @@ mod tests {
 
     #[test]
     fn absurd_kdf_parameters_are_rejected_before_derivation() {
-        let (header, _) = VaultHeader::create(&p("correct horse battery staple"), fast_params(), [3u8; 16], 1).unwrap();
+        let (header, _) = VaultHeader::create(
+            &p("correct horse battery staple"),
+            fast_params(),
+            [3u8; 16],
+            1,
+        )
+        .unwrap();
         let mut bytes = header.encode();
         // 4 TiB memory parameter.
         bytes[OFF_M..OFF_M + 4].copy_from_slice(&u32::MAX.to_le_bytes());
         let start = std::time::Instant::now();
-        assert!(matches!(VaultHeader::decode(&bytes), Err(AppError::KdfOutOfBounds)));
+        assert!(matches!(
+            VaultHeader::decode(&bytes),
+            Err(AppError::KdfOutOfBounds)
+        ));
         assert!(start.elapsed() < std::time::Duration::from_millis(50));
         bytes[OFF_M..OFF_M + 4].copy_from_slice(&65_536u32.to_le_bytes());
         bytes[OFF_KDF] = 99;
@@ -442,17 +465,36 @@ mod tests {
 
     #[test]
     fn rotation_changes_dek_salt_generation() {
-        let (header, old_dek) = VaultHeader::create(&p("correct horse battery staple"), fast_params(), [3u8; 16], 1).unwrap();
-        let (new_header, new_dek) = header.rotate(&p("new correct horse battery staple"), fast_params()).unwrap();
+        let (header, old_dek) = VaultHeader::create(
+            &p("correct horse battery staple"),
+            fast_params(),
+            [3u8; 16],
+            1,
+        )
+        .unwrap();
+        let (new_header, new_dek) = header
+            .rotate(&p("new correct horse battery staple"), fast_params())
+            .unwrap();
         assert_eq!(new_header.generation, 2);
         assert_ne!(old_dek.expose(), new_dek.expose());
         assert_ne!(header.salt, new_header.salt);
-        assert!(new_header.unwrap_dek(&p("correct horse battery staple")).is_err());
+        assert!(new_header
+            .unwrap_dek(&p("correct horse battery staple"))
+            .is_err());
         assert_eq!(
-            new_header.unwrap_dek(&p("new correct horse battery staple")).unwrap().expose(),
+            new_header
+                .unwrap_dek(&p("new correct horse battery staple"))
+                .unwrap()
+                .expose(),
             new_dek.expose()
         );
-        assert_eq!(header.unwrap_dek(&p("correct horse battery staple")).unwrap().expose(), old_dek.expose());
+        assert_eq!(
+            header
+                .unwrap_dek(&p("correct horse battery staple"))
+                .unwrap()
+                .expose(),
+            old_dek.expose()
+        );
     }
 
     #[test]
@@ -460,7 +502,13 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let paths = VaultPaths::new(tmp.path());
         paths.ensure().unwrap();
-        let (header, _) = VaultHeader::create(&p("correct horse battery staple"), fast_params(), [3u8; 16], 1).unwrap();
+        let (header, _) = VaultHeader::create(
+            &p("correct horse battery staple"),
+            fast_params(),
+            [3u8; 16],
+            1,
+        )
+        .unwrap();
         write_header(&paths, &header).unwrap();
         assert!(paths.header.exists());
         assert!(paths.header_mirror.exists());
@@ -477,8 +525,16 @@ mod tests {
 
     #[test]
     fn rotation_journal_roundtrip() {
-        let (header, _) = VaultHeader::create(&p("correct horse battery staple"), fast_params(), [3u8; 16], 1).unwrap();
-        let (new_header, _) = header.rotate(&p("new correct horse battery staple"), fast_params()).unwrap();
+        let (header, _) = VaultHeader::create(
+            &p("correct horse battery staple"),
+            fast_params(),
+            [3u8; 16],
+            1,
+        )
+        .unwrap();
+        let (new_header, _) = header
+            .rotate(&p("new correct horse battery staple"), fast_params())
+            .unwrap();
         let journal = RotationJournal::new(header.generation, new_header);
         let decoded = RotationJournal::decode(&journal.encode()).unwrap();
         assert_eq!(decoded.previous_generation, 1);

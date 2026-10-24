@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  command,
-  type PlaidLinkStatus,
-  type PlaidStatus,
-  type SyncStatus,
-} from "../../lib/bridge";
+import { command, type PlaidLinkStatus, type PlaidStatus, type SyncStatus } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 
@@ -254,7 +249,9 @@ export function ConnectionsSyncPanel({
               <Button
                 variant="primary"
                 onClick={startLink}
-                disabled={busy || (link !== null && (link.state === "waiting" || link.state === "starting"))}
+                disabled={
+                  busy || (link !== null && (link.state === "waiting" || link.state === "starting"))
+                }
               >
                 Link a Sandbox institution…
               </Button>
@@ -315,8 +312,8 @@ export function ConnectionsSyncPanel({
 
       {connections.length === 0 ? (
         <p className="muted">
-          No provider connected. Import a CSV in the panel below, or add a provider when live linking
-          is available.
+          No provider connected. Import a CSV in the panel below, or add a provider when live
+          linking is available.
         </p>
       ) : (
         <table className="accounts-table">
@@ -350,7 +347,9 @@ export function ConnectionsSyncPanel({
                     {connection.status.replaceAll("_", " ")}
                   </span>
                 </td>
-                <td>{connection.lastSuccessAt ? connection.lastSuccessAt.slice(0, 10) : "Never"}</td>
+                <td>
+                  {connection.lastSuccessAt ? connection.lastSuccessAt.slice(0, 10) : "Never"}
+                </td>
                 <td>{connection.accountCount}</td>
                 <td>
                   {connection.provider === "plaid" && connection.status !== "healthy" ? (
@@ -407,7 +406,10 @@ export function ConnectionsSyncPanel({
                   </td>
                   <td className="fine-print">
                     {run.steps
-                      .map((step) => `${step.stream}: ${step.status} (+${step.itemsAdded}/~${step.itemsModified}/-${step.itemsRemoved})`)
+                      .map(
+                        (step) =>
+                          `${step.stream}: ${step.status} (+${step.itemsAdded}/~${step.itemsModified}/-${step.itemsRemoved})`,
+                      )
                       .join(" · ")}
                   </td>
                 </tr>

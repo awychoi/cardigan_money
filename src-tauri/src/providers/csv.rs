@@ -213,7 +213,12 @@ pub fn file_info(path: &Path) -> AppResult<FileInfo> {
     })
 }
 
-pub fn parse(path: &Path, mapping: &CsvMapping, account_id: &str, currency: &str) -> AppResult<ParsedFile> {
+pub fn parse(
+    path: &Path,
+    mapping: &CsvMapping,
+    account_id: &str,
+    currency: &str,
+) -> AppResult<ParsedFile> {
     let bytes = read_bounded(path)?;
     let (date_format, sign) = mapping.validated(MAX_COLUMNS)?;
     let mut reader = csv::ReaderBuilder::new()
@@ -240,25 +245,48 @@ pub fn parse(path: &Path, mapping: &CsvMapping, account_id: &str, currency: &str
         let record = match record {
             Ok(record) => record,
             Err(_) => {
-                rejected.push(RejectedRow { row_number: total_rows, reason: "malformed row" });
+                rejected.push(RejectedRow {
+                    row_number: total_rows,
+                    reason: "malformed row",
+                });
                 continue;
             }
         };
         if record.len() > MAX_COLUMNS
-            || record.iter().any(|field| field.chars().count() > MAX_FIELD_CHARS)
+            || record
+                .iter()
+                .any(|field| field.chars().count() > MAX_FIELD_CHARS)
         {
-            rejected.push(RejectedRow { row_number: total_rows, reason: "field limit" });
+            rejected.push(RejectedRow {
+                row_number: total_rows,
+                reason: "field limit",
+            });
             continue;
         }
-        match parse_row(total_rows, &record, mapping, date_format, sign, account_id, currency) {
+        match parse_row(
+            total_rows,
+            &record,
+            mapping,
+            date_format,
+            sign,
+            account_id,
+            currency,
+        ) {
             Ok(row) => rows.push(row),
-            Err(reason) => rejected.push(RejectedRow { row_number: total_rows, reason }),
+            Err(reason) => rejected.push(RejectedRow {
+                row_number: total_rows,
+                reason,
+            }),
         }
     }
-    Ok(ParsedFile { rows, rejected, total_rows })
+    Ok(ParsedFile {
+        rows,
+        rejected,
+        total_rows,
+    })
 }
 
-fn field<'a>(record: &'a csv::StringRecord, index: usize) -> &'a str {
+fn field(record: &csv::StringRecord, index: usize) -> &str {
     record.get(index).unwrap_or("")
 }
 
@@ -282,7 +310,11 @@ fn parse_row(
     let merchant_normalized = normalize_merchant(&description).map_err(|_| "invalid merchant")?;
     let (amount_minor, tx_type) = match sign {
         SignConvention::SignedAmount => {
-            let raw = field(record, mapping.amount_column.ok_or("missing amount column")?).trim();
+            let raw = field(
+                record,
+                mapping.amount_column.ok_or("missing amount column")?,
+            )
+            .trim();
             let amount = parse_currency_amount(raw, currency).map_err(|_| "invalid amount")?;
             if amount < 0 {
                 (amount, mapping.credit_type.clone())
@@ -301,7 +333,8 @@ fn parse_row(
                 .filter(|value| !value.is_empty());
             match (debit, credit) {
                 (Some(debit), _) => {
-                    let amount = parse_currency_amount(debit, currency).map_err(|_| "invalid debit")?;
+                    let amount =
+                        parse_currency_amount(debit, currency).map_err(|_| "invalid debit")?;
                     if amount < 0 {
                         return Err("negative debit");
                     }
@@ -506,10 +539,26 @@ mod tests {
             sign_convention: "signed_amount".into(),
             credit_type: "refund".into(),
         };
-        let eu = CsvMapping { date_format: "eu".into(), ..us.clone() };
-        assert_eq!(parse(&path, &us, "a", "USD").unwrap().rows[0].date.to_string(), "2026-03-04");
-        assert_eq!(parse(&path, &eu, "a", "USD").unwrap().rows[0].date.to_string(), "2026-04-03");
-        let bad = CsvMapping { date_format: "guess".into(), ..us };
+        let eu = CsvMapping {
+            date_format: "eu".into(),
+            ..us.clone()
+        };
+        assert_eq!(
+            parse(&path, &us, "a", "USD").unwrap().rows[0]
+                .date
+                .to_string(),
+            "2026-03-04"
+        );
+        assert_eq!(
+            parse(&path, &eu, "a", "USD").unwrap().rows[0]
+                .date
+                .to_string(),
+            "2026-04-03"
+        );
+        let bad = CsvMapping {
+            date_format: "guess".into(),
+            ..us
+        };
         assert!(parse(&path, &bad, "a", "USD").is_err());
     }
 

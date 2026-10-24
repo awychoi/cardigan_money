@@ -32,17 +32,28 @@ fn run_loop<R: tauri::Runtime>(app: AppHandle<R>) {
     });
     loop {
         std::thread::sleep(std::time::Duration::from_secs(30));
-        let Some(app_state) = app.try_state::<AppState>() else { continue };
+        let Some(app_state) = app.try_state::<AppState>() else {
+            continue;
+        };
         if app_state.quitting.load(Ordering::SeqCst) {
             return;
         }
-        if !app_state.session.lock().map(|guard| guard.is_unlocked()).unwrap_or(false) {
+        if !app_state
+            .session
+            .lock()
+            .map(|guard| guard.is_unlocked())
+            .unwrap_or(false)
+        {
             if let Ok(mut runtime) = app_state.sync_runtime.lock() {
                 runtime.last_skip_reason = Some("vault_locked".into());
             }
             continue;
         }
-        let settings = app_state.session.lock().ok().and_then(|guard| guard.settings.clone());
+        let settings = app_state
+            .session
+            .lock()
+            .ok()
+            .and_then(|guard| guard.settings.clone());
         let Some(settings) = settings else { continue };
         let now = chrono::Local::now();
         if !state.launched.swap(true, Ordering::SeqCst) && settings.sync_on_launch {
@@ -51,7 +62,13 @@ fn run_loop<R: tauri::Runtime>(app: AppHandle<R>) {
         }
         let window = current_window(&settings.sync_windows, now.hour(), now.minute());
         let Some(window) = window else { continue };
-        let key = format!("{}-{:02}-{:02}-{}", now.date_naive(), window.0, window.1, window.2);
+        let key = format!(
+            "{}-{:02}-{:02}-{}",
+            now.date_naive(),
+            window.0,
+            window.1,
+            window.2
+        );
         {
             let mut runs = match state.windows_run.lock() {
                 Ok(runs) => runs,
@@ -87,8 +104,12 @@ fn trigger(state: &AppState, trigger: &str) -> bool {
 /// window. Windows are interpreted in the device's local timezone.
 pub fn current_window(windows: &[String], hour: u32, minute: u32) -> Option<(u32, u32, usize)> {
     for (index, window) in windows.iter().enumerate() {
-        let Some((hour_text, minute_text)) = window.split_once(':') else { continue };
-        let (Ok(hour_part), Ok(minute_part)) = (hour_text.parse::<u32>(), minute_text.parse::<u32>()) else {
+        let Some((hour_text, minute_text)) = window.split_once(':') else {
+            continue;
+        };
+        let (Ok(hour_part), Ok(minute_part)) =
+            (hour_text.parse::<u32>(), minute_text.parse::<u32>())
+        else {
             continue;
         };
         let target = hour_part * 60 + minute_part.min(59);

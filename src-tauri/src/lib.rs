@@ -11,10 +11,10 @@ pub mod storage;
 #[cfg(test)]
 pub mod test_support;
 
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::Manager;
 use crate::state::AppState;
 use crate::storage::settings::CloseBehavior;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::Manager;
 
 const CSP_SAFE_TITLE: &str = "cardigan_money";
 
@@ -24,7 +24,9 @@ pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle<tauri::Wry>> =
 /// Resolve the application-data directory. A debug-only override exists for
 /// sandboxed development/test runs; release builds always use the standard
 /// macOS Application Support directory and ignore the environment variable.
-fn resolve_app_data(app: &tauri::AppHandle) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+fn resolve_app_data(
+    app: &tauri::AppHandle,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)]
     {
         if let Ok(dir) = std::env::var("CARDIGAN_MONEY_APP_DATA_DIR") {
@@ -42,7 +44,10 @@ fn harden_process() {
     // Disable core dumps; no heap contents in crash artifacts.
     #[cfg(unix)]
     unsafe {
-        let limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+        let limit = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
         libc::setrlimit(libc::RLIMIT_CORE, &limit);
         // Every file the process creates is owner-only by default; explicit
         // mode checks remain in the filesystem layer.
@@ -120,7 +125,10 @@ fn handle_close_request<R: tauri::Runtime>(window: &tauri::Window<R>, app: &taur
             app.exit(0);
         }
         crate::security::native_dialog::CloseDecision::Ask => {
-            if state.close_prompt_open.swap(true, std::sync::atomic::Ordering::SeqCst) {
+            if state
+                .close_prompt_open
+                .swap(true, std::sync::atomic::Ordering::SeqCst)
+            {
                 return;
             }
             let app = app.clone();
@@ -172,13 +180,8 @@ pub fn run() {
             let _ = APP_HANDLE.set(app.handle().clone());
             crate::services::scheduler::spawn(app.handle());
 
-            let lock_item = MenuItem::with_id(
-                app,
-                "lock-now",
-                "Lock Now",
-                true,
-                Some("CmdOrCtrl+L"),
-            )?;
+            let lock_item =
+                MenuItem::with_id(app, "lock-now", "Lock Now", true, Some("CmdOrCtrl+L"))?;
             let quit_item = PredefinedMenuItem::quit(app, Some("Quit cardigan_money"))?;
             let app_menu = Submenu::with_items(
                 app,
@@ -208,7 +211,8 @@ pub fn run() {
                 let state = app.state::<AppState>();
                 match crate::demo::open(&state, app.handle()) {
                     Ok(view) => {
-                        let dashboard = crate::services::dashboard::get(&state, Some("2026-10".into()));
+                        let dashboard =
+                            crate::services::dashboard::get(&state, Some("2026-10".into()));
                         match dashboard {
                             Ok(dashboard) => eprintln!(
                                 "DEMO_NATIVE_OPEN=passed accounts={} rows={} net={} mode={}",
@@ -257,12 +261,12 @@ pub fn run() {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
                     match security::secure_input::smoke_test(&handle) {
-                        Ok(()) => eprintln!(
-                            "NATIVE_SHEET_SMOKE=passed: sheet presented and cancelled"
-                        ),
+                        Ok(()) => {
+                            eprintln!("NATIVE_SHEET_SMOKE=passed: sheet presented and cancelled")
+                        }
                         Err(_) => eprintln!("NATIVE_SHEET_SMOKE=failed"),
                     }
-                    let _ = handle.exit(0);
+                    handle.exit(0);
                 });
             }
             Ok(())
@@ -310,7 +314,9 @@ pub fn run() {
             tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
         ) {
             let state = app.state::<AppState>();
-            state.quitting.store(true, std::sync::atomic::Ordering::SeqCst);
+            state
+                .quitting
+                .store(true, std::sync::atomic::Ordering::SeqCst);
             state.lock(app, "quit");
         }
     });

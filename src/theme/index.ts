@@ -17,7 +17,11 @@ function describeIssues(error: { issues: { path: PropertyKey[]; message: string 
 function loadThemes(): Theme[] {
   const themes: Theme[] = [];
   for (const [path, raw] of Object.entries(modules)) {
-    const fileName = path.split("/").pop()?.replace(/\.theme\.json$/, "") ?? path;
+    const fileName =
+      path
+        .split("/")
+        .pop()
+        ?.replace(/\.theme\.json$/, "") ?? path;
     const parsed = themeSchema.safeParse(raw);
     if (!parsed.success) {
       // A bundled theme that fails validation is a build-time bug, not a user

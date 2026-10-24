@@ -117,7 +117,11 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
   }
 
   function buildMapping(): CsvMapping | null {
-    if (mapping.dateColumn === "" || mapping.descriptionColumn === "" || mapping.dateFormat === "") {
+    if (
+      mapping.dateColumn === "" ||
+      mapping.descriptionColumn === "" ||
+      mapping.dateFormat === ""
+    ) {
       setError("Choose a date column, a description column, and an explicit date format.");
       return null;
     }
@@ -280,7 +284,9 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
               <select
                 aria-label="Description column"
                 value={mapping.descriptionColumn}
-                onChange={(event) => setMapping({ ...mapping, descriptionColumn: event.target.value })}
+                onChange={(event) =>
+                  setMapping({ ...mapping, descriptionColumn: event.target.value })
+                }
               >
                 <option value="">Choose…</option>
                 {columnOptions}
@@ -292,7 +298,10 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
                 aria-label="Date format"
                 value={mapping.dateFormat}
                 onChange={(event) =>
-                  setMapping({ ...mapping, dateFormat: event.target.value as MappingForm["dateFormat"] })
+                  setMapping({
+                    ...mapping,
+                    dateFormat: event.target.value as MappingForm["dateFormat"],
+                  })
                 }
               >
                 <option value="">Choose explicitly…</option>
@@ -336,7 +345,9 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
                   <select
                     aria-label="Debit column"
                     value={mapping.debitColumn}
-                    onChange={(event) => setMapping({ ...mapping, debitColumn: event.target.value })}
+                    onChange={(event) =>
+                      setMapping({ ...mapping, debitColumn: event.target.value })
+                    }
                   >
                     <option value="">None</option>
                     {columnOptions}
@@ -347,7 +358,9 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
                   <select
                     aria-label="Credit column"
                     value={mapping.creditColumn}
-                    onChange={(event) => setMapping({ ...mapping, creditColumn: event.target.value })}
+                    onChange={(event) =>
+                      setMapping({ ...mapping, creditColumn: event.target.value })
+                    }
                   >
                     <option value="">None</option>
                     {columnOptions}
@@ -383,7 +396,10 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
                 aria-label="Credit type"
                 value={mapping.creditType}
                 onChange={(event) =>
-                  setMapping({ ...mapping, creditType: event.target.value as MappingForm["creditType"] })
+                  setMapping({
+                    ...mapping,
+                    creditType: event.target.value as MappingForm["creditType"],
+                  })
                 }
               >
                 <option value="refund">Refunds</option>
@@ -427,8 +443,7 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
               </dl>
               {preview.noOp ? (
                 <p className="inline-notice" role="status">
-                  This exact file was already imported for this account; importing again is a
-                  no-op.
+                  This exact file was already imported for this account; importing again is a no-op.
                 </p>
               ) : null}
               {preview.months.length > 0 ? (
@@ -571,7 +586,11 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
                         >
                           Roll back
                         </Button>{" "}
-                        <Button variant="ghost" className="btn-small" onClick={() => setRollbackConfirm(null)}>
+                        <Button
+                          variant="ghost"
+                          className="btn-small"
+                          onClick={() => setRollbackConfirm(null)}
+                        >
                           Cancel
                         </Button>
                       </span>

@@ -269,7 +269,15 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         override: {
           merchantAlias: string | null;
           category: string | null;
-          typeCorrection: "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other" | null;
+          typeCorrection:
+            | "purchase"
+            | "refund"
+            | "fee"
+            | "interest"
+            | "payment"
+            | "transfer"
+            | "other"
+            | null;
           excluded: boolean | null;
           notes: string | null;
         };
@@ -293,9 +301,7 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       break;
     case "merchant_rule_create":
       requireUnlocked();
-      data = mockCreateMerchantRule(
-        payload as Parameters<typeof mockCreateMerchantRule>[0],
-      );
+      data = mockCreateMerchantRule(payload as Parameters<typeof mockCreateMerchantRule>[0]);
       break;
     case "merchant_rule_update": {
       requireUnlocked();
@@ -448,7 +454,8 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       break;
     case "plaid_test":
       requireUnlocked();
-      if (!mockPlaidConfigured) throw new BridgeError("provider_not_configured", "No provider credentials.");
+      if (!mockPlaidConfigured)
+        throw new BridgeError("provider_not_configured", "No provider credentials.");
       data = {
         plaid: {
           configured: true,

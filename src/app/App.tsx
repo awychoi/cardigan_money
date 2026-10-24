@@ -4,7 +4,13 @@ import { AppShell } from "./AppShell";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { VaultGate } from "../features/vault/VaultGate";
 import { OnboardingWizard } from "../features/onboarding/OnboardingWizard";
-import { command, usingMockBridge, type AppInfo, type Settings, type VaultState } from "../lib/bridge";
+import {
+  command,
+  usingMockBridge,
+  type AppInfo,
+  type Settings,
+  type VaultState,
+} from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { logEvent } from "../lib/logging";
 import { applyTheme } from "../theme/apply";
@@ -113,9 +119,7 @@ export function App() {
 
   const handleSettingsChanged = useCallback((settings: Settings) => {
     setBoot((current) =>
-      current.kind === "ready"
-        ? { ...current, vault: { ...current.vault, settings } }
-        : current,
+      current.kind === "ready" ? { ...current, vault: { ...current.vault, settings } } : current,
     );
   }, []);
 
@@ -171,10 +175,14 @@ export function App() {
   if (boot.kind === "loading") {
     return (
       <main className="boot-screen" aria-labelledby="app-title">
-        <div className="boot-mark" aria-hidden="true">cm</div>
+        <div className="boot-mark" aria-hidden="true">
+          cm
+        </div>
         <h1 id="app-title">cardigan_money</h1>
         <p className="muted">Local-first, encrypted personal card ledger.</p>
-        <p className="status" role="status">Opening the secure bridge…</p>
+        <p className="status" role="status">
+          Opening the secure bridge…
+        </p>
         <p className="fine-print">
           Your ledger password is collected by a native macOS sheet and never enters this window.
         </p>
@@ -185,13 +193,17 @@ export function App() {
   if (boot.kind === "error") {
     return (
       <main className="boot-screen" role="alert">
-        <div className="boot-mark" aria-hidden="true">cm</div>
+        <div className="boot-mark" aria-hidden="true">
+          cm
+        </div>
         <h1>cardigan_money</h1>
         <p className="error-text">{boot.message}</p>
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
           Retry
         </button>
-        <p className="fine-print">No ledger data is displayed while the secure bridge is unavailable.</p>
+        <p className="fine-print">
+          No ledger data is displayed while the secure bridge is unavailable.
+        </p>
       </main>
     );
   }
@@ -208,9 +220,7 @@ export function App() {
   }
 
   if (boot.vault.settings && !boot.vault.settings.onboardingCompleted) {
-    return (
-      <OnboardingWizard settings={boot.vault.settings} onFinished={handleSettingsChanged} />
-    );
+    return <OnboardingWizard settings={boot.vault.settings} onFinished={handleSettingsChanged} />;
   }
 
   return (

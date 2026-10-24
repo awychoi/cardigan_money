@@ -156,7 +156,13 @@ export function TransactionEditor({
             </div>
             <div>
               <dt>Posted</dt>
-              <dd>{detail.postedDate ? formatDateOnly(detail.postedDate) : detail.pending ? "Pending" : "Unknown"}</dd>
+              <dd>
+                {detail.postedDate
+                  ? formatDateOnly(detail.postedDate)
+                  : detail.pending
+                    ? "Pending"
+                    : "Unknown"}
+              </dd>
             </div>
             <div>
               <dt>Card</dt>

@@ -9,7 +9,11 @@ use cardigan_money_lib::storage::accounts::{
 fn setup() -> (tempfile::TempDir, AppState) {
     let tmp = tempfile::tempdir().unwrap();
     let state = AppState::new(tmp.path().to_path_buf()).unwrap();
-    vault::create(&state, SecretString::new("correct horse battery staple accounts".into())).unwrap();
+    vault::create(
+        &state,
+        SecretString::new("correct horse battery staple accounts".into()),
+    )
+    .unwrap();
     (tmp, state)
 }
 
@@ -53,8 +57,20 @@ fn manual_accounts_create_update_archive_and_validate() {
         .with_db(|conn, _h, _s| set_archived(conn, &created.id, true))
         .unwrap();
     assert!(archived.archived);
-    assert_eq!(state.with_db(|conn, _h, _s| list(conn, false)).unwrap().len(), 0);
-    assert_eq!(state.with_db(|conn, _h, _s| list(conn, true)).unwrap().len(), 1);
+    assert_eq!(
+        state
+            .with_db(|conn, _h, _s| list(conn, false))
+            .unwrap()
+            .len(),
+        0
+    );
+    assert_eq!(
+        state
+            .with_db(|conn, _h, _s| list(conn, true))
+            .unwrap()
+            .len(),
+        1
+    );
 
     // Archived accounts cannot be edited until restored.
     let err = state
@@ -71,14 +87,38 @@ fn manual_accounts_create_update_archive_and_validate() {
 fn account_validation_rejects_bad_fields() {
     let (_tmp, state) = setup();
     let cases = [
-        AccountInput { issuer: "".into(), ..input("X") },
-        AccountInput { display_name: "".into(), ..input("X") },
-        AccountInput { last_four: Some("12".into()), ..input("X") },
-        AccountInput { last_four: Some("abcd".into()), ..input("X") },
-        AccountInput { currency: "US".into(), ..input("X") },
-        AccountInput { currency: "XYZ".into(), ..input("X") },
-        AccountInput { credit_limit_minor: Some(0), ..input("X") },
-        AccountInput { issuer: "a".repeat(81), ..input("X") },
+        AccountInput {
+            issuer: "".into(),
+            ..input("X")
+        },
+        AccountInput {
+            display_name: "".into(),
+            ..input("X")
+        },
+        AccountInput {
+            last_four: Some("12".into()),
+            ..input("X")
+        },
+        AccountInput {
+            last_four: Some("abcd".into()),
+            ..input("X")
+        },
+        AccountInput {
+            currency: "US".into(),
+            ..input("X")
+        },
+        AccountInput {
+            currency: "XYZ".into(),
+            ..input("X")
+        },
+        AccountInput {
+            credit_limit_minor: Some(0),
+            ..input("X")
+        },
+        AccountInput {
+            issuer: "a".repeat(81),
+            ..input("X")
+        },
     ];
     for case in cases {
         let result = state.with_db(|conn, _h, _s| create_manual(conn, &case));

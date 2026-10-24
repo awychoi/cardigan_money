@@ -74,8 +74,8 @@ export function OnboardingWizard({
           <>
             <h1 id="wizard-title">Add your first account.</h1>
             <p className="muted">
-              Optional and skippable. The app stays usable with zero accounts. No provider or network
-              is required, and nothing is seeded with demo data.
+              Optional and skippable. The app stays usable with zero accounts. No provider or
+              network is required, and nothing is seeded with demo data.
             </p>
             <AccountForm submitLabel="Add account" busy={busy} onSubmit={addAccount} />
             <Button variant="ghost" onClick={() => setStep("provider")} disabled={busy}>

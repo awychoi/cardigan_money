@@ -172,8 +172,8 @@ export function SettingsView({
             <div>
               <div className="setting-label">Idle auto-lock</div>
               <p className="fine-print">
-                The vault locks in Rust after this much system-wide inactivity. Screen lock and sleep
-                always lock.
+                The vault locks in Rust after this much system-wide inactivity. Screen lock and
+                sleep always lock.
               </p>
             </div>
             <select

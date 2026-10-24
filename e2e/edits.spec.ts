@@ -2,7 +2,9 @@ import { test, expect } from "@playwright/test";
 import { openUnlocked } from "./helpers";
 
 test.describe("edits, rules, metadata, and CSV workflow (browser mock)", () => {
-  test("edits a transaction override and clears it without changing the source", async ({ page }) => {
+  test("edits a transaction override and clears it without changing the source", async ({
+    page,
+  }) => {
     await openUnlocked(page);
     await page.getByRole("button", { name: "Transactions", exact: true }).click();
     await page.getByLabel("Search transactions").fill("Blue Bottle");

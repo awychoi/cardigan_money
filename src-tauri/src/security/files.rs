@@ -32,7 +32,10 @@ pub fn ensure_private_dir(dir: &Path) -> AppResult<()> {
             fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            fs::DirBuilder::new().recursive(true).mode(0o700).create(dir)?;
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(dir)?;
             fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
         }
         Err(_) => return Err(AppError::Io),
@@ -88,7 +91,10 @@ pub fn read_private_file(path: &Path, max_bytes: u64) -> AppResult<Vec<u8>> {
 pub fn atomic_write_private(path: &Path, bytes: &[u8]) -> AppResult<()> {
     let parent = path.parent().ok_or(AppError::Io)?;
     ensure_private_dir(parent)?;
-    if fs::symlink_metadata(path).map(|m| is_symlink(&m)).unwrap_or(false) {
+    if fs::symlink_metadata(path)
+        .map(|m| is_symlink(&m))
+        .unwrap_or(false)
+    {
         return Err(AppError::PermissionDenied("symlink rejected"));
     }
     let suffix: [u8; 8] = random_array()?;
@@ -168,9 +174,15 @@ mod tests {
         assert_eq!(fs::read(&file).unwrap(), b"second");
         let mode = fs::metadata(&file).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
-        assert_eq!(fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700);
+        assert_eq!(
+            fs::metadata(&dir).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
         // no temp litter
-        let names: Vec<_> = fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name()).collect();
+        let names: Vec<_> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
         assert_eq!(names.len(), 1);
     }
 

@@ -50,15 +50,32 @@ fn demo_open_seeds_at_least_150_transactions_and_all_scenarios() {
             Ok((transactions, accounts, connections, pending, eur, linked, refunds, identical, aliases, partial))
         })
         .unwrap();
-    let (transactions, accounts, connections, pending, eur, linked, refunds, identical, aliases, partial) = counts;
-    assert!(transactions >= 150, "demo has only {transactions} transactions");
+    let (
+        transactions,
+        accounts,
+        connections,
+        pending,
+        eur,
+        linked,
+        refunds,
+        identical,
+        aliases,
+        partial,
+    ) = counts;
+    assert!(
+        transactions >= 150,
+        "demo has only {transactions} transactions"
+    );
     assert_eq!(accounts, 11);
     assert_eq!(connections, 5);
     assert!(pending > 0);
     assert!(eur >= 6);
     assert!(linked > 0);
     assert!(refunds > 0);
-    assert_eq!(identical, 2, "legitimate identical purchases must both exist");
+    assert_eq!(
+        identical, 2,
+        "legitimate identical purchases must both exist"
+    );
     assert!(aliases > 0);
     assert!(partial > 0);
     assert_eq!(state.mode(), SessionMode::Demo);
@@ -93,10 +110,19 @@ fn demo_cannot_be_used_with_the_real_vault_or_mutate_ledger_data() {
     assert_eq!(state.mode(), SessionMode::Demo);
     assert!(real_db.exists());
     assert!(state.require_real("mutation").is_err());
-    assert!(vault::change_passphrase(&state, &app, SecretString::new(PASS.into()), SecretString::new("new correct horse battery staple".into())).is_err());
+    assert!(vault::change_passphrase(
+        &state,
+        &app,
+        SecretString::new(PASS.into()),
+        SecretString::new("new correct horse battery staple".into())
+    )
+    .is_err());
 
     // The fixed demo key cannot open the real encrypted ledger.
-    let demo_key = LockedKey::from_slice(&hex::decode("a2ceb32f7ebfe63ff306dcb0eb26326ca99c31998730f72c1446aafb2697164d").unwrap()).unwrap();
+    let demo_key = LockedKey::from_slice(
+        &hex::decode("a2ceb32f7ebfe63ff306dcb0eb26326ca99c31998730f72c1446aafb2697164d").unwrap(),
+    )
+    .unwrap();
     assert!(open_ledger(&real_db, &demo_key, false).is_err());
 
     // Demo reset recreates only the demo DB; the real ledger still opens with
@@ -170,13 +196,22 @@ fn demo_overview_exposes_unknown_zero_stale_and_reconnect_states() {
     let app = mock_app();
     demo::open(&state, &app).unwrap();
     let dash = dashboard::get(&state, Some("2026-10".into())).unwrap();
-    let kinds: Vec<String> = dash.overview.accounts.iter().map(|account| account.payment.due_amount_kind.clone()).collect();
+    let kinds: Vec<String> = dash
+        .overview
+        .accounts
+        .iter()
+        .map(|account| account.payment.due_amount_kind.clone())
+        .collect();
     assert!(kinds.iter().any(|kind| kind == "reported_zero"));
     assert!(kinds.iter().any(|kind| kind == "not_reported"));
     assert!(kinds.iter().any(|kind| kind == "minimum_due"));
     assert!(kinds.iter().any(|kind| kind == "no_due_date"));
     assert!(dash.overview.balances.accounts_missing_balance >= 1);
-    assert!(dash.overview.accounts.iter().any(|account| account.balance_stale));
+    assert!(dash
+        .overview
+        .accounts
+        .iter()
+        .any(|account| account.balance_stale));
     assert!(dash
         .overview
         .accounts

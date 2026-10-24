@@ -71,7 +71,7 @@ impl CredentialStore for KeychainStore {
 
 #[cfg(target_os = "macos")]
 fn keychain_set(service: &str, account: &str, value: &[u8]) -> AppResult<()> {
-    use core_foundation::base::{TCFType, CFType};
+    use core_foundation::base::{CFType, TCFType};
     use core_foundation::boolean::CFBoolean;
     use core_foundation::data::CFData;
     use core_foundation::dictionary::CFDictionary;
@@ -82,7 +82,7 @@ fn keychain_set(service: &str, account: &str, value: &[u8]) -> AppResult<()> {
         kSecAttrAccount, kSecAttrService, kSecAttrSynchronizable, kSecClass,
         kSecClassGenericPassword, kSecValueData,
     };
-    use security_framework_sys::keychain_item::{SecItemAdd, SecItemDelete};
+    use security_framework_sys::keychain_item::SecItemAdd;
 
     // Remove any prior item first so the accessibility class cannot be
     // silently inherited from an older item.
@@ -124,7 +124,7 @@ fn keychain_set(service: &str, account: &str, value: &[u8]) -> AppResult<()> {
 
 #[cfg(target_os = "macos")]
 fn keychain_get(service: &str, account: &str) -> AppResult<Option<SecretString>> {
-    use core_foundation::base::{TCFType, CFType, CFTypeRef};
+    use core_foundation::base::{CFType, CFTypeRef, TCFType};
     use core_foundation::boolean::CFBoolean;
     use core_foundation::data::{CFData, CFDataRef};
     use core_foundation::dictionary::CFDictionary;
@@ -184,7 +184,7 @@ fn keychain_get(service: &str, account: &str) -> AppResult<Option<SecretString>>
 
 #[cfg(target_os = "macos")]
 fn keychain_delete(service: &str, account: &str) -> AppResult<()> {
-    use core_foundation::base::{TCFType, CFType};
+    use core_foundation::base::{CFType, TCFType};
     use core_foundation::boolean::CFBoolean;
     use core_foundation::dictionary::CFDictionary;
     use core_foundation::string::CFString;
@@ -246,7 +246,10 @@ mod tests {
         let store = MemoryStore::default();
         let secret = SecretString::new("sandbox-secret-value".into());
         store.set(ACCOUNT_SECRET, &secret).unwrap();
-        assert_eq!(store.get(ACCOUNT_SECRET).unwrap().unwrap().expose(), "sandbox-secret-value");
+        assert_eq!(
+            store.get(ACCOUNT_SECRET).unwrap().unwrap().expose(),
+            "sandbox-secret-value"
+        );
         store.delete(ACCOUNT_SECRET).unwrap();
         assert!(store.get(ACCOUNT_SECRET).unwrap().is_none());
     }

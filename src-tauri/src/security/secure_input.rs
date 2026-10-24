@@ -86,7 +86,10 @@ fn spec(purpose: SecurePurpose) -> PromptSpec {
 
 /// Ask for one or more secrets. Returns `None` when the user cancels.
 /// Any field may be empty; policy validation is the caller's job.
-pub fn ask<R: tauri::Runtime>(app: &tauri::AppHandle<R>, purpose: SecurePurpose) -> AppResult<Option<Vec<SecretString>>> {
+pub fn ask<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    purpose: SecurePurpose,
+) -> AppResult<Option<Vec<SecretString>>> {
     show_native(app, spec(purpose))
 }
 
@@ -133,9 +136,7 @@ fn show_native<R: tauri::Runtime>(
     .map_err(|_| AppError::NativeInput)?;
 
     match rx.recv_timeout(Duration::from_secs(600)) {
-        Ok(Ok(Some(values))) => Ok(Some(
-            values.into_iter().map(|v| SecretString::new(v)).collect(),
-        )),
+        Ok(Ok(Some(values))) => Ok(Some(values.into_iter().map(SecretString::new).collect())),
         Ok(Ok(None)) => Ok(None),
         _ => Err(AppError::NativeInput),
     }
@@ -172,10 +173,7 @@ unsafe fn present_prompt(
         use objc2_app_kit::NSSecureTextField;
         let y = height - 12.0 - row_height * (index as f64 + 1.0) + 6.0;
         let field = NSSecureTextField::new(mtm);
-        field.setFrame(NSRect::new(
-            NSPoint::new(0.0, y),
-            NSSize::new(width, 24.0),
-        ));
+        field.setFrame(NSRect::new(NSPoint::new(0.0, y), NSSize::new(width, 24.0)));
         field.setPlaceholderString(Some(&NSString::from_str(label)));
         container.addSubview(&field);
         fields.push(field);
@@ -202,11 +200,8 @@ unsafe fn present_prompt(
                 NSApplication::sharedApplication(mtm).abortModal();
             }
         });
-        let timer = NSTimer::timerWithTimeInterval_repeats_block(
-            delay.as_secs_f64(),
-            false,
-            &block,
-        );
+        let timer =
+            NSTimer::timerWithTimeInterval_repeats_block(delay.as_secs_f64(), false, &block);
         NSRunLoop::mainRunLoop().addTimer_forMode(&timer, NSModalPanelRunLoopMode);
     }
 
@@ -237,7 +232,10 @@ pub fn smoke_test<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> AppResult<()>
     let (tx, rx) = mpsc::sync_channel(1);
     app.run_on_main_thread(move || {
         let result = unsafe {
-            present_prompt(spec(SecurePurpose::Unlock), Some(Duration::from_millis(1500)))
+            present_prompt(
+                spec(SecurePurpose::Unlock),
+                Some(Duration::from_millis(1500)),
+            )
         };
         let _ = tx.send(result);
     })

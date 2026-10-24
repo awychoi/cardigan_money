@@ -20,7 +20,8 @@ export function OverviewView({
   const pendingOnly = summary.netSpendingMinor === 0 && summary.pendingSubtotalMinor !== 0;
   const staleCount = overview.accounts.filter((account) => account.balanceStale).length;
   const errorConnections = overview.accounts.filter(
-    (account) => account.connectionStatus === "error" || account.connectionStatus === "reconnect_required",
+    (account) =>
+      account.connectionStatus === "error" || account.connectionStatus === "reconnect_required",
   ).length;
 
   if (overview.accounts.length === 0) {
@@ -42,7 +43,8 @@ export function OverviewView({
         <div>
           <h1 id="overview-title">Overview</h1>
           <p className="muted">
-            {monthLabel(dashboard.month)} · {formatMonthRange(dashboard.startDate, dashboard.endDateExclusive)}
+            {monthLabel(dashboard.month)} ·{" "}
+            {formatMonthRange(dashboard.startDate, dashboard.endDateExclusive)}
           </p>
         </div>
         <span className="backend-note">Calendar-month totals from the encrypted ledger</span>
@@ -54,7 +56,8 @@ export function OverviewView({
           <strong className="metric-value">{formatMoney(summary.netSpendingMinor)}</strong>
           <span className="metric-detail">
             {formatMoney(summary.grossPurchasesMinor)} purchases ·{" "}
-            {formatMoney(summary.refundsMinor)} refunds · {formatMoney(summary.feesInterestMinor)} fees
+            {formatMoney(summary.refundsMinor)} refunds · {formatMoney(summary.feesInterestMinor)}{" "}
+            fees
           </span>
         </article>
         <article className="metric" role="listitem">
@@ -85,7 +88,8 @@ export function OverviewView({
 
       <p className="fine-print block-note">
         Current balances and upcoming payments are current as of{" "}
-        {formatDateOnly(overview.upcoming.asOfDate)}. Changing the spending month does not change them.
+        {formatDateOnly(overview.upcoming.asOfDate)}. Changing the spending month does not change
+        them.
       </p>
 
       {overview.balances.otherCurrency.length > 0 ? (
@@ -121,7 +125,11 @@ export function OverviewView({
                 {account.displayName}
                 {account.lastFour ? ` · •••• ${account.lastFour}` : ""}
               </span>
-              <span className={account.balanceStale ? "status-pill status-warn" : "status-pill status-ok"}>
+              <span
+                className={
+                  account.balanceStale ? "status-pill status-warn" : "status-pill status-ok"
+                }
+              >
                 {account.currentBalanceMinor === null
                   ? "Balance unknown"
                   : account.balanceStale

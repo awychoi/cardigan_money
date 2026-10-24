@@ -16,7 +16,7 @@ use crate::state::AppState;
 mod native {
     use std::ffi::c_void;
 
-    use core_foundation::base::{TCFType, CFType};
+    use core_foundation::base::{CFType, TCFType};
     use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
     use core_foundation::string::CFString;
 
@@ -29,10 +29,7 @@ mod native {
     #[link(name = "CoreFoundation", kind = "framework")]
     extern "C" {
         static kCFBooleanTrue: *const c_void;
-        fn CFDictionaryGetValue(
-            the_dict: *const c_void,
-            key: *const c_void,
-        ) -> *const c_void;
+        fn CFDictionaryGetValue(the_dict: *const c_void, key: *const c_void) -> *const c_void;
     }
 
     /// (screen_locked, on_console). `None` when the session dictionary is
@@ -143,9 +140,7 @@ pub fn spawn_monitor<R: tauri::Runtime + 'static>(app: AppHandle<R>) {
             let auto_lock_minutes = state
                 .with_db(|_conn, _header, settings| Ok(settings.auto_lock_minutes))
                 .unwrap_or(15);
-            if auto_lock_minutes > 0
-                && idle >= f64::from(auto_lock_minutes) * 60.0
-            {
+            if auto_lock_minutes > 0 && idle >= f64::from(auto_lock_minutes) * 60.0 {
                 state.lock(&app, "idle");
             }
         }

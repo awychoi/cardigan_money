@@ -1,28 +1,30 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State, WebviewWindow};
 
+use crate::domain::money::parse_currency_amount;
 use crate::error::{AppError, AppResult, ErrorPayload};
 use crate::ipc::{guard_main_window, GatewayRequest, GatewayResponse, API_VERSION};
+use crate::providers::csv::CsvMapping;
 use crate::security::secure_input::{self, SecurePurpose};
-use crate::services::{security as security_service, vault as vault_service};
+use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
+use crate::services::dashboard::{self, Dashboard};
+use crate::services::exports::ExportResult;
+use crate::services::imports::{
+    self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview,
+};
+use crate::services::plaid_link::{self, PlaidLinkStatus, PlaidStatus, PlaidVerificationReport};
+use crate::services::sync::{self, ConnectionView, SyncRunView, SyncRuntimeStatus, SyncSummary};
 use crate::services::vault::SecuritySummary;
+use crate::services::{security as security_service, vault as vault_service};
 use crate::state::AppState;
-use crate::storage::events::SecurityEvent;
+use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::edits::{
     self, ManualPayment, ManualPaymentInput, MerchantRule, MerchantRuleInput, OverrideInput,
     TransactionDetail,
 };
+use crate::storage::events::SecurityEvent;
 use crate::storage::ledger::{query_ledger, LedgerPage, LedgerQuery};
-use crate::providers::csv::CsvMapping;
-use crate::services::exports::ExportResult;
-use crate::services::imports::{self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview};
-use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
-use crate::services::dashboard::{self, Dashboard};
-use crate::services::plaid_link::{self, PlaidLinkStatus, PlaidStatus, PlaidVerificationReport};
-use crate::services::sync::{self, ConnectionView, SyncRunView, SyncRuntimeStatus, SyncSummary};
-use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
-use crate::domain::money::parse_currency_amount;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -659,18 +661,14 @@ pub fn execute<R: tauri::Runtime>(
             let result: ExportResult = state.with_db(|conn, _h, _s| {
                 crate::services::exports::export_filtered(conn, &payload.query, &destination)
             })?;
-            if let Err(error) = state.with_db(|conn, _h, _s| {
+            state.with_db(|conn, _h, _s| {
                 crate::storage::events::record_event(
                     conn,
                     "export",
                     "success",
                     Some(serde_json::json!({ "rows": result.rows })),
                 )
-            }) {
-                // The file was already written; report the audit failure rather
-                // than pretending the export did not happen.
-                return Err(error);
-            }
+            })?;
             GatewayResponse::ok(result)
         }
         "backup_create" => {
@@ -851,7 +849,10 @@ pub fn gateway(
     #[cfg(debug_assertions)]
     eprintln!("cardigan_money dev: gateway request accepted");
     let data = execute(&app, state.inner(), request).map_err(ErrorPayload::from)?;
-    Ok(GatewayResponse { api_version: API_VERSION, data })
+    Ok(GatewayResponse {
+        api_version: API_VERSION,
+        data,
+    })
 }
 
 #[cfg(test)]
@@ -870,7 +871,11 @@ mod tests {
     }
 
     fn req(command: &str, payload: serde_json::Value) -> GatewayRequest {
-        GatewayRequest { v: 1, command: command.into(), payload }
+        GatewayRequest {
+            v: 1,
+            command: command.into(),
+            payload,
+        }
     }
 
     #[test]
@@ -895,11 +900,17 @@ mod tests {
         request.v = 2;
         assert!(execute(&app, &state, request).is_err());
 
-        let request =
-            req("health_check", json!({ "blob": "x".repeat(crate::ipc::MAX_REQUEST_BYTES) }));
+        let request = req(
+            "health_check",
+            json!({ "blob": "x".repeat(crate::ipc::MAX_REQUEST_BYTES) }),
+        );
         assert!(execute(&app, &state, request).is_err());
 
-        let request = GatewayRequest { v: 1, command: "unknown".into(), payload: json!({}) };
+        let request = GatewayRequest {
+            v: 1,
+            command: "unknown".into(),
+            payload: json!({}),
+        };
         assert!(execute(&app, &state, request).is_err());
     }
 
@@ -921,7 +932,10 @@ mod tests {
         ];
         for raw in corpus {
             if let Ok(request) = serde_json::from_str::<GatewayRequest>(raw) {
-                assert!(execute(&app, &state, request).is_err(), "malformed request accepted: {raw}");
+                assert!(
+                    execute(&app, &state, request).is_err(),
+                    "malformed request accepted: {raw}"
+                );
             }
         }
     }
@@ -945,10 +959,7 @@ mod tests {
         let err = execute(
             &app,
             &state,
-            req(
-                "dashboard_get",
-                json!({"month":"not-a-month"}),
-            ),
+            req("dashboard_get", json!({"month":"not-a-month"})),
         )
         .unwrap_err();
         assert_eq!(err.code(), "vault_locked");
@@ -962,11 +973,19 @@ mod tests {
             let err = execute(&app, &state, req(command, json!({}))).unwrap_err();
             assert_eq!(err.code(), "vault_locked", "{command}");
         }
-        let err =
-            execute(&app, &state, req("security_events_list", json!({"limit": 0}))).unwrap_err();
+        let err = execute(
+            &app,
+            &state,
+            req("security_events_list", json!({"limit": 0})),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "invalid_input");
-        let err =
-            execute(&app, &state, req("security_events_list", json!({"limit": 5}))).unwrap_err();
+        let err = execute(
+            &app,
+            &state,
+            req("security_events_list", json!({"limit": 5})),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "vault_locked");
     }
 
@@ -977,7 +996,10 @@ mod tests {
         let value = execute(&app, &state, req("app_info", json!({}))).unwrap();
         let text = serde_json::to_string(&value).unwrap().to_lowercase();
         for forbidden in ["passphrase", "secret", "token", "dek", "kek", "password"] {
-            assert!(!text.contains(forbidden), "app_info leaked a {forbidden}-shaped field");
+            assert!(
+                !text.contains(forbidden),
+                "app_info leaked a {forbidden}-shaped field"
+            );
         }
     }
 
@@ -1043,7 +1065,14 @@ mod tests {
         let fetched = execute(&app, &state, req("settings_get", json!({}))).unwrap();
         assert_eq!(fetched["settings"]["theme"], "dark");
         assert_eq!(
-            state.session.lock().unwrap().settings.as_ref().unwrap().theme,
+            state
+                .session
+                .lock()
+                .unwrap()
+                .settings
+                .as_ref()
+                .unwrap()
+                .theme,
             crate::storage::settings::Theme::Dark
         );
     }

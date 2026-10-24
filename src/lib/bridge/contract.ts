@@ -43,7 +43,6 @@ export const zHealthCheck = z
   })
   .strict();
 
-
 export const zTheme = z.enum(["light", "dark", "system"]);
 /** Lowercase slug. Unknown ids fall back to the default theme in the UI. */
 export const zThemeId = z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/);
@@ -112,7 +111,10 @@ export const zSettingsPatch = z
     closeBehavior: zCloseBehavior.optional(),
     onboardingCompleted: z.boolean().optional(),
     autoLockMinutes: z.number().int().min(1).max(240).optional(),
-    syncWindows: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(8).optional(),
+    syncWindows: z
+      .array(z.string().regex(/^\d{2}:\d{2}$/))
+      .max(8)
+      .optional(),
     syncOnLaunch: z.boolean().optional(),
     backupRetentionDaily: z.number().int().min(1).max(30).optional(),
   })
@@ -121,7 +123,6 @@ export const zSettingsPatch = z
 export const zEventsRequest = z
   .object({ limit: z.number().int().min(1).max(100).optional() })
   .strict();
-
 
 export const zAccountType = z.enum(["credit_card", "charge_card", "line_of_credit", "other"]);
 
@@ -159,9 +160,7 @@ export const zAccount = z
   .strict();
 
 export const zAccountsView = z.object({ accounts: z.array(zAccount) }).strict();
-export const zAccountsListRequest = z
-  .object({ includeArchived: z.boolean().optional() })
-  .strict();
+export const zAccountsListRequest = z.object({ includeArchived: z.boolean().optional() }).strict();
 export const zAccountUpdateRequest = z
   .object({ id: z.string().min(1).max(64), account: zAccountPayload })
   .strict();
@@ -171,7 +170,6 @@ export const zAccountArchiveRequest = z
 
 export type Account = z.infer<typeof zAccount>;
 export type AccountPayload = z.infer<typeof zAccountPayload>;
-
 
 export const zPaymentInfo = z
   .object({
@@ -384,7 +382,6 @@ export type LedgerRow = z.infer<typeof zLedgerRow>;
 export type LedgerPage = z.infer<typeof zLedgerPage>;
 export type LedgerQuery = z.infer<typeof zLedgerQuery>;
 
-
 export const zTransactionDetail = z
   .object({
     id: z.string(),
@@ -580,7 +577,6 @@ export type ImportResult = z.infer<typeof zImportResult>;
 export type ImportBatch = z.infer<typeof zImportBatch>;
 export type ExportResult = z.infer<typeof zExportResult>;
 
-
 export const zBackupItem = z
   .object({
     id: z.string(),
@@ -591,9 +587,7 @@ export const zBackupItem = z
     schemaVersion: z.number().int(),
   })
   .strict();
-export const zBackupResult = z
-  .object({ backup: zBackupItem, pruned: z.number().int() })
-  .strict();
+export const zBackupResult = z.object({ backup: zBackupItem, pruned: z.number().int() }).strict();
 export const zRestoreResult = z
   .object({
     restored: z.boolean(),
@@ -605,7 +599,6 @@ export const zRestoreResult = z
 export type BackupItem = z.infer<typeof zBackupItem>;
 export type BackupResult = z.infer<typeof zBackupResult>;
 export type RestoreResult = z.infer<typeof zRestoreResult>;
-
 
 export const zConnectionView = z
   .object({
@@ -691,7 +684,6 @@ export type SyncRuntime = z.infer<typeof zSyncRuntime>;
 export type SyncStatus = z.infer<typeof zSyncStatus>;
 export type SyncSummary = z.infer<typeof zSyncSummary>;
 
-
 export const zPlaidStatus = z
   .object({
     configured: z.boolean(),
@@ -710,7 +702,6 @@ export const zPlaidLinkStatus = z
   .strict();
 export type PlaidStatus = z.infer<typeof zPlaidStatus>;
 export type PlaidLinkStatus = z.infer<typeof zPlaidLinkStatus>;
-
 
 export const zPlaidVerificationReport = z
   .object({
@@ -864,7 +855,15 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   demo_open: zEmpty,
   demo_close: zEmpty,
   demo_reset: zEmpty,
-  dashboard_get: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).nullable().optional() }).strict(),
+  dashboard_get: z
+    .object({
+      month: z
+        .string()
+        .regex(/^\d{4}-\d{2}$/)
+        .nullable()
+        .optional(),
+    })
+    .strict(),
   ledger_query: zLedgerQuery,
   transaction_detail: z.object({ id: z.string().min(1).max(64) }).strict(),
   transaction_override_set: z
@@ -883,9 +882,7 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
     .strict(),
   manual_payment_clear: z.object({ accountId: z.string().min(1).max(64) }).strict(),
   import_choose_file: z.object({ accountId: z.string().min(1).max(64) }).strict(),
-  import_validate: z
-    .object({ jobId: z.string().min(1).max(64), mapping: zCsvMapping })
-    .strict(),
+  import_validate: z.object({ jobId: z.string().min(1).max(64), mapping: zCsvMapping }).strict(),
   import_commit: z
     .object({
       jobId: z.string().min(1).max(64),

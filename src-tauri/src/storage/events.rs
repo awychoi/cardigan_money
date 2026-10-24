@@ -41,16 +41,27 @@ pub struct SecurityEvent {
 }
 
 fn sanitize_metadata(metadata: Option<serde_json::Value>) -> AppResult<Option<String>> {
-    let Some(value) = metadata else { return Ok(None) };
+    let Some(value) = metadata else {
+        return Ok(None);
+    };
     let Some(object) = value.as_object() else {
         return Err(AppError::InvalidInput("event metadata"));
     };
     let mut clean = serde_json::Map::new();
     for (key, value) in object {
         let lower = key.to_ascii_lowercase();
-        if ["passphrase", "password", "secret", "token", "dek", "kek", "sql", "path"]
-            .iter()
-            .any(|forbidden| lower.contains(forbidden))
+        if [
+            "passphrase",
+            "password",
+            "secret",
+            "token",
+            "dek",
+            "kek",
+            "sql",
+            "path",
+        ]
+        .iter()
+        .any(|forbidden| lower.contains(forbidden))
         {
             continue;
         }
@@ -88,7 +99,13 @@ pub fn record_event(
     conn.execute(
         "INSERT INTO security_events (id, event_type, outcome, created_at, metadata_json)
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![uuid::Uuid::new_v4().to_string(), event_type, outcome, now_rfc3339(), metadata],
+        rusqlite::params![
+            uuid::Uuid::new_v4().to_string(),
+            event_type,
+            outcome,
+            now_rfc3339(),
+            metadata
+        ],
     )?;
     Ok(())
 }

@@ -132,7 +132,11 @@ fn imports_csv_with_bom_quotes_and_parentheses_then_is_idempotent() {
         .unwrap();
     assert_eq!(exported.rows, 3);
     assert_eq!(
-        std::fs::metadata(&export_path).unwrap().permissions().mode() & 0o777,
+        std::fs::metadata(&export_path)
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
         0o600
     );
 }
@@ -168,7 +172,10 @@ fn duplicate_review_preserves_legitimate_identical_rows() {
                 .map_err(|_| cardigan_money_lib::error::AppError::Database)
         })
         .unwrap();
-    assert_eq!(count, 2, "the review row is not silently inserted or merged");
+    assert_eq!(
+        count, 2,
+        "the review row is not silently inserted or merged"
+    );
 
     // A third, explicitly accepted review inserts the legitimate duplicate.
     let third = csv_file(
@@ -218,8 +225,10 @@ fn rollback_removes_only_that_batchs_unique_rows() {
     assert_eq!(count, 1, "only Gamma from the untouched batch remains");
     let merchant: String = state
         .with_db(|conn, _h, _s| {
-            conn.query_row("SELECT merchant_display FROM transactions", [], |row| row.get(0))
-                .map_err(|_| cardigan_money_lib::error::AppError::Database)
+            conn.query_row("SELECT merchant_display FROM transactions", [], |row| {
+                row.get(0)
+            })
+            .map_err(|_| cardigan_money_lib::error::AppError::Database)
         })
         .unwrap();
     assert_eq!(merchant, "Gamma");
@@ -330,7 +339,9 @@ fn overrides_rules_and_manual_metadata_are_independent_and_survive_reload() {
     assert_eq!(summary.net_spending_minor, 750);
 
     // Deleting the rule reverts the rule-derived display but not the override.
-    let rules = state.with_db(|conn, _h, _s| edits::list_rules(conn)).unwrap();
+    let rules = state
+        .with_db(|conn, _h, _s| edits::list_rules(conn))
+        .unwrap();
     state
         .with_db(|conn, _h, _s| edits::delete_rule(conn, &rules[0].id))
         .unwrap();
@@ -439,7 +450,10 @@ fn export_escapes_formula_cells_and_sets_0600() {
         .with_db(|conn, _h, _s| export_filtered(conn, &query, &path))
         .unwrap();
     let contents = std::fs::read_to_string(&path).unwrap();
-    assert!(contents.contains("'=SUM(A1:A9)"), "formula not escaped: {contents}");
+    assert!(
+        contents.contains("'=SUM(A1:A9)"),
+        "formula not escaped: {contents}"
+    );
     assert!(contents.contains("'+cmd"));
     assert!(contents.contains("'@x"));
     assert!(contents.contains("'=cmd"));
@@ -457,6 +471,9 @@ fn export_escapes_formula_cells_and_sets_0600() {
     let err = state
         .with_db(|conn, _h, _s| export_filtered(conn, &query, &link))
         .unwrap_err();
-    assert!(matches!(err, cardigan_money_lib::error::AppError::PermissionDenied(_)));
+    assert!(matches!(
+        err,
+        cardigan_money_lib::error::AppError::PermissionDenied(_)
+    ));
     assert_eq!(std::fs::read(&outside).unwrap(), b"original");
 }

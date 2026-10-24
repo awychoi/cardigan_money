@@ -84,15 +84,17 @@ export function VaultGate({
               <Button variant="ghost" onClick={openDemo} disabled={busy !== null}>
                 Open demo (synthetic data)
               </Button>
-              <span className="fine-print">Separate database. No passphrase, no real data, no provider.</span>
+              <span className="fine-print">
+                Separate database. No passphrase, no real data, no provider.
+              </span>
             </div>
           </>
         ) : (
           <>
             <h1 id="vault-title">Create your encrypted ledger.</h1>
             <p className="muted">
-              First launch starts empty. You choose the passphrase; the app never stores it and there
-              is no recovery if you lose it.
+              First launch starts empty. You choose the passphrase; the app never stores it and
+              there is no recovery if you lose it.
             </p>
             <ul className="vault-facts">
               <li>SQLCipher database with an Argon2id-wrapped random key.</li>

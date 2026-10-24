@@ -184,7 +184,11 @@ fn verify_hash(path: &Path, expected: &str) -> AppResult<()> {
     Ok(())
 }
 
-fn existing_exact_batch(conn: &Connection, account_id: &str, sha: &str) -> AppResult<Option<String>> {
+fn existing_exact_batch(
+    conn: &Connection,
+    account_id: &str,
+    sha: &str,
+) -> AppResult<Option<String>> {
     conn.query_row(
         "SELECT id FROM import_batches WHERE account_id = ?1 AND file_sha256 = ?2 AND status = 'imported' LIMIT 1",
         rusqlite::params![account_id, sha],
@@ -197,7 +201,11 @@ fn existing_exact_batch(conn: &Connection, account_id: &str, sha: &str) -> AppRe
     })
 }
 
-fn classify(conn: &Connection, account_id: &str, parsed: &csv::ParsedFile) -> AppResult<Vec<Classified>> {
+fn classify(
+    conn: &Connection,
+    account_id: &str,
+    parsed: &csv::ParsedFile,
+) -> AppResult<Vec<Classified>> {
     let mut stmt = conn.prepare(
         "SELECT source_row_ref, import_fingerprint FROM transactions WHERE account_id = ?1",
     )?;
@@ -219,12 +227,16 @@ fn classify(conn: &Connection, account_id: &str, parsed: &csv::ParsedFile) -> Ap
         let class = if let Some(source) = &row.source_id {
             if source_ids.contains(source) || seen_sources.contains(source) {
                 RowClass::Duplicate
-            } else if fingerprints.contains(&row.fingerprint) || seen_fingerprints.contains(&row.fingerprint) {
+            } else if fingerprints.contains(&row.fingerprint)
+                || seen_fingerprints.contains(&row.fingerprint)
+            {
                 RowClass::Review
             } else {
                 RowClass::Insert
             }
-        } else if fingerprints.contains(&row.fingerprint) || seen_fingerprints.contains(&row.fingerprint) {
+        } else if fingerprints.contains(&row.fingerprint)
+            || seen_fingerprints.contains(&row.fingerprint)
+        {
             RowClass::Review
         } else {
             RowClass::Insert
@@ -233,7 +245,10 @@ fn classify(conn: &Connection, account_id: &str, parsed: &csv::ParsedFile) -> Ap
             seen_sources.insert(source.clone());
         }
         seen_fingerprints.insert(row.fingerprint.clone());
-        out.push(Classified { row: row.clone(), class });
+        out.push(Classified {
+            row: row.clone(),
+            class,
+        });
     }
     Ok(out)
 }
@@ -247,8 +262,12 @@ pub fn validate(
     let (account_id, path, sha, _, _) = get_job(state, job_id)?;
     verify_hash(&path, &sha)?;
     let currency = state.with_db(|conn, _h, _s| {
-        conn.query_row("SELECT currency FROM accounts WHERE id = ?1", [&account_id], |row| row.get::<_, String>(0))
-            .map_err(|_| AppError::NotFound)
+        conn.query_row(
+            "SELECT currency FROM accounts WHERE id = ?1",
+            [&account_id],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(|_| AppError::NotFound)
     })?;
     let parsed = csv::parse(&path, mapping, &account_id, &currency)?;
     let classified = state.with_db(|conn, _h, _s| classify(conn, &account_id, &parsed))?;
@@ -269,11 +288,18 @@ pub fn validate(
         let (status, reason) = match item.class {
             RowClass::Insert => ("insert", None),
             RowClass::Duplicate => ("duplicate", Some("source id already imported")),
-            RowClass::Review => ("review", Some("possible duplicate; review before importing")),
+            RowClass::Review => (
+                "review",
+                Some("possible duplicate; review before importing"),
+            ),
         };
         sample_rows.push(csv::preview_row(&item.row, status, reason));
     }
-    for rejected in parsed.rejected.iter().take(csv::SAMPLE_ROWS.saturating_sub(sample_rows.len())) {
+    for rejected in parsed
+        .rejected
+        .iter()
+        .take(csv::SAMPLE_ROWS.saturating_sub(sample_rows.len()))
+    {
         sample_rows.push(PreviewRow {
             row_number: rejected.row_number,
             date: String::new(),
@@ -284,13 +310,18 @@ pub fn validate(
             reason: Some(rejected.reason.into()),
         });
     }
-    let no_op_batch = state.with_db(|conn, _h, _s| existing_exact_batch(conn, &account_id, &sha))?;
+    let no_op_batch =
+        state.with_db(|conn, _h, _s| existing_exact_batch(conn, &account_id, &sha))?;
     let no_op = no_op_batch.is_some();
     Ok(ValidationPreview {
         job_id: job_id.to_string(),
         row_count: parsed.total_rows,
         insert_count: if no_op { 0 } else { insert.len() },
-        duplicate_count: if no_op { parsed.total_rows } else { parsed.rows.len() - insert.len() - review.len() },
+        duplicate_count: if no_op {
+            parsed.total_rows
+        } else {
+            parsed.rows.len() - insert.len() - review.len()
+        },
         review_count: if no_op { 0 } else { review.len() },
         rejected_count: parsed.rejected.len(),
         sample_rows,
@@ -311,8 +342,12 @@ pub fn commit(
     let (account_id, path, sha, _, _) = get_job(state, job_id)?;
     verify_hash(&path, &sha)?;
     let currency = state.with_db(|conn, _h, _s| {
-        conn.query_row("SELECT currency FROM accounts WHERE id = ?1", [&account_id], |row| row.get::<_, String>(0))
-            .map_err(|_| AppError::NotFound)
+        conn.query_row(
+            "SELECT currency FROM accounts WHERE id = ?1",
+            [&account_id],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(|_| AppError::NotFound)
     })?;
     let parsed = csv::parse(&path, mapping, &account_id, &currency)?;
     verify_hash(&path, &sha)?;
@@ -458,7 +493,11 @@ pub fn commit(
         duplicates: view.duplicate_count as usize,
         review: view.review_count as usize,
         rejected: view.rejected_count as usize,
-        months: if no_op { Vec::new() } else { csv::month_totals(&inserted_rows) },
+        months: if no_op {
+            Vec::new()
+        } else {
+            csv::month_totals(&inserted_rows)
+        },
         no_op,
     })
 }

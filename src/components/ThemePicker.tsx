@@ -61,9 +61,8 @@ export function ThemePicker({
         })}
       </div>
       <p className="fine-print">
-        Themes are data files in <code>src/themes</code>. Add one, run{" "}
-        <code>pnpm theme:check</code>, and it appears here. Authoring guide:{" "}
-        <code>docs/design/theming.md</code>.
+        Themes are data files in <code>src/themes</code>. Add one, run <code>pnpm theme:check</code>
+        , and it appears here. Authoring guide: <code>docs/design/theming.md</code>.
       </p>
     </>
   );

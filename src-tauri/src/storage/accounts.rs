@@ -69,7 +69,8 @@ pub struct Account {
 }
 
 fn validate_input(input: &AccountInput) -> AppResult<(String, String, Option<String>, String)> {
-    let issuer = clean_text(&input.issuer, 80, false).map_err(|_| AppError::InvalidInput("issuer"))?;
+    let issuer =
+        clean_text(&input.issuer, 80, false).map_err(|_| AppError::InvalidInput("issuer"))?;
     let display_name = clean_text(&input.display_name, 120, false)
         .map_err(|_| AppError::InvalidInput("display name"))?;
     let last_four = match &input.last_four {
@@ -187,7 +188,11 @@ pub fn get(conn: &Connection, id: &str) -> AppResult<Account> {
 pub fn list(conn: &Connection, include_archived: bool) -> AppResult<Vec<Account>> {
     let sql = format!(
         "{SELECT}{} ORDER BY issuer COLLATE NOCASE, display_name COLLATE NOCASE, id",
-        if include_archived { "" } else { " WHERE archived = 0" }
+        if include_archived {
+            ""
+        } else {
+            " WHERE archived = 0"
+        }
     );
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], row_to_account)?;

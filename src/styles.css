@@ -77,7 +77,7 @@
   /* motion */
   --motion-fast: 120ms;
   --motion-base: 160ms;
-  --ease: cubic-bezier(.2, 0, 0, 1);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 
   /* shell */
   --sidebar-w: 224px;
@@ -1381,7 +1381,11 @@ h3 {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 80% at 8% 0%, color-mix(in srgb, var(--issuer-ink) 16%, transparent), transparent 55%),
+    radial-gradient(
+      120% 80% at 8% 0%,
+      color-mix(in srgb, var(--issuer-ink) 16%, transparent),
+      transparent 55%
+    ),
     linear-gradient(180deg, transparent 55%, color-mix(in srgb, #000 18%, transparent));
 }
 .cardface > * {

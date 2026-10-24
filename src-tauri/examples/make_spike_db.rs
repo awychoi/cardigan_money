@@ -5,7 +5,9 @@ use cardigan_money_lib::security::crypto::{KdfParams, SecretString};
 use cardigan_money_lib::security::vault::VaultHeader;
 
 fn main() {
-    let path = std::env::args().nth(1).expect("usage: make_spike_db <path>");
+    let path = std::env::args()
+        .nth(1)
+        .expect("usage: make_spike_db <path>");
     let path = std::path::PathBuf::from(path);
     if path.exists() {
         std::fs::remove_file(&path).unwrap();
@@ -13,7 +15,11 @@ fn main() {
     let pass = SecretString::new("spike-only passphrase with enough chars".into());
     let (_header, dek) = VaultHeader::create(
         &pass,
-        KdfParams { m_cost_kib: 8192, t_cost: 1, p_cost: 1 },
+        KdfParams {
+            m_cost_kib: 8192,
+            t_cost: 1,
+            p_cost: 1,
+        },
         [9u8; 16],
         1,
     )
@@ -24,7 +30,8 @@ fn main() {
          INSERT INTO spike(note) VALUES ('synthetic spike row');",
     )
     .unwrap();
-    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);").unwrap();
+    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+        .unwrap();
     println!("cipher={} provider={}", info.version, info.provider);
     println!("created {}", path.display());
 }

@@ -22,14 +22,12 @@ use crate::security::cipher::{
 };
 use crate::security::crypto::{self, LockedKey, SecretString};
 use crate::security::files::{
-    ensure_private_dir, enforce_private_file, file_exists_no_follow,
-    fsync_dir, remove_file_if_exists,
+    enforce_private_file, ensure_private_dir, file_exists_no_follow, fsync_dir,
+    remove_file_if_exists,
 };
 use crate::security::native_dialog;
 use crate::security::secure_input::{self, SecurePurpose};
-use crate::security::vault::{
-    VaultHeader, HEADER_LEN as VAULT_HEADER_LEN,
-};
+use crate::security::vault::{VaultHeader, HEADER_LEN as VAULT_HEADER_LEN};
 use crate::services::vault::VaultState;
 use crate::state::AppState;
 use crate::storage::events::record_event;
@@ -139,7 +137,13 @@ fn now_unix() -> i64 {
 }
 
 impl BackupHeader {
-    fn new(kind: BackupKind, vault_header: VaultHeader, db_len: u64, hash: [u8; 32], dek: &LockedKey) -> AppResult<Self> {
+    fn new(
+        kind: BackupKind,
+        vault_header: VaultHeader,
+        db_len: u64,
+        hash: [u8; 32],
+        dek: &LockedKey,
+    ) -> AppResult<Self> {
         let nonce = crypto::random_array::<24>()?;
         let mut header = Self {
             kind,
@@ -198,9 +202,8 @@ impl BackupHeader {
         let vault_header = VaultHeader::decode(
             &bytes[OFFSET_VAULT_HEADER..OFFSET_VAULT_HEADER + VAULT_HEADER_LEN],
         )?;
-        let db_len = u64::from_le_bytes(
-            bytes[OFFSET_DB_LEN..OFFSET_DB_LEN + 8].try_into().unwrap(),
-        );
+        let db_len =
+            u64::from_le_bytes(bytes[OFFSET_DB_LEN..OFFSET_DB_LEN + 8].try_into().unwrap());
         if db_len == 0 || db_len > MAX_BACKUP_BYTES {
             return Err(AppError::HeaderInvalid("backup size"));
         }
@@ -214,7 +217,9 @@ impl BackupHeader {
             kind,
             vault_header,
             created_at: i64::from_le_bytes(
-                bytes[OFFSET_CREATED..OFFSET_CREATED + 8].try_into().unwrap(),
+                bytes[OFFSET_CREATED..OFFSET_CREATED + 8]
+                    .try_into()
+                    .unwrap(),
             ),
             db_len,
             db_sha256: hash,
@@ -269,7 +274,7 @@ fn container_name(kind: BackupKind, header: &VaultHeader, now: i64) -> String {
         .map(|value| value.format("%Y%m%dT%H%M%SZ").to_string())
         .unwrap_or_else(|| "19700101T000000Z".to_string());
     let nonce = crypto::random_array::<4>()
-        .map(|bytes| hex::encode(bytes))
+        .map(hex::encode)
         .unwrap_or_else(|_| "0000".to_string());
     format!(
         "cm-backup-{}-{}-gen{}-{}-{}.cmbak",
@@ -335,10 +340,13 @@ fn read_header(path: &Path) -> AppResult<BackupHeader> {
         return Err(AppError::HeaderInvalid("backup file size"));
     }
     if meta.mode() & 0o077 != 0 {
-        return Err(AppError::PermissionDenied("backup permissions are not owner-only"));
+        return Err(AppError::PermissionDenied(
+            "backup permissions are not owner-only",
+        ));
     }
     let mut bytes = vec![0u8; CONTAINER_HEADER_LEN];
-    file.read_exact(&mut bytes).map_err(|_| AppError::HeaderInvalid("backup header"))?;
+    file.read_exact(&mut bytes)
+        .map_err(|_| AppError::HeaderInvalid("backup header"))?;
     let header = BackupHeader::decode(&bytes)?;
     let expected_total = CONTAINER_HEADER_LEN as u64 + header.db_len;
     if meta.len() != expected_total {
@@ -468,7 +476,7 @@ pub fn prune_backups(backup_dir: &Path) -> AppResult<usize> {
             items.push((name, header.kind, header));
         }
     }
-    items.sort_by(|a, b| b.2.created_at.cmp(&a.2.created_at));
+    items.sort_by_key(|item| std::cmp::Reverse(item.2.created_at));
     let mut removed = 0usize;
     let mut remaining = items.len();
     for kind in [
@@ -578,7 +586,10 @@ pub fn create_backup<R: tauri::Runtime>(
         save_settings(conn, &settings)?;
         guard.settings = Some(settings);
     }
-    Ok(BackupResult { backup: item, pruned })
+    Ok(BackupResult {
+        backup: item,
+        pruned,
+    })
 }
 
 pub fn maybe_daily_backup(state: &AppState) {
@@ -670,8 +681,8 @@ pub fn prepare_restore(
     passphrase: &SecretString,
 ) -> AppResult<RestorePlan> {
     let header = read_header(backup_path)?;
-    let current_header = state
-        .with_db(|_conn, header, _settings| header.cloned().ok_or(AppError::Locked))?;
+    let current_header =
+        state.with_db(|_conn, header, _settings| header.cloned().ok_or(AppError::Locked))?;
     if header.vault_header.vault_id != current_header.vault_id {
         return Err(AppError::Blocked("backup belongs to a different vault"));
     }
@@ -731,10 +742,7 @@ pub fn install_restore<R: tauri::Runtime>(
 
 /// Install a validated staged restore without a native prompt. The caller must
 /// have confirmed with the owner.
-pub fn install_restore_confirmed(
-    state: &AppState,
-    plan: RestorePlan,
-) -> AppResult<RestoreResult> {
+pub fn install_restore_confirmed(state: &AppState, plan: RestorePlan) -> AppResult<RestoreResult> {
     let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
     if !guard.is_unlocked() {
         let _ = std::fs::remove_file(&plan.staged_path);
@@ -881,7 +889,10 @@ pub fn choose_backup_file<R: tauri::Runtime>(app: &AppHandle<R>) -> AppResult<Op
         .map_err(|_| AppError::NativeInput)
 }
 
-pub fn restore<R: tauri::Runtime>(state: &AppState, app: &AppHandle<R>) -> AppResult<RestoreResult> {
+pub fn restore<R: tauri::Runtime>(
+    state: &AppState,
+    app: &AppHandle<R>,
+) -> AppResult<RestoreResult> {
     state.require_real("restore a backup in demo mode")?;
     let Some(path) = choose_backup_file(app)? else {
         return Err(AppError::Cancelled);
@@ -937,11 +948,17 @@ pub fn portable_export_to(
     let result = (|| -> AppResult<BackupItem> {
         create_encrypted_snapshot_with_key(conn, &snapshot, &export_dek)?;
         let (len, hash) = hash_file(&snapshot)?;
-        let header = BackupHeader::new(BackupKind::Portable, export_header.clone(), len, hash, &export_dek)?;
+        let header = BackupHeader::new(
+            BackupKind::Portable,
+            export_header.clone(),
+            len,
+            hash,
+            &export_dek,
+        )?;
         write_container(destination, &header, &snapshot, false)?;
         let read = read_header(destination)?;
         read.verify_seal(&export_dek)?;
-        verify_db_bytes(&destination, &read)?;
+        verify_db_bytes(destination, &read)?;
         let _ = record_event(
             conn,
             "export",
@@ -964,7 +981,9 @@ pub fn portable_export_to(
     result
 }
 
-fn choose_portable_destination<R: tauri::Runtime>(app: &AppHandle<R>) -> AppResult<Option<PathBuf>> {
+fn choose_portable_destination<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+) -> AppResult<Option<PathBuf>> {
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
     app.run_on_main_thread(move || {
         let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
@@ -1020,7 +1039,10 @@ fn remove_tree(dir: &Path) {
     let _ = std::fs::remove_dir(dir);
 }
 
-pub fn crypto_erase<R: tauri::Runtime>(state: &AppState, app: &AppHandle<R>) -> AppResult<VaultState> {
+pub fn crypto_erase<R: tauri::Runtime>(
+    state: &AppState,
+    app: &AppHandle<R>,
+) -> AppResult<VaultState> {
     let confirmed = native_dialog::confirm_destructive(
         app,
         "Crypto-erase all local cardigan_money data?",
@@ -1043,7 +1065,8 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
     // crypto-erase does not leave Plaid credentials behind in the login keychain.
     let credential_refs: Vec<String> = state
         .with_db(|conn, _h, _s| {
-            let mut stmt = conn.prepare("SELECT credential_ref FROM connections WHERE provider = 'plaid'")?;
+            let mut stmt =
+                conn.prepare("SELECT credential_ref FROM connections WHERE provider = 'plaid'")?;
             let rows = stmt
                 .query_map([], |row| row.get::<_, String>(0))?
                 .collect::<Result<Vec<_>, _>>()?;
@@ -1051,12 +1074,18 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
         })
         .unwrap_or_default();
     for credential_ref in credential_refs {
-        let _ = state.credentials.delete(
-            &crate::providers::plaid::access_token_account(&credential_ref),
-        );
+        let _ = state
+            .credentials
+            .delete(&crate::providers::plaid::access_token_account(
+                &credential_ref,
+            ));
     }
-    let _ = state.credentials.delete(crate::security::keychain::ACCOUNT_CLIENT_ID);
-    let _ = state.credentials.delete(crate::security::keychain::ACCOUNT_SECRET);
+    let _ = state
+        .credentials
+        .delete(crate::security::keychain::ACCOUNT_CLIENT_ID);
+    let _ = state
+        .credentials
+        .delete(crate::security::keychain::ACCOUNT_SECRET);
     state.lock(app, "crypto_erase");
     remove_tree(&state.app_data.join("vault"));
     remove_tree(&state.app_data.join("backups"));
@@ -1071,7 +1100,7 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
         }
     }
     let _ = fsync_dir(&state.app_data);
-    Ok(crate::services::vault::status(&state))
+    Ok(crate::services::vault::status(state))
 }
 
 pub fn backup_public_header(path: &Path) -> AppResult<BackupItem> {
@@ -1097,7 +1126,9 @@ mod tests {
 
     #[test]
     fn filename_pattern_is_strict() {
-        assert!(valid_filename("cm-backup-daily-deadbeef-gen1-20261023T120000Z.cmbak"));
+        assert!(valid_filename(
+            "cm-backup-daily-deadbeef-gen1-20261023T120000Z.cmbak"
+        ));
         for bad in [
             "../cm-backup-daily-x.cmbak",
             "cm-backup-daily-x.cmbak/evil",

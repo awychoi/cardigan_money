@@ -2,7 +2,9 @@ import { test, expect } from "@playwright/test";
 import { openLocked, openUnlocked } from "./helpers";
 
 test.describe("read-only dashboard (browser mock)", () => {
-  test("overview shows calendar-month and current-data metrics with demo labels", async ({ page }) => {
+  test("overview shows calendar-month and current-data metrics with demo labels", async ({
+    page,
+  }) => {
     await openUnlocked(page);
     await expect(page.getByText("Current card balances")).toBeVisible();
     await expect(page.getByText("Upcoming reported payments")).toBeVisible();
@@ -17,7 +19,9 @@ test.describe("read-only dashboard (browser mock)", () => {
     await expect(page.getByRole("heading", { name: "Cards" })).toBeVisible();
     await expect(page.getByText(/amount not reported/).first()).toBeVisible();
     await expect(page.getByText(/reported/).first()).toBeVisible();
-    await expect(page.getByText(/A statement balance is not the remaining amount due/).first()).toBeVisible();
+    await expect(
+      page.getByText(/A statement balance is not the remaining amount due/).first(),
+    ).toBeVisible();
     await expect(page.getByText("Reconnect needed").first()).toBeVisible();
     await expect(page.getByText("Sync error").first()).toBeVisible();
   });
@@ -99,7 +103,9 @@ test.describe("read-only dashboard (browser mock)", () => {
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await page.getByRole("button", { name: "Reset demo" }).click();
     await page.getByRole("button", { name: "Reset", exact: true }).click();
-    await expect(page.getByText(/Demo data was recreated|Demo mode — synthetic data/).first()).toBeVisible();
+    await expect(
+      page.getByText(/Demo data was recreated|Demo mode — synthetic data/).first(),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Exit demo" }).first().click();
     await expect(page.getByText(/Your encrypted ledger is locked/)).toBeVisible();
   });

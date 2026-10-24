@@ -42,7 +42,8 @@ export function AccountForm({ initial, submitLabel, busy, onSubmit, onCancel }: 
       const next: Errors = {};
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
-        if (typeof key === "string" && !(key in next)) next[key as keyof AccountPayload] = issue.message;
+        if (typeof key === "string" && !(key in next))
+          next[key as keyof AccountPayload] = issue.message;
       }
       setErrors(next);
       return;
@@ -92,7 +93,9 @@ export function AccountForm({ initial, submitLabel, busy, onSubmit, onCancel }: 
           <span className="field-label">Account type</span>
           <select
             value={accountType}
-            onChange={(event) => setAccountType(event.target.value as AccountPayload["accountType"])}
+            onChange={(event) =>
+              setAccountType(event.target.value as AccountPayload["accountType"])
+            }
           >
             <option value="credit_card">Credit card</option>
             <option value="charge_card">Charge card</option>

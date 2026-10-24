@@ -15,11 +15,7 @@ const PASS: &str = "correct horse battery staple ledger";
 fn setup() -> (tempfile::TempDir, AppState) {
     let tmp = tempfile::tempdir().unwrap();
     let state = AppState::new(tmp.path().to_path_buf()).unwrap();
-    vault::create(
-        &state,
-        SecretString::new(PASS.to_string()),
-    )
-    .unwrap();
+    vault::create(&state, SecretString::new(PASS.to_string())).unwrap();
     (tmp, state)
 }
 
@@ -59,7 +55,13 @@ fn tx(
     posted: Option<&str>,
 ) -> String {
     let id = uuid::Uuid::new_v4().to_string();
-    let source = if authorized.is_some() { "authorized" } else if posted.is_some() { "posted" } else { "manual" };
+    let source = if authorized.is_some() {
+        "authorized"
+    } else if posted.is_some() {
+        "posted"
+    } else {
+        "manual"
+    };
     state
         .with_db(|conn, _header, _settings| {
             conn.execute(
@@ -154,19 +156,188 @@ fn manual_payment(
 
 fn october_fixture(state: &AppState) -> String {
     let account = account(state, "Everyday Card", "USD");
-    tx(state, &account, "2026-10-02", 10_000, "purchase", "Acme Market", Some("Groceries"), false, false, "USD", None, None);
-    tx(state, &account, "2026-10-31", 5_000, "purchase", "Bilt", Some("Travel"), false, false, "USD", Some("2026-10-31"), Some("2026-11-02"));
-    tx(state, &account, "2026-10-20", -2_500, "refund", "Acme Market", Some("Groceries"), false, false, "USD", None, None);
-    tx(state, &account, "2026-10-10", 500, "fee", "Acme Market", Some("Fees"), false, false, "USD", None, None);
-    tx(state, &account, "2026-10-11", 200, "interest", "Citi", Some("Interest"), false, false, "USD", None, None);
-    tx(state, &account, "2026-10-05", -20_000, "payment", "Payment Thank You", None, false, false, "USD", None, None);
-    tx(state, &account, "2026-10-06", 7_000, "transfer", "Transfer", None, false, false, "USD", None, None);
-    tx(state, &account, "2026-10-12", 4_000, "purchase", "Acme Market", Some("Groceries"), false, true, "USD", None, None);
-    tx(state, &account, "2026-10-18", 7_500, "purchase", "Pending Shop", Some("Shopping"), true, false, "USD", None, None);
-    tx(state, &account, "2026-10-15", 2_000, "purchase", "Corner Cafe", Some("Dining"), false, false, "USD", None, None);
-    tx(state, &account, "2026-10-15", 2_000, "purchase", "Corner Cafe", Some("Dining"), false, false, "USD", None, None);
-    tx(state, &account, "2026-10-15", 5_000, "purchase", "Cafe Europe", Some("Dining"), false, false, "EUR", None, None);
-    tx(state, &account, "2026-11-01", 9_999, "purchase", "November Shop", Some("Shopping"), false, false, "USD", None, Some("2026-11-01"));
+    tx(
+        state,
+        &account,
+        "2026-10-02",
+        10_000,
+        "purchase",
+        "Acme Market",
+        Some("Groceries"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-31",
+        5_000,
+        "purchase",
+        "Bilt",
+        Some("Travel"),
+        false,
+        false,
+        "USD",
+        Some("2026-10-31"),
+        Some("2026-11-02"),
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-20",
+        -2_500,
+        "refund",
+        "Acme Market",
+        Some("Groceries"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-10",
+        500,
+        "fee",
+        "Acme Market",
+        Some("Fees"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-11",
+        200,
+        "interest",
+        "Citi",
+        Some("Interest"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-05",
+        -20_000,
+        "payment",
+        "Payment Thank You",
+        None,
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-06",
+        7_000,
+        "transfer",
+        "Transfer",
+        None,
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-12",
+        4_000,
+        "purchase",
+        "Acme Market",
+        Some("Groceries"),
+        false,
+        true,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-18",
+        7_500,
+        "purchase",
+        "Pending Shop",
+        Some("Shopping"),
+        true,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-15",
+        2_000,
+        "purchase",
+        "Corner Cafe",
+        Some("Dining"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-15",
+        2_000,
+        "purchase",
+        "Corner Cafe",
+        Some("Dining"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-10-15",
+        5_000,
+        "purchase",
+        "Cafe Europe",
+        Some("Dining"),
+        false,
+        false,
+        "EUR",
+        None,
+        None,
+    );
+    tx(
+        state,
+        &account,
+        "2026-11-01",
+        9_999,
+        "purchase",
+        "November Shop",
+        Some("Shopping"),
+        false,
+        false,
+        "USD",
+        None,
+        Some("2026-11-01"),
+    );
     account
 }
 
@@ -175,7 +346,9 @@ fn october_summary_components_reconcile_exactly() {
     let (_tmp, state) = setup();
     let _account = october_fixture(&state);
     let summary = state
-        .with_db(|conn, _header, _settings| month_summary(conn, Month::new(2026, 10).unwrap(), "USD"))
+        .with_db(|conn, _header, _settings| {
+            month_summary(conn, Month::new(2026, 10).unwrap(), "USD")
+        })
         .unwrap();
 
     assert_eq!(summary.gross_purchases_minor, 19_000);
@@ -193,18 +366,36 @@ fn october_summary_components_reconcile_exactly() {
     assert_eq!(summary.reconciliation.supplier_net_minor, 17_200);
     assert_eq!(summary.reconciliation.category_net_minor, 17_200);
 
-    let acme = summary.suppliers.iter().find(|s| s.key == "Acme Market").unwrap();
+    let acme = summary
+        .suppliers
+        .iter()
+        .find(|s| s.key == "Acme Market")
+        .unwrap();
     assert_eq!(acme.gross_minor, 10_500);
     assert_eq!(acme.refunds_minor, -2_500);
     assert_eq!(acme.net_minor, 8_000);
     assert_eq!(acme.count, 3); // excluded purchase is not eligible
-    let cafe = summary.suppliers.iter().find(|s| s.key == "Corner Cafe").unwrap();
-    assert_eq!(cafe.count, 2, "identical legitimate purchases stay distinct");
+    let cafe = summary
+        .suppliers
+        .iter()
+        .find(|s| s.key == "Corner Cafe")
+        .unwrap();
+    assert_eq!(
+        cafe.count, 2,
+        "identical legitimate purchases stay distinct"
+    );
     assert_eq!(cafe.net_minor, 4_000);
     assert!(summary.suppliers.iter().all(|s| s.key != "Cafe Europe"));
-    assert!(summary.suppliers.iter().all(|s| s.key != "Payment Thank You"));
+    assert!(summary
+        .suppliers
+        .iter()
+        .all(|s| s.key != "Payment Thank You"));
 
-    let groceries = summary.categories.iter().find(|c| c.key == "Groceries").unwrap();
+    let groceries = summary
+        .categories
+        .iter()
+        .find(|c| c.key == "Groceries")
+        .unwrap();
     assert_eq!(groceries.net_minor, 7_500);
 }
 
@@ -232,8 +423,34 @@ fn month_boundary_uses_authorization_date_and_historical_month_is_independent() 
 fn pending_is_separate_and_posted_replacement_does_not_double_count() {
     let (_tmp, state) = setup();
     let account = account(&state, "Pending Card", "USD");
-    let pending_id = tx(&state, &account, "2026-10-18", 7_500, "purchase", "Pending Shop", Some("Shopping"), true, false, "USD", None, None);
-    let posted_id = tx(&state, &account, "2026-10-19", 7_500, "purchase", "Pending Shop", Some("Shopping"), false, false, "USD", None, None);
+    let pending_id = tx(
+        &state,
+        &account,
+        "2026-10-18",
+        7_500,
+        "purchase",
+        "Pending Shop",
+        Some("Shopping"),
+        true,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    let posted_id = tx(
+        &state,
+        &account,
+        "2026-10-19",
+        7_500,
+        "purchase",
+        "Pending Shop",
+        Some("Shopping"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
     state
         .with_db(|conn, _h, _s| {
             conn.execute(
@@ -315,7 +532,20 @@ fn ledger_search_filters_sort_and_pagination_are_parameterized() {
     let (_tmp, state) = setup();
     let first_account = october_fixture(&state);
     let other = account(&state, "Other Card", "USD");
-    tx(&state, &other, "2026-10-03", 1_234, "purchase", "Zeta Shop", Some("Other"), false, false, "USD", None, None);
+    tx(
+        &state,
+        &other,
+        "2026-10-03",
+        1_234,
+        "purchase",
+        "Zeta Shop",
+        Some("Other"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
 
     let page = state
         .with_db(|conn, _h, _s| {
@@ -458,17 +688,27 @@ fn current_balances_and_payment_metadata_keep_missing_distinct_from_zero() {
     assert_eq!(view.balances.accounts_missing_balance, 2);
     assert!(!view.balances.complete);
 
-    let known_card = view.accounts.iter().find(|a| a.display_name == "Known Balance").unwrap();
-    assert_eq!(known_card.payment.next_due_date.as_deref(), Some("2026-10-30"));
+    let known_card = view
+        .accounts
+        .iter()
+        .find(|a| a.display_name == "Known Balance")
+        .unwrap();
+    assert_eq!(
+        known_card.payment.next_due_date.as_deref(),
+        Some("2026-10-30")
+    );
     assert_eq!(known_card.payment.due_amount_minor, None);
     assert_eq!(known_card.payment.due_amount_kind, "not_reported");
     assert_eq!(known_card.payment.statement_balance_minor, Some(120_000));
     assert_ne!(
-        known_card.payment.due_amount_minor,
-        known_card.payment.statement_balance_minor,
+        known_card.payment.due_amount_minor, known_card.payment.statement_balance_minor,
         "a statement balance must never become the amount due"
     );
-    let zero_card = view.accounts.iter().find(|a| a.display_name == "Zero Due").unwrap();
+    let zero_card = view
+        .accounts
+        .iter()
+        .find(|a| a.display_name == "Zero Due")
+        .unwrap();
     assert_eq!(zero_card.payment.due_amount_minor, Some(0));
     assert_eq!(zero_card.payment.due_amount_kind, "reported_zero");
     assert_eq!(view.upcoming.entries.len(), 2);
@@ -482,8 +722,21 @@ fn current_balances_and_payment_metadata_keep_missing_distinct_from_zero() {
 fn valid_manual_payment_metadata_is_independent_and_can_override_provider() {
     let (_tmp, state) = setup();
     let account = account(&state, "Manual Card", "USD");
-    provider_payment(&state, &account, Some("2026-10-30"), Some(3_000), Some(90_000));
-    manual_payment(&state, &account, Some("2026-10-27"), Some(2_500), Some(88_000), Some("2026-10-31"));
+    provider_payment(
+        &state,
+        &account,
+        Some("2026-10-30"),
+        Some(3_000),
+        Some(90_000),
+    );
+    manual_payment(
+        &state,
+        &account,
+        Some("2026-10-27"),
+        Some(2_500),
+        Some(88_000),
+        Some("2026-10-31"),
+    );
     let view = state
         .with_db(|conn, _h, _s| overview(conn, NaiveDate::from_ymd_opt(2026, 10, 23).unwrap()))
         .unwrap();
@@ -492,7 +745,10 @@ fn valid_manual_payment_metadata_is_independent_and_can_override_provider() {
     assert_eq!(card.payment.due_amount_minor, Some(2_500));
     assert_eq!(card.payment.due_source.as_deref(), Some("manual"));
     assert_eq!(card.payment.statement_balance_minor, Some(88_000));
-    assert_eq!(card.payment.statement_balance_source.as_deref(), Some("manual"));
+    assert_eq!(
+        card.payment.statement_balance_source.as_deref(),
+        Some("manual")
+    );
 
     // Expired manual facts fall back to the provider, with the expiry surfaced.
     state
@@ -524,8 +780,20 @@ fn upcoming_window_and_non_usd_balances_are_separated() {
     balance(&state, &within, 10_000);
     balance(&state, &outside, 20_000);
     balance(&state, &eur, 30_000);
-    provider_payment(&state, &within, Some("2026-10-25"), Some(1_000), Some(10_000));
-    provider_payment(&state, &outside, Some("2026-11-20"), Some(2_000), Some(20_000));
+    provider_payment(
+        &state,
+        &within,
+        Some("2026-10-25"),
+        Some(1_000),
+        Some(10_000),
+    );
+    provider_payment(
+        &state,
+        &outside,
+        Some("2026-11-20"),
+        Some(2_000),
+        Some(20_000),
+    );
     let view = state
         .with_db(|conn, _h, _s| overview(conn, NaiveDate::from_ymd_opt(2026, 10, 23).unwrap()))
         .unwrap();
@@ -534,7 +802,10 @@ fn upcoming_window_and_non_usd_balances_are_separated() {
     assert_eq!(view.upcoming.known_total_minor, 1_000);
     assert!(view.upcoming.complete);
     assert_eq!(view.balances.known_total_minor, 30_000);
-    assert_eq!(view.balances.other_currency, vec![("EUR".to_string(), 30_000)]);
+    assert_eq!(
+        view.balances.other_currency,
+        vec![("EUR".to_string(), 30_000)]
+    );
     // USD accounts missing balances: none; EUR is counted separately, so complete is true.
     assert!(view.balances.complete);
 }

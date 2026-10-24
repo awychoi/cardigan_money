@@ -8,7 +8,9 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::domain::dates::{choose_reporting_date, format_date, parse_date, DateSource};
-use crate::domain::text::{clean_text, normalize_merchant, MAX_CATEGORY_CHARS, MAX_DESCRIPTION_CHARS};
+use crate::domain::text::{
+    clean_text, normalize_merchant, MAX_CATEGORY_CHARS, MAX_DESCRIPTION_CHARS,
+};
 use crate::error::{AppError, AppResult};
 use crate::providers::mock::MockProvider;
 use crate::providers::plaid::{
@@ -31,7 +33,6 @@ pub struct ConnectionRow {
     provider: String,
     environment: String,
     institution_name: Option<String>,
-    status: String,
     cursor: Option<String>,
     #[allow(dead_code)]
     credential_ref: String,
@@ -140,7 +141,14 @@ pub fn sync_now(state: &AppState, trigger: &str) -> AppResult<SyncSummary> {
         runtime.last_finished_at = Some(now_rfc3339());
         match &result {
             Ok(summary) => {
-                runtime.last_result = Some(if summary.accepted { "completed" } else { "skipped" }.into());
+                runtime.last_result = Some(
+                    if summary.accepted {
+                        "completed"
+                    } else {
+                        "skipped"
+                    }
+                    .into(),
+                );
                 if let Some(reason) = &summary.skip_reason {
                     runtime.last_skip_reason = Some(reason.clone());
                 }
@@ -191,7 +199,9 @@ fn sync_all_inner(state: &AppState, trigger: &str) -> AppResult<SyncSummary> {
             Err(_) => {
                 results.push(ConnectionSyncResult {
                     connection_id: connection.id,
-                    institution: connection.institution_name.unwrap_or_else(|| "Provider".into()),
+                    institution: connection
+                        .institution_name
+                        .unwrap_or_else(|| "Provider".into()),
                     status: "failed".into(),
                     transactions_added: 0,
                     transactions_modified: 0,
@@ -214,7 +224,7 @@ fn sync_all_inner(state: &AppState, trigger: &str) -> AppResult<SyncSummary> {
 
 fn load_connections(conn: &Connection) -> AppResult<Vec<ConnectionRow>> {
     let mut stmt = conn.prepare(
-        "SELECT id, provider, environment, institution_name, status, cursor, credential_ref \
+        "SELECT id, provider, environment, institution_name, cursor, credential_ref \
          FROM connections WHERE status <> 'disconnected' ORDER BY institution_name, id",
     )?;
     let rows = stmt
@@ -224,21 +234,25 @@ fn load_connections(conn: &Connection) -> AppResult<Vec<ConnectionRow>> {
                 provider: row.get(1)?,
                 environment: row.get(2)?,
                 institution_name: row.get(3)?,
-                status: row.get(4)?,
-                cursor: row.get(5)?,
-                credential_ref: row.get(6)?,
+                cursor: row.get(4)?,
+                credential_ref: row.get(5)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
 }
 
-fn provider_for(state: &AppState, connection: &ConnectionRow) -> AppResult<Box<dyn ProviderClient>> {
+fn provider_for(
+    state: &AppState,
+    connection: &ConnectionRow,
+) -> AppResult<Box<dyn ProviderClient>> {
     match connection.provider.as_str() {
         "mock" => Ok(Box::new(MockProvider::default())),
         "plaid" => {
             if connection.environment != "sandbox" {
-                return Err(AppError::Blocked("Production Plaid is disabled until Sandbox verification"));
+                return Err(AppError::Blocked(
+                    "Production Plaid is disabled until Sandbox verification",
+                ));
             }
             let credentials = load_sandbox_credentials(state.credentials.as_ref())?
                 .ok_or(AppError::ProviderNotConfigured)?;
@@ -252,7 +266,11 @@ fn provider_for(state: &AppState, connection: &ConnectionRow) -> AppResult<Box<d
     }
 }
 
-fn sync_connection(state: &AppState, connection: &ConnectionRow, trigger: &str) -> AppResult<ConnectionSyncResult> {
+fn sync_connection(
+    state: &AppState,
+    connection: &ConnectionRow,
+    trigger: &str,
+) -> AppResult<ConnectionSyncResult> {
     let client = provider_for(state, connection)?;
     let result = sync_connection_with_client(state, connection, client.as_ref(), trigger);
     result
@@ -311,6 +329,7 @@ fn start_run(state: &AppState, connection: &ConnectionRow, trigger: &str) -> App
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn finish_step(
     state: &AppState,
     run: &mut RunTracker,
@@ -339,7 +358,14 @@ fn finish_step(
         )?;
         Ok(())
     })?;
-    run.steps.push((stream.to_string(), status.to_string(), added, modified, removed, error.map(str::to_string)));
+    run.steps.push((
+        stream.to_string(),
+        status.to_string(),
+        added,
+        modified,
+        removed,
+        error.map(str::to_string),
+    ));
     Ok(())
 }
 
@@ -366,7 +392,11 @@ fn ensure_accounts(
                 .institution_name
                 .clone()
                 .unwrap_or_else(|| "Provider".to_string());
-            let last_four = account.mask.chars().filter(|c| c.is_ascii_digit()).collect::<String>();
+            let last_four = account
+                .mask
+                .chars()
+                .filter(|c| c.is_ascii_digit())
+                .collect::<String>();
             let last_four = if last_four.len() >= 4 {
                 Some(last_four[last_four.len() - 4..].to_string())
             } else {
@@ -446,8 +476,14 @@ fn apply_page(
                 |row| row.get(0),
             )
             .ok();
-        let authorized = change.authorized_date.as_deref().and_then(|v| parse_date(v).ok());
-        let posted = change.posted_date.as_deref().and_then(|v| parse_date(v).ok());
+        let authorized = change
+            .authorized_date
+            .as_deref()
+            .and_then(|v| parse_date(v).ok());
+        let posted = change
+            .posted_date
+            .as_deref()
+            .and_then(|v| parse_date(v).ok());
         let (reporting, source) = choose_reporting_date(authorized, posted, None)
             .map_err(|_| AppError::InvalidInput("provider transaction date"))?;
         let tx_type = if matches!(
@@ -462,11 +498,12 @@ fn apply_page(
         };
         let description = clean_text(&change.description, MAX_DESCRIPTION_CHARS, false)
             .unwrap_or_else(|_| "Provider transaction".to_string());
-        let normalized = normalize_merchant(&description)
-            .unwrap_or_else(|_| "provider transaction".to_string());
-        let category = change.category.as_deref().and_then(|value| {
-            clean_text(value, MAX_CATEGORY_CHARS, false).ok()
-        });
+        let normalized =
+            normalize_merchant(&description).unwrap_or_else(|_| "provider transaction".to_string());
+        let category = change
+            .category
+            .as_deref()
+            .and_then(|value| clean_text(value, MAX_CATEGORY_CHARS, false).ok());
         if let Some(id) = existing {
             tx.execute(
                 "UPDATE transactions SET amount_minor = ?2, currency = ?3, authorized_date = ?4, \
@@ -493,7 +530,13 @@ fn apply_page(
             )?;
             modified += 1;
             if !change.pending {
-                link_pending(&tx, account_id, &id, change.pending_transaction_id.as_deref(), &now)?;
+                link_pending(
+                    &tx,
+                    account_id,
+                    &id,
+                    change.pending_transaction_id.as_deref(),
+                    &now,
+                )?;
             }
         } else {
             let id = Uuid::new_v4().to_string();
@@ -524,7 +567,13 @@ fn apply_page(
             )?;
             added += 1;
             if !change.pending {
-                link_pending(&tx, account_id, &id, change.pending_transaction_id.as_deref(), &now)?;
+                link_pending(
+                    &tx,
+                    account_id,
+                    &id,
+                    change.pending_transaction_id.as_deref(),
+                    &now,
+                )?;
             }
         }
     }
@@ -655,7 +704,11 @@ fn finish_run(
         let _ = record_event(
             conn,
             "sync_finished",
-            if status == "success" { "success" } else { "failure" },
+            if status == "success" {
+                "success"
+            } else {
+                "failure"
+            },
             Some(serde_json::json!({
                 "trigger": trigger,
                 "added": results.transactions_added,
@@ -667,7 +720,12 @@ fn finish_run(
     })
 }
 
-fn mark_connection_error(state: &AppState, connection: &ConnectionRow, kind: ProviderErrorKind, message: &str) -> AppResult<()> {
+fn mark_connection_error(
+    state: &AppState,
+    connection: &ConnectionRow,
+    kind: ProviderErrorKind,
+    message: &str,
+) -> AppResult<()> {
     state.with_db(|conn, _h, _s| {
         let status = match kind {
             ProviderErrorKind::ReauthRequired => "reconnect_required",
@@ -690,7 +748,10 @@ pub fn sync_connection_with_client(
     let mut run = start_run(state, connection, trigger)?;
     let mut result = ConnectionSyncResult {
         connection_id: connection.id.clone(),
-        institution: connection.institution_name.clone().unwrap_or_else(|| "Provider".into()),
+        institution: connection
+            .institution_name
+            .clone()
+            .unwrap_or_else(|| "Provider".into()),
         status: "success".into(),
         transactions_added: 0,
         transactions_modified: 0,
@@ -703,9 +764,30 @@ pub fn sync_connection_with_client(
         Ok(accounts) => accounts,
         Err(error) => {
             mark_connection_error(state, connection, error.kind, error.safe_message)?;
-            finish_step(state, &mut run, "transactions", "failed", 0, 0, 0, Some(error.safe_message))?;
-            finish_run(state, &run, connection, "failed", Some("provider_accounts"), &result, trigger)?;
-            return Ok(ConnectionSyncResult { status: "failed".into(), error_code: Some("provider_accounts".into()), ..result });
+            finish_step(
+                state,
+                &mut run,
+                "transactions",
+                "failed",
+                0,
+                0,
+                0,
+                Some(error.safe_message),
+            )?;
+            finish_run(
+                state,
+                &run,
+                connection,
+                "failed",
+                Some("provider_accounts"),
+                &result,
+                trigger,
+            )?;
+            return Ok(ConnectionSyncResult {
+                status: "failed".into(),
+                error_code: Some("provider_accounts".into()),
+                ..result
+            });
         }
     };
     let account_map = state.with_db(|conn, _h, _s| ensure_accounts(conn, connection, &accounts))?;
@@ -718,20 +800,56 @@ pub fn sync_connection_with_client(
             page_count += 1;
             if page_count > MAX_PAGES {
                 result.status = "partial".into();
-                finish_step(state, &mut run, "transactions", "partial", result.transactions_added, result.transactions_modified, result.transactions_removed, Some("page limit"))?;
+                finish_step(
+                    state,
+                    &mut run,
+                    "transactions",
+                    "partial",
+                    result.transactions_added,
+                    result.transactions_modified,
+                    result.transactions_removed,
+                    Some("page limit"),
+                )?;
                 break;
             }
             let page = match client.transactions_page(cursor.as_deref()) {
                 Ok(page) => page,
                 Err(error) => {
                     mark_connection_error(state, connection, error.kind, error.safe_message)?;
-                    finish_step(state, &mut run, "transactions", "failed", result.transactions_added, result.transactions_modified, result.transactions_removed, Some(error.safe_message))?;
-                    finish_run(state, &run, connection, "failed", Some("transactions"), &result, trigger)?;
-                    return Ok(ConnectionSyncResult { status: "failed".into(), error_code: Some("transactions".into()), ..result });
+                    finish_step(
+                        state,
+                        &mut run,
+                        "transactions",
+                        "failed",
+                        result.transactions_added,
+                        result.transactions_modified,
+                        result.transactions_removed,
+                        Some(error.safe_message),
+                    )?;
+                    finish_run(
+                        state,
+                        &run,
+                        connection,
+                        "failed",
+                        Some("transactions"),
+                        &result,
+                        trigger,
+                    )?;
+                    return Ok(ConnectionSyncResult {
+                        status: "failed".into(),
+                        error_code: Some("transactions".into()),
+                        ..result
+                    });
                 }
             };
             let page_counts = match state.with_db(|conn, _h, _s| {
-                apply_page(conn, connection, &account_map, &page.changes, page.next_cursor.as_deref())
+                apply_page(
+                    conn,
+                    connection,
+                    &account_map,
+                    &page.changes,
+                    page.next_cursor.as_deref(),
+                )
             }) {
                 Ok(counts) => counts,
                 Err(AppError::Locked) => {
@@ -740,8 +858,25 @@ pub fn sync_connection_with_client(
                     return Err(AppError::Locked);
                 }
                 Err(error) => {
-                    finish_step(state, &mut run, "transactions", "failed", result.transactions_added, result.transactions_modified, result.transactions_removed, Some("database write failed"))?;
-                    finish_run(state, &run, connection, "failed", Some("database"), &result, trigger)?;
+                    finish_step(
+                        state,
+                        &mut run,
+                        "transactions",
+                        "failed",
+                        result.transactions_added,
+                        result.transactions_modified,
+                        result.transactions_removed,
+                        Some("database write failed"),
+                    )?;
+                    finish_run(
+                        state,
+                        &run,
+                        connection,
+                        "failed",
+                        Some("database"),
+                        &result,
+                        trigger,
+                    )?;
                     return Err(error);
                 }
             };
@@ -755,35 +890,82 @@ pub fn sync_connection_with_client(
                 break;
             }
         }
-        finish_step(state, &mut run, "transactions", "success", result.transactions_added, result.transactions_modified, result.transactions_removed, None)?;
+        finish_step(
+            state,
+            &mut run,
+            "transactions",
+            "success",
+            result.transactions_added,
+            result.transactions_modified,
+            result.transactions_removed,
+            None,
+        )?;
         state.with_db(|conn, _h, _s| crate::storage::edits::apply_rules(conn))?;
     } else {
-        finish_step(state, &mut run, "transactions", "unavailable", 0, 0, 0, Some("unsupported"))?;
+        finish_step(
+            state,
+            &mut run,
+            "transactions",
+            "unavailable",
+            0,
+            0,
+            0,
+            Some("unsupported"),
+        )?;
         result.status = "partial".into();
     }
 
     // Balances
     match client.balances() {
         Ok(balances) if capabilities.balances == Capability::Supported => {
-            match state.with_db(|conn, _h, _s| apply_balances(conn, connection, &account_map, &balances)) {
+            match state
+                .with_db(|conn, _h, _s| apply_balances(conn, connection, &account_map, &balances))
+            {
                 Ok(count) => {
                     result.balances_written = count;
                     finish_step(state, &mut run, "balances", "success", count, 0, 0, None)?;
                 }
                 Err(AppError::Locked) => return Err(AppError::Locked),
                 Err(_) => {
-                    finish_step(state, &mut run, "balances", "failed", 0, 0, 0, Some("database write failed"))?;
+                    finish_step(
+                        state,
+                        &mut run,
+                        "balances",
+                        "failed",
+                        0,
+                        0,
+                        0,
+                        Some("database write failed"),
+                    )?;
                     result.status = "partial".into();
                 }
             }
         }
         Ok(_) => {
-            finish_step(state, &mut run, "balances", "unavailable", 0, 0, 0, Some("unsupported"))?;
+            finish_step(
+                state,
+                &mut run,
+                "balances",
+                "unavailable",
+                0,
+                0,
+                0,
+                Some("unsupported"),
+            )?;
             result.status = "partial".into();
         }
         Err(error) => {
             mark_connection_error(state, connection, error.kind, error.safe_message)?;
-            finish_step(state, &mut run, "balances", "failed", 0, 0, 0, Some(error.safe_message))?;
+            finish_step(
+                state,
+                &mut run,
+                "balances",
+                "failed",
+                0,
+                0,
+                0,
+                Some(error.safe_message),
+            )?;
             result.status = "partial".into();
         }
     }
@@ -801,7 +983,16 @@ pub fn sync_connection_with_client(
                 Err(AppError::Locked) => return Err(AppError::Locked),
                 Err(_) => {
                     result.liabilities_status = "failed".into();
-                    finish_step(state, &mut run, "liabilities", "failed", 0, 0, 0, Some("database write failed"))?;
+                    finish_step(
+                        state,
+                        &mut run,
+                        "liabilities",
+                        "failed",
+                        0,
+                        0,
+                        0,
+                        Some("database write failed"),
+                    )?;
                     result.status = "partial".into();
                 }
             },
@@ -812,19 +1003,49 @@ pub fn sync_connection_with_client(
                     _ => "unsupported",
                 }
                 .into();
-                let step_status = if other == Capability::Unsupported { "unavailable" } else { "partial" };
-                finish_step(state, &mut run, "liabilities", step_status, 0, 0, 0, Some(result.liabilities_status.as_str()))?;
+                let step_status = if other == Capability::Unsupported {
+                    "unavailable"
+                } else {
+                    "partial"
+                };
+                finish_step(
+                    state,
+                    &mut run,
+                    "liabilities",
+                    step_status,
+                    0,
+                    0,
+                    0,
+                    Some(result.liabilities_status.as_str()),
+                )?;
                 result.status = "partial".into();
             }
         },
         Err(error) => {
             result.liabilities_status = "unavailable".into();
-            finish_step(state, &mut run, "liabilities", "failed", 0, 0, 0, Some(error.safe_message))?;
+            finish_step(
+                state,
+                &mut run,
+                "liabilities",
+                "failed",
+                0,
+                0,
+                0,
+                Some(error.safe_message),
+            )?;
             result.status = "partial".into();
         }
     }
 
-    finish_run(state, &run, connection, &result.status, None, &result, trigger)?;
+    finish_run(
+        state,
+        &run,
+        connection,
+        &result.status,
+        None,
+        &result,
+        trigger,
+    )?;
     Ok(result)
 }
 
@@ -932,7 +1153,7 @@ pub fn runtime_status(state: &AppState) -> AppResult<SyncRuntimeStatus> {
 pub fn connection_by_id(state: &AppState, id: &str) -> AppResult<ConnectionRow> {
     state.with_db(|conn, _h, _s| {
         conn.query_row(
-            "SELECT id, provider, environment, institution_name, status, cursor, credential_ref \
+            "SELECT id, provider, environment, institution_name, cursor, credential_ref \
              FROM connections WHERE id = ?1",
             [id],
             |row| {
@@ -941,9 +1162,8 @@ pub fn connection_by_id(state: &AppState, id: &str) -> AppResult<ConnectionRow> 
                     provider: row.get(1)?,
                     environment: row.get(2)?,
                     institution_name: row.get(3)?,
-                    status: row.get(4)?,
-                    cursor: row.get(5)?,
-                    credential_ref: row.get(6)?,
+                    cursor: row.get(4)?,
+                    credential_ref: row.get(5)?,
                 })
             },
         )
@@ -961,9 +1181,11 @@ pub fn disconnect(state: &AppState, connection_id: &str) -> AppResult<()> {
             // Best-effort remote revoke; local disconnect always proceeds.
             let _ = client.revoke();
         }
-        let _ = state.credentials.delete(&crate::providers::plaid::access_token_account(
-            &connection.credential_ref,
-        ));
+        let _ = state
+            .credentials
+            .delete(&crate::providers::plaid::access_token_account(
+                &connection.credential_ref,
+            ));
     }
     state.with_db(|conn, _h, _s| {
         conn.execute(

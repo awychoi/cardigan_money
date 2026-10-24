@@ -57,8 +57,11 @@ fn ensure_migration_table(conn: &Connection) -> AppResult<()> {
 }
 
 fn applied(conn: &Connection) -> AppResult<Vec<(u32, String)>> {
-    let mut stmt = conn.prepare("SELECT version, checksum FROM schema_migrations ORDER BY version")?;
-    let rows = stmt.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?)))?;
+    let mut stmt =
+        conn.prepare("SELECT version, checksum FROM schema_migrations ORDER BY version")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
+    })?;
     rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
 }
 

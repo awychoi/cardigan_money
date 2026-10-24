@@ -114,7 +114,9 @@ export function MerchantRulesPanel({ onChanged }: { onChanged: () => void }) {
           <span className="field-label">Match</span>
           <select
             value={form.matchType}
-            onChange={(event) => setForm({ ...form, matchType: event.target.value as typeof form.matchType })}
+            onChange={(event) =>
+              setForm({ ...form, matchType: event.target.value as typeof form.matchType })
+            }
           >
             <option value="contains">Contains</option>
             <option value="exact">Exact</option>
@@ -212,7 +214,9 @@ export function MerchantRulesPanel({ onChanged }: { onChanged: () => void }) {
                 <td>{rule.category ?? "—"}</td>
                 <td>{rule.priority}</td>
                 <td>
-                  <span className={rule.enabled ? "status-pill status-ok" : "status-pill status-info"}>
+                  <span
+                    className={rule.enabled ? "status-pill status-ok" : "status-pill status-info"}
+                  >
                     {rule.enabled ? "enabled" : "disabled"}
                   </span>
                 </td>
