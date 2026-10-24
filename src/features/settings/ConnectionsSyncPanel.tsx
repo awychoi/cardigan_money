@@ -43,7 +43,6 @@ export function ConnectionsSyncPanel({
         }
       })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly]);
 
   useEffect(() => {
@@ -68,6 +67,8 @@ export function ConnectionsSyncPanel({
       })();
     }, 2000);
     return () => window.clearInterval(timer);
+    // Poll only while the link state changes; load() and onSyncFinished() are
+    // intentionally read from the current render rather than re-arming the timer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link?.state, readOnly]);
 

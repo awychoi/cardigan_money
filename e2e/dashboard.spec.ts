@@ -15,7 +15,7 @@ test.describe("read-only dashboard (browser mock)", () => {
     await openUnlocked(page);
     await page.getByRole("button", { name: "Cards", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Cards" })).toBeVisible();
-    await expect(page.getByText(/amount not reported/)).toBeVisible();
+    await expect(page.getByText(/amount not reported/).first()).toBeVisible();
     await expect(page.getByText(/reported/).first()).toBeVisible();
     await expect(page.getByText(/A statement balance is not the remaining amount due/).first()).toBeVisible();
     await expect(page.getByText("Reconnect needed").first()).toBeVisible();

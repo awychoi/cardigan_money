@@ -1,0 +1,139 @@
+{
+  "$schema": "./theme.schema.json",
+  "id": "ledger",
+  "name": "Ledger",
+  "description": "Warm paper, ledger green, card faces in the wallet. The default.",
+  "options": {
+    "navigation": "sidebar",
+    "cardArt": "faces",
+    "density": "comfortable",
+    "motion": "full"
+  },
+  "type": {
+    "sans": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", sans-serif",
+    "mono": "ui-monospace, \"SF Mono\", Menlo, monospace",
+    "display": "-apple-system, BlinkMacSystemFont, \"SF Pro Display\", \"Helvetica Neue\", sans-serif",
+    "scale": 1,
+    "displayWeight": 640,
+    "displayTracking": -0.03,
+    "lineHeight": 1.45
+  },
+  "shape": {
+    "controlRadius": 7,
+    "panelRadius": 11,
+    "cardRadius": 15,
+    "borderWidth": 1
+  },
+  "spacing": {
+    "screen": 28,
+    "card": 18,
+    "gap": 14
+  },
+  "motion": {
+    "fast": 120,
+    "base": 160,
+    "easing": "cubic-bezier(.2,0,0,1)"
+  },
+  "modes": {
+    "light": {
+      "bg": "#f7f5ef",
+      "sidebar": "#efeae0",
+      "surface": "#fffdf8",
+      "surface2": "#f2eee4",
+      "surface3": "#e8e3d6",
+      "text": "#161d26",
+      "text2": "#3f4a58",
+      "muted": "#5f6a78",
+      "border": "#e3ddce",
+      "borderStrong": "#d3cbb9",
+      "borderControl": "#9c917d",
+      "accent": "#2c6659",
+      "accentInk": "#1f4c42",
+      "success": "#2c6659",
+      "onAccent": "#f5fbf9",
+      "warning": "#8a5c12",
+      "danger": "#9c3a2e",
+      "focus": "#2a5f8f",
+      "chart": [
+        "#2c6659",
+        "#b26a4c",
+        "#5b6c9d",
+        "#8a5c12",
+        "#7a8f5b"
+      ],
+      "shadow": "rgb(22 29 38 / 8%)",
+      "shadowStrong": "rgb(15 20 26 / 45%)"
+    },
+    "dark": {
+      "bg": "#14171c",
+      "sidebar": "#181c22",
+      "surface": "#1c2128",
+      "surface2": "#232830",
+      "surface3": "#2b313a",
+      "text": "#edf0f4",
+      "text2": "#c6cdd7",
+      "muted": "#97a2b1",
+      "border": "#2a3038",
+      "borderStrong": "#3a424d",
+      "borderControl": "#6b7684",
+      "accent": "#7fc2b0",
+      "accentInk": "#a7dbcd",
+      "success": "#7fc2b0",
+      "onAccent": "#0f231e",
+      "warning": "#e4bf7e",
+      "danger": "#e9a79c",
+      "focus": "#8cbde8",
+      "chart": [
+        "#7fc2b0",
+        "#d79b7d",
+        "#9aa9d8",
+        "#e4bf7e",
+        "#a8c48a"
+      ],
+      "shadow": "rgb(0 0 0 / 32%)",
+      "shadowStrong": "rgb(0 0 0 / 65%)"
+    }
+  },
+  "issuers": {
+    "default": {
+      "from": "#39424c",
+      "to": "#1b2026",
+      "ink": "#f4f7f8"
+    },
+    "chase": {
+      "from": "#1d4879",
+      "to": "#0d2439",
+      "ink": "#f4f7f8"
+    },
+    "synchrony": {
+      "from": "#33383d",
+      "to": "#171a1d",
+      "ink": "#f4f7f8"
+    },
+    "bilt": {
+      "from": "#2b2b30",
+      "to": "#121214",
+      "ink": "#f4f7f8"
+    },
+    "american-express": {
+      "from": "#e2e5e8",
+      "to": "#aeb4bb",
+      "ink": "#1c2026"
+    },
+    "citi": {
+      "from": "#1a4a70",
+      "to": "#0c2740",
+      "ink": "#f4f7f8"
+    },
+    "demo-bank": {
+      "from": "#245c55",
+      "to": "#123a35",
+      "ink": "#f4f7f8"
+    },
+    "paypal": {
+      "from": "#1d4773",
+      "to": "#0e2338",
+      "ink": "#f4f7f8"
+    }
+  }
+}

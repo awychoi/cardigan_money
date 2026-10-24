@@ -28,6 +28,9 @@ pub enum CloseBehavior {
 pub struct Settings {
     pub timezone: String,
     pub theme: Theme,
+    /// Visual theme id. Unknown ids fall back to the default in the front end;
+    /// this value is persisted but never trusted as a path or CSS.
+    pub theme_id: String,
     pub close_behavior: CloseBehavior,
     pub onboarding_completed: bool,
     pub auto_lock_minutes: u32,
@@ -52,6 +55,7 @@ impl Default for Settings {
         Self {
             timezone: "America/New_York".to_string(),
             theme: Theme::System,
+            theme_id: "ledger".to_string(),
             close_behavior: CloseBehavior::Unset,
             onboarding_completed: false,
             auto_lock_minutes: 15,
@@ -71,6 +75,7 @@ impl Default for Settings {
 pub struct SettingsPatch {
     pub timezone: Option<String>,
     pub theme: Option<Theme>,
+    pub theme_id: Option<String>,
     pub close_behavior: Option<CloseBehavior>,
     pub onboarding_completed: Option<bool>,
     pub auto_lock_minutes: Option<u32>,
@@ -82,6 +87,7 @@ pub struct SettingsPatch {
 const KEYS: &[&str] = &[
     "timezone",
     "theme",
+    "themeId",
     "closeBehavior",
     "onboardingCompleted",
     "autoLockMinutes",
@@ -117,6 +123,9 @@ pub fn load_settings(conn: &Connection) -> AppResult<Settings> {
     }
     if let Some(v) = take!("theme") {
         settings.theme = v;
+    }
+    if let Some(v) = take!("themeId") {
+        settings.theme_id = v;
     }
     if let Some(v) = take!("closeBehavior") {
         settings.close_behavior = v;
@@ -155,11 +164,25 @@ pub fn load_settings(conn: &Connection) -> AppResult<Settings> {
     Ok(settings)
 }
 
+/// Theme ids are lowercase slugs. They are stored, compared, and used as a
+/// lookup key only — never interpolated into CSS, a path, or HTML.
+fn valid_theme_id(id: &str) -> bool {
+    if id.is_empty() || id.len() > 40 {
+        return false;
+    }
+    let mut chars = id.chars();
+    let first_ok = chars.next().is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit());
+    first_ok && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
 pub fn validate_settings(settings: &Settings) -> AppResult<()> {
     settings
         .timezone
         .parse::<Tz>()
         .map_err(|_| AppError::InvalidInput("timezone"))?;
+    if !valid_theme_id(&settings.theme_id) {
+        return Err(AppError::InvalidInput("theme id"));
+    }
     if !(1..=240).contains(&settings.auto_lock_minutes) {
         return Err(AppError::InvalidInput("auto-lock minutes"));
     }
@@ -193,6 +216,9 @@ pub fn apply_patch(current: &Settings, patch: SettingsPatch) -> AppResult<Settin
     if let Some(v) = patch.theme {
         next.theme = v;
     }
+    if let Some(v) = patch.theme_id {
+        next.theme_id = v;
+    }
     if let Some(v) = patch.close_behavior {
         next.close_behavior = v;
     }
@@ -218,9 +244,10 @@ pub fn apply_patch(current: &Settings, patch: SettingsPatch) -> AppResult<Settin
 pub fn save_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
     validate_settings(settings)?;
     let now = now_rfc3339();
-    let pairs: [(&str, String); 12] = [
+    let pairs: [(&str, String); 13] = [
         ("timezone", serde_json::to_string(&settings.timezone).map_err(|_| AppError::Internal)?),
         ("theme", serde_json::to_string(&settings.theme).map_err(|_| AppError::Internal)?),
+        ("themeId", serde_json::to_string(&settings.theme_id).map_err(|_| AppError::Internal)?),
         (
             "closeBehavior",
             serde_json::to_string(&settings.close_behavior).map_err(|_| AppError::Internal)?,
@@ -285,6 +312,7 @@ mod tests {
         let s = Settings::default();
         validate_settings(&s).unwrap();
         assert_eq!(s.timezone, "America/New_York");
+        assert_eq!(s.theme_id, "ledger");
         assert_eq!(s.auto_lock_minutes, 15);
         assert!(s.lock_on_system_events);
         assert!(s.content_protection);
@@ -315,6 +343,26 @@ mod tests {
         .unwrap();
         assert_eq!(ok.theme, Theme::Dark);
         assert_eq!(ok.auto_lock_minutes, 30);
+    }
+
+    #[test]
+    fn theme_ids_are_validated_as_slugs() {
+        let s = Settings::default();
+        let long = "a".repeat(41);
+        for bad in ["", "Ledger", "../theme", "theme id", "ledger!", long.as_str()] {
+            assert!(apply_patch(
+                &s,
+                SettingsPatch { theme_id: Some(bad.to_string()), ..Default::default() }
+            )
+            .is_err());
+        }
+        for good in ["ledger", "graphite-2", "editorial", "x"] {
+            assert!(apply_patch(
+                &s,
+                SettingsPatch { theme_id: Some(good.to_string()), ..Default::default() }
+            )
+            .is_ok());
+        }
     }
 
     #[test]

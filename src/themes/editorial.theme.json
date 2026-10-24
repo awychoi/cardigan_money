@@ -1,0 +1,97 @@
+{
+  "$schema": "./theme.schema.json",
+  "id": "editorial",
+  "name": "Editorial",
+  "description": "Cream paper, serif headings, terracotta accent, data tiles instead of card art.",
+  "options": {
+    "navigation": "sidebar",
+    "cardArt": "tiles",
+    "density": "comfortable",
+    "motion": "calm"
+  },
+  "type": {
+    "sans": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", sans-serif",
+    "mono": "ui-monospace, \"SF Mono\", Menlo, monospace",
+    "display": "\"Iowan Old Style\", Palatino, ui-serif, Georgia, serif",
+    "scale": 1.04,
+    "displayWeight": 600,
+    "displayTracking": -0.015,
+    "lineHeight": 1.5
+  },
+  "shape": {
+    "controlRadius": 4,
+    "panelRadius": 6,
+    "cardRadius": 8,
+    "borderWidth": 1
+  },
+  "spacing": {
+    "screen": 32,
+    "card": 22,
+    "gap": 16
+  },
+  "motion": {
+    "fast": 160,
+    "base": 220,
+    "easing": "cubic-bezier(.25,0,0,1)"
+  },
+  "modes": {
+    "light": {
+      "bg": "#faf6ee",
+      "sidebar": "#f2ece0",
+      "surface": "#fffdf7",
+      "surface2": "#f4efe4",
+      "surface3": "#eae3d3",
+      "text": "#1b1712",
+      "text2": "#4a4239",
+      "muted": "#6b6257",
+      "border": "#e6ddcc",
+      "borderStrong": "#d5c9b4",
+      "borderControl": "#9c8f79",
+      "accent": "#a0472b",
+      "accentInk": "#7d3620",
+      "success": "#5f6b46",
+      "onAccent": "#fdf6f1",
+      "warning": "#8a5a12",
+      "danger": "#9c2f26",
+      "focus": "#2f5f8a",
+      "chart": [
+        "#a0472b",
+        "#5f6b46",
+        "#8a6a2f",
+        "#3f5668",
+        "#7a4a5c"
+      ],
+      "shadow": "rgb(27 23 18 / 7%)",
+      "shadowStrong": "rgb(27 23 18 / 38%)"
+    },
+    "dark": {
+      "bg": "#171310",
+      "sidebar": "#1d1814",
+      "surface": "#221c17",
+      "surface2": "#2a231c",
+      "surface3": "#332a22",
+      "text": "#f2ece3",
+      "text2": "#cfc3b4",
+      "muted": "#a2937f",
+      "border": "#302821",
+      "borderStrong": "#41362c",
+      "borderControl": "#7a6b58",
+      "accent": "#d98b62",
+      "accentInk": "#e8b394",
+      "success": "#a3b083",
+      "onAccent": "#2a1409",
+      "warning": "#dcb26e",
+      "danger": "#e6a096",
+      "focus": "#8cbde8",
+      "chart": [
+        "#d98b62",
+        "#9aa77f",
+        "#d8b06a",
+        "#8ba6bd",
+        "#c08a9c"
+      ],
+      "shadow": "rgb(0 0 0 / 38%)",
+      "shadowStrong": "rgb(0 0 0 / 62%)"
+    }
+  }
+}

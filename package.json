@@ -22,7 +22,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\"",
     "audit": "pnpm audit --audit-level high",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "theme:check": "vitest run src/theme",
+    "theme:schema": "UPDATE_THEME_SCHEMA=1 vitest run src/theme/schema.test.ts"
   },
   "dependencies": {
     "@tanstack/react-table": "8.21.3",

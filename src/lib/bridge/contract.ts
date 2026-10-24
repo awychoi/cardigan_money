@@ -45,12 +45,15 @@ export const zHealthCheck = z
 
 
 export const zTheme = z.enum(["light", "dark", "system"]);
+/** Lowercase slug. Unknown ids fall back to the default theme in the UI. */
+export const zThemeId = z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/);
 export const zCloseBehavior = z.enum(["unset", "hide", "quit"]);
 
 export const zSettings = z
   .object({
     timezone: z.string().min(1).max(64),
     theme: zTheme,
+    themeId: zThemeId,
     closeBehavior: zCloseBehavior,
     onboardingCompleted: z.boolean(),
     autoLockMinutes: z.number().int().min(1).max(240),
@@ -105,6 +108,7 @@ export const zSettingsPatch = z
   .object({
     timezone: z.string().min(1).max(64).optional(),
     theme: zTheme.optional(),
+    themeId: zThemeId.optional(),
     closeBehavior: zCloseBehavior.optional(),
     onboardingCompleted: z.boolean().optional(),
     autoLockMinutes: z.number().int().min(1).max(240).optional(),

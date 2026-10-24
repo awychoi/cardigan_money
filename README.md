@@ -47,6 +47,8 @@ pnpm test                 # Vitest + React Testing Library
 pnpm test:e2e             # Playwright against the mock bridge
 pnpm typecheck
 pnpm lint
+pnpm theme:check          # validate every theme: schema + contrast
+pnpm theme:schema         # regenerate the editor JSON Schema
 
 # Rust
 cd src-tauri
@@ -55,6 +57,18 @@ cargo audit
 cargo deny check
 cargo test --test perf -- --ignored --nocapture   # 50k dataset measurement
 ```
+
+## Theming
+
+The UI is driven by a theme document: one JSON file per theme in `src/themes/`, validated against
+`src/themes/theme.schema.json`. A theme sets design tokens (color, type, radii, spacing, motion,
+card art) and four component variants: sidebar or top navigation, card faces or data tiles,
+comfortable or compact density, full or calm motion. Themes are data — adding one needs no code
+change, and the picker in **Settings → Appearance** is generated from the files.
+
+- Full field reference, recipes, and limits: [docs/design/theming.md](docs/design/theming.md)
+- Add a theme: copy a file in `src/themes/`, set `id` to match the file name, run `pnpm theme:check`
+- Dark/light follows the existing appearance setting; every theme ships both palettes
 
 This checkout was prepared in a sandbox that allows writes only inside the repository, so `scripts/dev-env.sh` points `CARGO_HOME`, `RUSTUP_HOME`, the pnpm store, and the Playwright browser cache at `.toolchain/` and `.cache/`. Source it if your environment has the same restriction:
 

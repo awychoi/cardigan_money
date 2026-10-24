@@ -578,12 +578,14 @@ mod tests {
         let s = status(&state).settings.unwrap();
         let mut next = s.clone();
         next.theme = crate::storage::settings::Theme::Dark;
+        next.theme_id = "graphite".to_string();
         next.auto_lock_minutes = 30;
         state
             .with_db(|conn, _h, _s| save_settings(conn, &next))
             .unwrap();
         let loaded = state.with_db(|conn, _h, _s| load_settings(conn)).unwrap();
         assert_eq!(loaded.theme, crate::storage::settings::Theme::Dark);
+        assert_eq!(loaded.theme_id, "graphite");
         assert_eq!(loaded.auto_lock_minutes, 30);
     }
 

@@ -1,0 +1,575 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cardigan_money theme",
+  "description": "Theme document for cardigan_money. See docs/design/theming.md. Regenerate with pnpm theme:schema.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "Optional editor hint",
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,31}$",
+      "description": "Must match the file name: <id>.theme.json"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "description": "Shown in Settings → Appearance"
+    },
+    "description": {
+      "description": "One line for the picker",
+      "type": "string",
+      "maxLength": 240
+    },
+    "options": {
+      "type": "object",
+      "properties": {
+        "navigation": {
+          "type": "string",
+          "enum": [
+            "sidebar",
+            "topbar"
+          ],
+          "description": "sidebar = macOS source list on the left; topbar = tab strip under the toolbar"
+        },
+        "cardArt": {
+          "type": "string",
+          "enum": [
+            "faces",
+            "tiles"
+          ],
+          "description": "faces = physical card art in the Cards view; tiles = data tiles"
+        },
+        "density": {
+          "type": "string",
+          "enum": [
+            "comfortable",
+            "compact"
+          ],
+          "description": "comfortable = airy rows; compact = denser tables and panels"
+        },
+        "motion": {
+          "type": "string",
+          "enum": [
+            "full",
+            "calm"
+          ],
+          "description": "calm turns transitions off"
+        }
+      },
+      "required": [
+        "navigation",
+        "cardArt",
+        "density",
+        "motion"
+      ],
+      "additionalProperties": false,
+      "description": "Component variants. Each one is implemented in the app"
+    },
+    "type": {
+      "type": "object",
+      "properties": {
+        "sans": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180,
+          "pattern": "^[A-Za-z0-9 ,\"'-]+$",
+          "description": "UI and body font"
+        },
+        "mono": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180,
+          "pattern": "^[A-Za-z0-9 ,\"'-]+$",
+          "description": "Masks, dates, identifiers"
+        },
+        "display": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180,
+          "pattern": "^[A-Za-z0-9 ,\"'-]+$",
+          "description": "Headings and hero numbers"
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 0.85,
+          "maximum": 1.2,
+          "description": "Multiplier applied to structural type sizes"
+        },
+        "displayWeight": {
+          "type": "integer",
+          "minimum": 300,
+          "maximum": 800,
+          "description": "Heading / hero weight"
+        },
+        "displayTracking": {
+          "type": "number",
+          "minimum": -0.06,
+          "maximum": 0.02,
+          "description": "em tracking for headings and hero numbers"
+        },
+        "lineHeight": {
+          "type": "number",
+          "minimum": 1.2,
+          "maximum": 1.8,
+          "description": "Body line height"
+        }
+      },
+      "required": [
+        "sans",
+        "mono",
+        "display",
+        "scale",
+        "displayWeight",
+        "displayTracking",
+        "lineHeight"
+      ],
+      "additionalProperties": false,
+      "description": "Typography"
+    },
+    "shape": {
+      "type": "object",
+      "properties": {
+        "controlRadius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 24,
+          "description": "Buttons, inputs, chips"
+        },
+        "panelRadius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 28,
+          "description": "Panels and tables"
+        },
+        "cardRadius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 28,
+          "description": "Card faces and hero cards"
+        },
+        "borderWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Hairline thickness"
+        }
+      },
+      "required": [
+        "controlRadius",
+        "panelRadius",
+        "cardRadius",
+        "borderWidth"
+      ],
+      "additionalProperties": false,
+      "description": "Radii and hairline weight"
+    },
+    "spacing": {
+      "type": "object",
+      "properties": {
+        "screen": {
+          "type": "number",
+          "minimum": 12,
+          "maximum": 48,
+          "description": "Content padding"
+        },
+        "card": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 32,
+          "description": "Panel padding"
+        },
+        "gap": {
+          "type": "number",
+          "minimum": 6,
+          "maximum": 24,
+          "description": "Grid gap"
+        }
+      },
+      "required": [
+        "screen",
+        "card",
+        "gap"
+      ],
+      "additionalProperties": false,
+      "description": "Spacing"
+    },
+    "motion": {
+      "type": "object",
+      "properties": {
+        "fast": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Hover / press duration (ms)"
+        },
+        "base": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Panel / layout duration (ms)"
+        },
+        "easing": {
+          "type": "string",
+          "maxLength": 60,
+          "pattern": "^[a-z0-9(),.\\s-]+$",
+          "description": "CSS timing function"
+        }
+      },
+      "required": [
+        "fast",
+        "base",
+        "easing"
+      ],
+      "additionalProperties": false,
+      "description": "Motion; `options.motion: \"calm\"` disables it regardless"
+    },
+    "modes": {
+      "type": "object",
+      "properties": {
+        "light": {
+          "type": "object",
+          "properties": {
+            "bg": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "App canvas"
+            },
+            "sidebar": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Navigation ground (sidebar)"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Cards, toolbars, panels"
+            },
+            "surface2": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Recessed fills: inputs, tracks, hover"
+            },
+            "surface3": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Stronger recessed fill"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Primary text"
+            },
+            "text2": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Secondary text"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Tertiary text and labels · must be ≥ 4.5:1 on surface"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Hairlines"
+            },
+            "borderStrong": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Visible dividers"
+            },
+            "borderControl": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Input boundaries · must be ≥ 3:1 on surface"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Primary action, selection, active navigation"
+            },
+            "accentInk": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Accent-colored text and links on surfaces · ≥ 4.5:1"
+            },
+            "success": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Confirmed state: fresh, healthy, enforced · ≥ 4.5:1 on surface"
+            },
+            "onAccent": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Text on an accent fill · ≥ 4.5:1 against accent"
+            },
+            "warning": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Attention, stale, reconnect"
+            },
+            "danger": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Failure and destructive"
+            },
+            "focus": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Focus ring · ≥ 3:1 on bg"
+            },
+            "chart": {
+              "minItems": 3,
+              "maxItems": 5,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^#[0-9a-f]{6}$",
+                "description": "Hex color, #rrggbb"
+              },
+              "description": "Ordered series colors for bars and charts"
+            },
+            "shadow": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^(#[0-9a-f]{6}|rgba?\\([\\d\\s.,%/]+\\))$",
+              "description": "Soft elevation color"
+            },
+            "shadowStrong": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^(#[0-9a-f]{6}|rgba?\\([\\d\\s.,%/]+\\))$",
+              "description": "Card-face / overlay shadow color"
+            }
+          },
+          "required": [
+            "bg",
+            "sidebar",
+            "surface",
+            "surface2",
+            "surface3",
+            "text",
+            "text2",
+            "muted",
+            "border",
+            "borderStrong",
+            "borderControl",
+            "accent",
+            "accentInk",
+            "success",
+            "onAccent",
+            "warning",
+            "danger",
+            "focus",
+            "chart",
+            "shadow",
+            "shadowStrong"
+          ],
+          "additionalProperties": false,
+          "description": "One mode of a theme: every semantic color, no derived values"
+        },
+        "dark": {
+          "type": "object",
+          "properties": {
+            "bg": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "App canvas"
+            },
+            "sidebar": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Navigation ground (sidebar)"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Cards, toolbars, panels"
+            },
+            "surface2": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Recessed fills: inputs, tracks, hover"
+            },
+            "surface3": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Stronger recessed fill"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Primary text"
+            },
+            "text2": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Secondary text"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Tertiary text and labels · must be ≥ 4.5:1 on surface"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Hairlines"
+            },
+            "borderStrong": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Visible dividers"
+            },
+            "borderControl": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Input boundaries · must be ≥ 3:1 on surface"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Primary action, selection, active navigation"
+            },
+            "accentInk": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Accent-colored text and links on surfaces · ≥ 4.5:1"
+            },
+            "success": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Confirmed state: fresh, healthy, enforced · ≥ 4.5:1 on surface"
+            },
+            "onAccent": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Text on an accent fill · ≥ 4.5:1 against accent"
+            },
+            "warning": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Attention, stale, reconnect"
+            },
+            "danger": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Failure and destructive"
+            },
+            "focus": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$",
+              "description": "Focus ring · ≥ 3:1 on bg"
+            },
+            "chart": {
+              "minItems": 3,
+              "maxItems": 5,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^#[0-9a-f]{6}$",
+                "description": "Hex color, #rrggbb"
+              },
+              "description": "Ordered series colors for bars and charts"
+            },
+            "shadow": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^(#[0-9a-f]{6}|rgba?\\([\\d\\s.,%/]+\\))$",
+              "description": "Soft elevation color"
+            },
+            "shadowStrong": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^(#[0-9a-f]{6}|rgba?\\([\\d\\s.,%/]+\\))$",
+              "description": "Card-face / overlay shadow color"
+            }
+          },
+          "required": [
+            "bg",
+            "sidebar",
+            "surface",
+            "surface2",
+            "surface3",
+            "text",
+            "text2",
+            "muted",
+            "border",
+            "borderStrong",
+            "borderControl",
+            "accent",
+            "accentInk",
+            "success",
+            "onAccent",
+            "warning",
+            "danger",
+            "focus",
+            "chart",
+            "shadow",
+            "shadowStrong"
+          ],
+          "additionalProperties": false,
+          "description": "One mode of a theme: every semantic color, no derived values"
+        }
+      },
+      "required": [
+        "light",
+        "dark"
+      ],
+      "additionalProperties": false,
+      "description": "Both modes are required so a theme never renders blank"
+    },
+    "issuers": {
+      "description": "Optional card art by issuer slug, e.g. \"american-express\"; \"default\" is the fallback",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,31}$",
+        "description": "Lowercase slug, also used as a CSS custom-property segment"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$",
+            "description": "Gradient start"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$",
+            "description": "Gradient end"
+          },
+          "ink": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$",
+            "description": "Card face text · ≥ 4.5:1 against from and to"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "ink"
+        ],
+        "additionalProperties": false,
+        "description": "Card-face colors for one issuer"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "options",
+    "type",
+    "shape",
+    "spacing",
+    "motion",
+    "modes"
+  ],
+  "additionalProperties": false
+}

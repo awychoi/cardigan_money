@@ -56,7 +56,7 @@ function initialState() {
 
 const mockState = initialState();
 let mockBackups: import("../lib/bridge/contract").BackupItem[] = [];
-let mockSyncRuns: import("../lib/bridge/contract").SyncRunView[] = [];
+const mockSyncRuns: import("../lib/bridge/contract").SyncRunView[] = [];
 let mockPlaidConfigured = false;
 let mockPlaidLink = {
   state: "idle",
@@ -69,6 +69,7 @@ let mockPlaidConnection: import("../lib/bridge/contract").ConnectionView | null 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
   theme: "system",
+  themeId: "ledger",
   closeBehavior: "unset",
   onboardingCompleted: params.get("mockOnboarding") !== "1",
   autoLockMinutes: 15,

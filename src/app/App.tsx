@@ -7,6 +7,8 @@ import { OnboardingWizard } from "../features/onboarding/OnboardingWizard";
 import { command, usingMockBridge, type AppInfo, type Settings, type VaultState } from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { logEvent } from "../lib/logging";
+import { applyTheme } from "../theme/apply";
+import { DEFAULT_THEME_ID, getTheme, resolveMode } from "../theme";
 
 type Boot =
   | { kind: "loading" }
@@ -15,18 +17,13 @@ type Boot =
 
 const THEME_MEDIA = "(prefers-color-scheme: dark)";
 
-function applyTheme(theme: Settings["theme"]): void {
-  if (theme === "system") {
-    document.documentElement.removeAttribute("data-theme");
-  } else {
-    document.documentElement.setAttribute("data-theme", theme);
-  }
-}
-
 export function App() {
   const [boot, setBoot] = useState<Boot>({ kind: "loading" });
   const [notice, setNotice] = useState<string | null>(null);
   const [sessionNonce, setSessionNonce] = useState(0);
+  // Theme ids are not sensitive; remembering one keeps the lock screen in the
+  // same visual language after the vault settings are cleared on lock.
+  const [rememberedThemeId, setRememberedThemeId] = useState(DEFAULT_THEME_ID);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,17 +46,23 @@ export function App() {
     };
   }, []);
 
-  const theme = boot.kind === "ready" ? (boot.vault.settings?.theme ?? "system") : "system";
+  const themePreference: Settings["theme"] =
+    boot.kind === "ready" ? (boot.vault.settings?.theme ?? "system") : "system";
+  const bootThemeId = boot.kind === "ready" ? boot.vault.settings?.themeId : undefined;
+  const theme = getTheme(bootThemeId ?? rememberedThemeId);
 
   useEffect(() => {
-    applyTheme(theme);
-    if (theme !== "system") return;
+    if (bootThemeId) setRememberedThemeId(bootThemeId);
+  }, [bootThemeId]);
+
+  useEffect(() => {
     const media = window.matchMedia?.(THEME_MEDIA);
-    if (!media) return;
-    const onChange = () => applyTheme("system");
-    media.addEventListener?.("change", onChange);
-    return () => media.removeEventListener?.("change", onChange);
-  }, [theme]);
+    const apply = () => applyTheme(theme, resolveMode(themePreference, media?.matches ?? false));
+    apply();
+    if (themePreference !== "system" || !media) return;
+    media.addEventListener?.("change", apply);
+    return () => media.removeEventListener?.("change", apply);
+  }, [theme, themePreference]);
 
   // The Rust side enforces the lock; this listener only clears the renderer.
   useEffect(() => {
@@ -119,7 +122,7 @@ export function App() {
   const handleTheme = useCallback(
     async (next: Settings["theme"]) => {
       if (boot.kind !== "ready" || !boot.vault.unlocked) {
-        applyTheme(next);
+        applyTheme(theme, resolveMode(next, window.matchMedia?.(THEME_MEDIA).matches ?? false));
         return;
       }
       try {
@@ -129,7 +132,7 @@ export function App() {
         setNotice(friendlyError(error));
       }
     },
-    [boot, handleSettingsChanged],
+    [boot, handleSettingsChanged, theme],
   );
 
   const handleDemoOpen = useCallback(async () => {
@@ -215,6 +218,7 @@ export function App() {
       <AppShell
         info={boot.info}
         vault={boot.vault}
+        theme={theme}
         usingMock={usingMockBridge}
         notice={notice}
         onDismissNotice={() => setNotice(null)}
@@ -224,7 +228,7 @@ export function App() {
         onResetDemo={handleDemoReset}
         onOpenDemo={handleDemoOpen}
         onVaultChanged={handleOpened}
-        themeControl={<ThemeToggle theme={theme} onChange={handleTheme} />}
+        themeControl={<ThemeToggle theme={themePreference} onChange={handleTheme} />}
         sessionNonce={sessionNonce}
       />
     </ErrorBoundary>

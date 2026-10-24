@@ -74,7 +74,6 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
         setError(friendlyError(caught));
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function inferMapping(headers: string[]) {

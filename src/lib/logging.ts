@@ -50,7 +50,6 @@ const enabled = import.meta.env.DEV && import.meta.env.VITE_DEBUG_LOGS === "1";
 export function logEvent(event: string, meta: Record<string, unknown> = {}): void {
   if (!enabled) return;
   const safeEvent = /^[a-z0-9_.-]{1,64}$/i.test(event) ? event : "invalid_event";
-  // eslint-disable-next-line no-console
   console.debug(`[${safeEvent}]`, sanitizeMeta(meta));
 }
 

@@ -1,63 +1,139 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens.
+ *
+ * The values below are the default ("ledger" light) fallback. At runtime
+ * src/theme applies the selected theme by setting these same custom properties
+ * on :root, so component CSS must never use a literal color — only tokens.
+ *
+ * Themeable   : everything defined here and in src/themes/*.theme.json
+ * Not themed  : data, copy, information architecture, security behavior
+ * Authoring   : docs/design/theming.md
+ */
 :root {
   color-scheme: light;
-  --bg: #f6f4ef;
+
+  /* surfaces */
+  --bg: #f7f5ef;
+  --sidebar: #efeae0;
   --surface: #fffdf8;
-  --surface-2: #efece4;
-  --text: #1d2430;
-  --muted: #5c6675;
-  --border: #d9d4c8;
-  --accent: #2f6b5f;
-  --accent-soft: #dcebe6;
-  --danger: #9d2f2f;
-  --warning: #8a5a09;
-  --focus: #245c8a;
-  --shadow: rgb(29 36 48 / 8%);
-  --chart-1: #2f6b5f;
+  --surface-2: #f2eee4;
+  --surface-3: #e8e3d6;
+
+  /* text */
+  --text: #161d26;
+  --text-2: #3f4a58;
+  --muted: #5f6a78;
+
+  /* lines */
+  --border: #e3ddce;
+  --border-strong: #d3cbb9;
+  --border-control: #9c917d;
+
+  /* semantic */
+  --accent: #2c6659;
+  --accent-ink: #1f4c42;
+  --on-accent: #f5fbf9;
+  --success: #2c6659;
+  --warning: #8a5c12;
+  --danger: #9c3a2e;
+  --focus: #2a5f8f;
+
+  /* charts */
+  --chart-1: #2c6659;
   --chart-2: #b26a4c;
   --chart-3: #5b6c9d;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  --chart-4: #8a5c12;
+  --chart-5: #7a8f5b;
+
+  /* elevations */
+  --shadow: rgb(22 29 38 / 8%);
+  --shadow-strong: rgb(15 20 26 / 45%);
+  --shadow-1: 0 1px 2px var(--shadow);
+  --shadow-2: 0 8px 24px var(--shadow);
+
+  /* typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --type-scale: 1;
+  --display-weight: 640;
+  --display-tracking: -0.03em;
+  --line-height: 1.45;
+
+  /* shape */
+  --radius-control: 7px;
+  --radius-panel: 11px;
+  --radius-card: 15px;
+  --border-width: 1px;
+
+  /* density */
+  --screen-pad: 28px;
+  --card-pad: 18px;
+  --gap: 14px;
+  --row-y: 8px;
+
+  /* motion */
+  --motion-fast: 120ms;
+  --motion-base: 160ms;
+  --ease: cubic-bezier(.2, 0, 0, 1);
+
+  /* shell */
+  --sidebar-w: 224px;
+
+  /* card art fallback */
+  --issuer-default-from: #39424c;
+  --issuer-default-to: #1b2026;
+  --issuer-default-ink: #f4f7f8;
+
+  /* Derived tints — computed from the palette so themes only declare bases. */
+  --accent-soft: color-mix(in srgb, var(--accent) 13%, var(--surface));
+  --accent-line: color-mix(in srgb, var(--accent) 34%, var(--border));
+  --success-soft: color-mix(in srgb, var(--success) 13%, var(--surface));
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  --warning-line: color-mix(in srgb, var(--warning) 36%, var(--border));
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  --danger-line: color-mix(in srgb, var(--danger) 38%, var(--border));
+
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #171a20;
-  --surface: #1f242c;
-  --surface-2: #2a303a;
-  --text: #eceff3;
-  --muted: #a6b0be;
-  --border: #38404c;
-  --accent: #7fc2b0;
-  --accent-soft: #243a35;
-  --danger: #f0a0a0;
-  --warning: #e7c47a;
-  --focus: #8cbde8;
-  --shadow: rgb(0 0 0 / 30%);
-  --chart-1: #7fc2b0;
-  --chart-2: #d79b7d;
-  --chart-3: #9aa9d8;
-}
-
+/* Pre-hydration fallback: the default theme's dark palette. Once React mounts,
+   src/theme writes the chosen theme's variables inline and these are unused. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #171a20;
-    --surface: #1f242c;
-    --surface-2: #2a303a;
-    --text: #eceff3;
-    --muted: #a6b0be;
-    --border: #38404c;
+    --bg: #14171c;
+    --sidebar: #181c22;
+    --surface: #1c2128;
+    --surface-2: #232830;
+    --surface-3: #2b313a;
+    --text: #edf0f4;
+    --text-2: #c6cdd7;
+    --muted: #97a2b1;
+    --border: #2a3038;
+    --border-strong: #3a424d;
+    --border-control: #6b7684;
     --accent: #7fc2b0;
-    --accent-soft: #243a35;
-    --danger: #f0a0a0;
-    --warning: #e7c47a;
+    --accent-ink: #a7dbcd;
+    --on-accent: #0f231e;
+    --success: #7fc2b0;
+    --warning: #e4bf7e;
+    --danger: #e9a79c;
     --focus: #8cbde8;
-    --shadow: rgb(0 0 0 / 30%);
+    --chart-1: #7fc2b0;
+    --chart-2: #d79b7d;
+    --chart-3: #9aa9d8;
+    --chart-4: #e4bf7e;
+    --chart-5: #a8c48a;
+    --shadow: rgb(0 0 0 / 32%);
+    --shadow-strong: rgb(0 0 0 / 65%);
+    --issuer-default-from: #39424c;
+    --issuer-default-to: #1b2026;
+    --issuer-default-ink: #f4f7f8;
   }
 }
 
@@ -75,8 +151,20 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.45;
+  font-family: var(--font-sans);
+  font-size: calc(var(--type-scale) * 13px);
+  line-height: var(--line-height);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+h1 {
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
 }
 
 button,
@@ -143,16 +231,26 @@ textarea {
 .app {
   min-height: 100%;
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+}
+.app-topbar {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 14px 24px;
+  gap: 16px;
+  min-height: 54px;
+  padding: 0 20px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--border-width) solid var(--border);
   -webkit-app-region: drag;
 }
 .header button,
@@ -171,7 +269,7 @@ textarea {
   height: 26px;
   border-radius: 7px;
   background: var(--accent);
-  color: var(--surface);
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 700;
   display: grid;
@@ -248,8 +346,8 @@ textarea {
 }
 
 .demo-banner {
-  background: var(--accent-soft);
-  color: var(--text);
+  background: var(--surface-2);
+  color: var(--text-2);
   padding: 8px 24px;
   font-size: 12px;
   border-bottom: 1px solid var(--border);
@@ -284,10 +382,11 @@ textarea {
 }
 
 .content {
-  padding: 32px 32px 48px;
+  padding: var(--screen-pad) var(--screen-pad) calc(var(--screen-pad) * 1.7);
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
+  flex: 1;
 }
 .empty-state {
   max-width: 560px;
@@ -298,8 +397,7 @@ textarea {
   justify-items: center;
 }
 .empty-state h1 {
-  font-size: 26px;
-  letter-spacing: -0.02em;
+  font-size: calc(var(--type-scale) * 26px);
   margin: 0;
 }
 
@@ -316,7 +414,7 @@ textarea {
 /* ---------- Buttons ---------- */
 
 .btn {
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--border);
   background: var(--surface);
   padding: 7px 12px;
@@ -338,8 +436,9 @@ textarea {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--surface);
+  color: var(--on-accent);
   font-weight: 600;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--on-accent) 18%, transparent);
 }
 .btn-secondary:hover:not(:disabled),
 .btn-primary:hover:not(:disabled) {
@@ -384,8 +483,8 @@ textarea {
 .vault-card {
   width: min(560px, 100%);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
   padding: 32px;
   box-shadow: 0 20px 60px var(--shadow);
   display: grid;
@@ -416,7 +515,7 @@ textarea {
   gap: 4px;
 }
 .sheet-note {
-  background: var(--accent-soft);
+  background: var(--surface-2);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 12px;
@@ -431,9 +530,9 @@ textarea {
   padding: 8px 10px;
 }
 .inline-notice {
-  color: var(--accent);
+  color: var(--text-2);
   font-size: 13px;
-  background: var(--accent-soft);
+  background: var(--surface-2);
   border-radius: 8px;
   padding: 8px 10px;
 }
@@ -470,19 +569,18 @@ textarea {
 }
 .page-heading h1 {
   margin: 0 0 4px;
-  font-size: 24px;
-  letter-spacing: -0.02em;
+  font-size: calc(var(--type-scale) * 25px);
 }
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  gap: var(--gap);
 }
 .panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--card-pad);
   display: grid;
   gap: 12px;
   align-content: start;
@@ -510,14 +608,14 @@ textarea {
 }
 .text-input {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 6px 9px;
   min-width: 190px;
 }
 select {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 6px 9px;
   min-height: 30px;
@@ -530,9 +628,9 @@ select {
   white-space: nowrap;
 }
 .status-ok {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: var(--accent-soft);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  background: var(--success-soft);
 }
 .status-fail {
   color: var(--danger);
@@ -571,7 +669,7 @@ select {
 .events-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(var(--type-scale) * 12px);
 }
 .events-table th {
   text-align: left;
@@ -607,8 +705,8 @@ select {
 .wizard-card {
   width: min(680px, 100%);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
   padding: 28px;
   box-shadow: 0 20px 60px var(--shadow);
   display: grid;
@@ -646,7 +744,7 @@ select {
 .form-grid input,
 .form-grid select {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 7px 9px;
   min-height: 32px;
@@ -682,7 +780,7 @@ select {
 .accounts-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(var(--type-scale) * 12px);
 }
 .accounts-table th {
   text-align: left;
@@ -692,7 +790,7 @@ select {
   padding: 6px 8px;
 }
 .accounts-table td {
-  padding: 7px 8px;
+  padding: var(--row-y) 8px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   vertical-align: middle;
 }
@@ -709,7 +807,7 @@ select {
 /* ---------- Dashboard ---------- */
 .dashboard {
   display: grid;
-  gap: 18px;
+  gap: var(--gap);
 }
 .backend-note {
   color: var(--muted);
@@ -722,13 +820,13 @@ select {
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: var(--gap);
 }
 .metric {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--card-pad);
   display: grid;
   gap: 4px;
 }
@@ -739,8 +837,10 @@ select {
   letter-spacing: 0.05em;
 }
 .metric-value {
-  font-size: 24px;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: calc(var(--type-scale) * 24px);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
   font-variant-numeric: tabular-nums;
 }
 .metric-detail {
@@ -780,14 +880,14 @@ select {
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
+  gap: var(--gap);
 }
 .card-tile {
   text-align: left;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--card-pad);
   display: grid;
   gap: 6px;
   cursor: pointer;
@@ -821,8 +921,10 @@ select {
   font-size: 12px;
 }
 .card-balance {
-  font-size: 22px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: calc(var(--type-scale) * 22px);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
   font-variant-numeric: tabular-nums;
   margin-top: 4px;
 }
@@ -848,8 +950,8 @@ select {
 /* ---------- Ledger ---------- */
 .segmented {
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
   overflow: hidden;
 }
 .segment {
@@ -871,8 +973,8 @@ select {
   flex-wrap: wrap;
   align-items: flex-end;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
   padding: 12px;
 }
 .filter-field {
@@ -884,7 +986,7 @@ select {
 .filter-field select,
 .filter-field input {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 5px 8px;
   min-height: 28px;
@@ -913,29 +1015,29 @@ select {
 }
 .table-wrap {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
   overflow: auto;
   max-width: 100%;
 }
 .ledger-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(var(--type-scale) * 12px);
   min-width: 620px;
 }
 .ledger-table th {
   text-align: left;
   color: var(--muted);
   font-weight: 500;
-  padding: 8px 10px;
+  padding: var(--row-y) 10px;
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   background: var(--surface);
 }
 .ledger-table td {
-  padding: 8px 10px;
+  padding: var(--row-y) 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   white-space: nowrap;
 }
@@ -976,8 +1078,8 @@ select {
 }
 .detail-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
   padding: 16px;
   display: grid;
   gap: 10px;
@@ -1047,7 +1149,7 @@ select {
 .edit-form select,
 .edit-form textarea {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 6px 8px;
   font-size: 12px;
@@ -1079,7 +1181,7 @@ select {
 .rule-form input,
 .rule-form select {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 6px 8px;
   min-height: 30px;
@@ -1143,4 +1245,490 @@ h3 {
   border-radius: 8px;
   padding: 10px;
   font-size: 11px;
+}
+
+/* ==========================================================================
+   Themeable shell, card art and picker
+   Everything below reads tokens only. A new theme should never need new CSS.
+   ========================================================================== */
+
+.app-sidebar {
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+}
+
+.sidebar {
+  background: var(--sidebar);
+  border-right: var(--border-width) solid var(--border);
+  padding: 14px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.sidebar .brand {
+  min-width: 0;
+  padding: 2px 6px 4px;
+}
+.sidebar button,
+.sidebar a {
+  -webkit-app-region: no-drag;
+}
+.side-nav {
+  display: grid;
+  gap: 1px;
+}
+.side-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 31px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.side-nav-item svg {
+  width: 15px;
+  height: 15px;
+  opacity: 0.75;
+  flex: none;
+}
+.side-nav-item:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+}
+.side-nav-item-active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.side-nav-item-active svg {
+  opacity: 1;
+}
+.side-foot {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+}
+.side-foot .btn,
+.side-foot .theme-toggle {
+  width: 100%;
+  justify-content: flex-start;
+}
+.side-foot .theme-toggle {
+  border-color: var(--border);
+  background: var(--surface);
+}
+.side-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  color: var(--text-2);
+  font-size: 11.5px;
+}
+.side-version {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --sidebar-w: 196px;
+  }
+}
+
+/* ---------- Card faces (theme option: cardArt = "faces") ---------- */
+
+.cards-grid-faces {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.cardface {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 8px;
+  width: 100%;
+  aspect-ratio: 1.586;
+  padding: calc(var(--card-pad) * 0.9);
+  border: var(--border-width) solid color-mix(in srgb, var(--issuer-ink) 14%, transparent);
+  border-radius: var(--radius-card);
+  background: linear-gradient(148deg, var(--issuer-from), var(--issuer-to));
+  color: var(--issuer-ink);
+  box-shadow: 0 10px 22px -8px var(--shadow-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.cardface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 8% 0%, color-mix(in srgb, var(--issuer-ink) 16%, transparent), transparent 55%),
+    linear-gradient(180deg, transparent 55%, color-mix(in srgb, #000 18%, transparent));
+}
+.cardface > * {
+  position: relative;
+  z-index: 1;
+}
+.cardface:hover {
+  box-shadow: 0 16px 30px -10px var(--shadow-strong);
+}
+.cardface-stale {
+  filter: saturate(0.55) brightness(0.95);
+}
+.cardface-missing {
+  background: linear-gradient(148deg, var(--surface-3), var(--surface-2));
+  border-style: dashed;
+  border-color: var(--border-strong);
+  box-shadow: none;
+  color: var(--text);
+}
+.cardface-missing::after {
+  background: none;
+}
+.cf-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cf-issuer {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  opacity: 0.86;
+}
+.cf-last {
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+.cf-mid {
+  align-self: end;
+  display: grid;
+  gap: 1px;
+  padding-bottom: 6px;
+}
+.cf-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+.cf-bal {
+  font-family: var(--font-display);
+  font-size: calc(var(--type-scale) * 28px);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.cf-bal-unknown {
+  font-size: calc(var(--type-scale) * 22px);
+  letter-spacing: -0.01em;
+}
+.cf-note {
+  font-size: 10px;
+  opacity: 0.82;
+}
+.cardface-missing .cf-label,
+.cardface-missing .cf-note {
+  opacity: 1;
+  color: var(--muted);
+}
+.cf-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--issuer-ink) 20%, transparent);
+}
+.cardface-missing .cf-foot {
+  border-top-color: var(--border);
+}
+.cf-next {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 10.5px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--issuer-ink) 24%, transparent);
+  background: color-mix(in srgb, var(--issuer-ink) 10%, transparent);
+  font-size: 9.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cardface-missing .cf-chip {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+.cf-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.cf-chip-warn .cf-dot,
+.cf-chip-fail .cf-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* ---------- Card details table ---------- */
+
+.card-details {
+  display: grid;
+  gap: 8px;
+}
+.card-details-title {
+  margin: 2px 0 0;
+  font-size: calc(var(--type-scale) * 14px);
+}
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: calc(var(--type-scale) * 12px);
+}
+.detail-table th,
+.detail-table td {
+  text-align: left;
+  padding: var(--row-y) 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  vertical-align: top;
+}
+.detail-table thead th {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom-color: var(--border);
+}
+.detail-table tbody th {
+  font-weight: 550;
+  white-space: nowrap;
+}
+.detail-table tbody tr:last-child th,
+.detail-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.detail-table .fine-print {
+  color: var(--muted);
+}
+
+/* ---------- Theme picker ---------- */
+
+.mode-seg {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(52px, 1fr));
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+}
+.mode-seg button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: calc(var(--radius-control) - 2px);
+  cursor: pointer;
+}
+.mode-seg button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+.theme-card {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-panel);
+  padding: 10px;
+  cursor: pointer;
+}
+.theme-card:hover {
+  border-color: var(--muted);
+}
+.theme-card-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.theme-preview {
+  display: flex;
+  height: 56px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-control) - 1px);
+  overflow: hidden;
+}
+.theme-preview-side {
+  width: 26%;
+}
+.theme-preview-body {
+  position: relative;
+  flex: 1;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+}
+.theme-preview-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+.theme-preview-chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.theme-card-name {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.theme-card-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.panel code {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.hr {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ---------- Motion (theme option + system preference) ---------- */
+
+.btn,
+.icon-btn,
+.nav-item,
+.side-nav-item,
+.card-tile,
+.cardface,
+.theme-card,
+.mode-seg button,
+.ledger-table tbody tr {
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+:root[data-motion="calm"] .btn,
+:root[data-motion="calm"] .icon-btn,
+:root[data-motion="calm"] .nav-item,
+:root[data-motion="calm"] .side-nav-item,
+:root[data-motion="calm"] .card-tile,
+:root[data-motion="calm"] .cardface,
+:root[data-motion="calm"] .theme-card,
+:root[data-motion="calm"] .mode-seg button,
+:root[data-motion="calm"] .ledger-table tbody tr {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .icon-btn,
+  .nav-item,
+  .side-nav-item,
+  .card-tile,
+  .cardface,
+  .theme-card,
+  .mode-seg button,
+  .ledger-table tbody tr {
+    transition: none;
+  }
+}
+
+/* ---------- Density (theme option) ---------- */
+
+:root[data-density="compact"] .panel {
+  padding: calc(var(--card-pad) * 0.8);
+  gap: 9px;
+}
+:root[data-density="compact"] .metric {
+  padding: calc(var(--card-pad) * 0.8);
+}
+:root[data-density="compact"] .card-tile {
+  padding: calc(var(--card-pad) * 0.85);
+}
+:root[data-density="compact"] .ledger-table td,
+:root[data-density="compact"] .ledger-table th,
+:root[data-density="compact"] .accounts-table td,
+:root[data-density="compact"] .accounts-table th,
+:root[data-density="compact"] .detail-table td,
+:root[data-density="compact"] .detail-table th {
+  padding: calc(var(--row-y) * 0.7) 8px;
+}
+:root[data-density="compact"] .settings {
+  gap: var(--gap);
+}
+:root[data-density="compact"] .content {
+  padding-top: calc(var(--screen-pad) * 0.8);
+  padding-bottom: calc(var(--screen-pad) * 1.2);
 }

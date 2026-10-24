@@ -8,7 +8,8 @@ import {
 } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
-import { ThemeToggle } from "../../components/ThemeToggle";
+import { ThemePicker } from "../../components/ThemePicker";
+import type { ThemeMode } from "../../theme/schema";
 import { AccountManager } from "../accounts/AccountManager";
 import { MerchantRulesPanel } from "./MerchantRulesPanel";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
@@ -38,6 +39,8 @@ export function SettingsView({
   onResetDemo: () => Promise<void>;
 }) {
   const settings = vault.settings;
+  const previewMode: ThemeMode =
+    document.documentElement.dataset.theme === "dark" ? "dark" : "light";
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,15 +136,34 @@ export function SettingsView({
       ) : null}
 
       <div className="settings-grid">
-        <section className="panel" aria-labelledby="appearance-title">
+        <section className="panel panel-wide" aria-labelledby="appearance-title">
           <h2 id="appearance-title">Appearance</h2>
           <div className="setting-row">
             <div>
-              <div className="setting-label">Theme</div>
-              <p className="fine-print">Follow the system or pin light or dark.</p>
+              <div className="setting-label">Mode</div>
+              <p className="fine-print">
+                Follow the system or pin light or dark. Every theme provides both modes.
+              </p>
             </div>
-            <ThemeToggle theme={settings.theme} onChange={(theme) => update({ theme })} />
+            <div className="mode-seg" role="group" aria-label="Appearance mode">
+              {(["light", "system", "dark"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={settings.theme === mode}
+                  onClick={() => void update({ theme: mode })}
+                >
+                  {mode === "light" ? "Light" : mode === "dark" ? "Dark" : "System"}
+                </button>
+              ))}
+            </div>
           </div>
+          <div className="hr" />
+          <ThemePicker
+            value={settings.themeId}
+            mode={previewMode}
+            onChange={(themeId) => void update({ themeId })}
+          />
         </section>
 
         <section className="panel" aria-labelledby="lock-title">

@@ -31,7 +31,6 @@ export function MerchantRulesPanel({ onChanged }: { onChanged: () => void }) {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function submit() {
