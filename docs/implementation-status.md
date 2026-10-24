@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 0 exit and Phase 1 verification (2026-10-23, America/New_York).
+Last updated: Phase 2 exit (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -9,7 +9,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | --- | --- | --- |
 | 0 | Foundation, threat model, crypto design, SQLCipher and Plaid feasibility | **Complete** |
 | 1 | Tauri shell, command gateway, renderer lockdown | **Complete** |
-| 2 | Vault envelope, native secret input, lock lifecycle, migrations | Not started |
+| 2 | Vault envelope, native secret input, lock lifecycle, migrations | **Complete** (implementation + automated evidence; owner passphrase-entry smoke pending) |
 | 3 | Domain rules, input bounds, calendar-month accounting | Not started |
 | 4 | Onboarding, accounts, settings, theme, security settings | Not started |
 | 5 | Demo data and read-only dashboard | Not started |
@@ -94,6 +94,48 @@ This is the honesty document: it records what was built, what actually ran, and 
 - Theme switching works: **yes**.
 - Frontend/contract/IPC tests pass: **yes**.
 
+## 3a. Phase 2 — encrypted vault, native secret input, lock lifecycle
+
+### Completed
+- Native AppKit `NSSecureTextField` sheet (`security/secure_input.rs`) for vault creation (two fields + match), unlock, current/new passphrase, restore, portable export, and the Plaid client secret. Fixed Rust-owned titles/messages; renderer receives only success/failure/cancel. Sheet window sets `NSWindowSharingNone`. No HTML password field exists anywhere.
+- Vault envelope: random 256-bit DEK, Argon2id KEK, XChaCha20-Poly1305 wrap, authenticated 152-byte `vault.header` + mirror, generation, vault ID, schema version, timestamps, rotation journal.
+- `services/vault.rs`: create, unlock (with journal recovery and mirror repair), lock, passphrase rotation (new DEK, pre-rekey encrypted snapshot + old header copy, journal, raw-key rekey, verification), status, security summary/events.
+- SQLCipher open/create is fail-closed; creation pre-creates the ledger 0600 and never opens an existing path with CREATE. `umask(0077)` plus explicit 0600 enforcement for DB/WAL/SHM.
+- Memory: `LockedKey` mlock/zeroize; passphrases in zeroizing `SecretString`; drop on lock/decrypt; core dumps disabled; debug-only panic detail, release fixed message.
+- Lock lifecycle: Rust monitor every 2 s for screen lock and console session state, sleep/resume wall-vs-monotonic gap, and native idle seconds. Manual lock via header button, menu item, and Cmd+L. Quit/exit locks. Lock closes the connection, drops DEK/header/settings, records a `lock` event, and emits one `vault:locked` event; renderer unmounts sensitive views. Hiding is not a lock.
+- Single-instance plugin registered before setup; second instance focuses the first and exits without touching the database.
+- Migrations: `schema_migrations` with checksums, forward-only application in transactions, pre-migration encrypted snapshot for non-empty DBs, fail-closed on edited checksum or newer schema.
+- Schema (migration 1): `vault_metadata`, `settings`, `security_events` with STRICT tables/CHECK constraints and indexes.
+- Settings repository: validated timezone, theme, close behavior, onboarding, auto-lock (1–240), sync windows, retention; secrets are never stored. Lock-on-system-events and content protection are pinned on.
+- Security events: allowlisted types, outcome, capped metadata with secret/path/SQL-shaped keys dropped; recent events shown in Settings.
+- UI: locked gate, vault creation, unlock, lock-again, real security/KDF/cipher/event display, theme through encrypted settings, timezone/auto-lock controls.
+- Native smoke harness (debug only) that presents the AppKit secure sheet and auto-cancels it after 1.5 s, used to prove the native path on this Mac without inventing automation.
+
+### Actual test runs
+| Command | Result |
+| --- | --- |
+| `cargo test` | 37 lib + 7 `vault_cipher` + 9 `vault_flow` = 53 passed, 0 failed |
+| `./scripts/native-sheet-smoke.sh` (via equivalent run) | `NATIVE_SHEET_SMOKE=passed: sheet presented and cancelled` |
+| Native single-instance probe | First process stayed up; second exited 0 in the same second; exactly one process remained |
+| `pnpm test` | 21 passed |
+| `pnpm test:e2e` | 11 passed |
+| `pnpm build` + artifact scan | Passed; dev mock sentinel absent; no source maps |
+
+### Phase 2 exit gate check
+- Create → quit → relaunch → unlock same ledger: **partially verified.** The full lifecycle is exercised in Rust with real encrypted DBs (create, lock/clear, reopen, unlock, wrong passphrase, rotation, crash-window journal recovery). The native sheet presentation is verified. Entering a passphrase into the native sheet and relaunching the app is an owner smoke item because this environment cannot safely drive macOS secure input (TCC/accessibility automation was refused; a probe was stopped without sending input).
+- Wrong passphrase non-destructive: **verified** (DB and header bytes unchanged).
+- Header missing/tampered/truncated, absurd KDF, mirror recovery: **verified**.
+- Lock closes connections and drops the DEK: **verified**; OS screen-lock/sleep/fast-user-switch triggers are implemented but **not automated here**; owner smoke required.
+- Migrations success/failure, checksum tamper: **verified**; pre-migration snapshot primitive implemented.
+- 0700/0600, symlink rejection, single instance: **verified**.
+- Passphrase never enters the renderer: **verified by construction and tests** (no password input; native sheet only; no secret in DOM/storage/URL).
+- No plaintext temp artifacts: snapshots are SQLCipher-encrypted with 0600; no plaintext DB copy is created.
+
+### Open Phase 2 items (blockers)
+- Owner must complete the native passphrase-entry smoke: create a vault, quit, relaunch, unlock, Lock Now, screen-lock lock, and sleep lock on the M1 Max outside the DSH sandbox.
+- Screen lock/sleep/fast-user-switching/logout could not be induced or observed in this environment. The code paths are implemented; do not describe them as verified.
+- Keychain is not touched yet (Phase 8/9).
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -111,19 +153,19 @@ This is the honesty document: it records what was built, what actually ran, and 
 | ID | Status in this build |
 | --- | --- |
 | SEC-01 fail-open encryption | **Mitigated and tested**: key-first, cipher/provider checks, plaintext rejection, plain-SQLite negative build, wrong-key non-destructiveness. `cipher_status` unsupported on 4.6.1 and handled explicitly. |
-| SEC-02 passphrase in renderer | **Not yet implemented** (Phase 2). No HTML password input exists; the shell has no passphrase flow yet. |
+| SEC-02 passphrase in renderer | **Implemented**: native AppKit secure input for create/unlock/change; no HTML password field; renderer receives only outcomes. Native passphrase entry itself awaits the owner smoke. |
 | SEC-03 circular key hierarchy | **Mitigated**: external authenticated header; in-memory-only DEK. |
 | SEC-04 backup vs. no-prompt | Designed (header-embedded wrapped DEK); implementation Phase 7. |
-| SEC-05 lock lifecycle | Designed; implementation Phase 2. No lock screen yet. |
+| SEC-05 lock lifecycle | **Implemented** in Rust: manual, screen lock, sleep, session switch, quit, idle timeout; connection close + DEK drop + renderer clear + lock event. OS-trigger verification pending owner smoke. |
 | SEC-06 Plaid desktop flow | **Documented blocker**: Hosted Link + polling, no credentials, unverified. |
 | SEC-07 renderer privilege/network | **Mitigated for the shell**: CSP, one capability, gateway, nav/new-window blocking, no remote content. Native release verification pending Phase 10. |
 | SEC-08 Keychain/signing | Design recorded; Keychain implementation Phase 8/9; signing ad-hoc in Phase 10. |
-| SEC-09 security deferred | Phases 0–2 gates enforced; Phase 0/1 evidence recorded. |
+| SEC-09 security deferred | Phases 0–2 gates enforced; Phase 0–2 evidence recorded here. |
 | SEC-10 supply chain | Lockfiles, pinned toolchains, audits, explicit build-script allowlist (`esbuild`, `@tailwindcss/oxide`). |
 | SEC-11 logs/crash/state restoration | Core dumps disabled; redacting logger off by default; state restoration disabled. Crash diagnostics in debug only. |
 | SEC-12..20 | Corresponding features are not built yet; controls are designed in the spec and tracked per phase. |
 
-Open Critical/High findings: none newly discovered. SEC-02 (native secure input) and SEC-05 (lock lifecycle) remain open until Phase 2; they are anticipated by the plan and do not allow a false claim because no vault or passphrase UI exists yet.
+Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested to the extent this environment allows; their native OS-trigger portions remain owner-smoke items and are not claimed as verified.
 
 ## 6. Blockers and external dependencies
 
@@ -143,4 +185,4 @@ No performance target has been measured yet (no ledger/dashboard). Do not treat 
 
 ## 9. Next phase
 
-Phase 2 will implement the native secure-input sheet, the vault create/unlock/change flow, the lock lifecycle, single-instance-before-DB, migrations, and the encrypted settings/vault/security-event schema. Its exit gate requires a real create → quit → relaunch → unlock cycle on this Mac (native smoke where the sandbox permits) plus tests for wrong passphrase, header tamper, lock/zeroize, and migration failure.
+Phase 3 will add the financial schema (accounts, snapshots, transactions, overrides, merchant rules, imports, sync runs), integer-cent money and date-only types, calendar-month eligibility and summary functions, parameterized repositories with enum-only identifiers, and the domain test suite including reconciliation, DST/leap-day, pending/posted, refunds, exclusions, and SQL-injection attempts.

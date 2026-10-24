@@ -110,6 +110,17 @@ pub fn open_ledger(
         if let Some(parent) = path.parent() {
             crate::security::files::ensure_private_dir(parent)?;
         }
+        // Pre-create 0600 so SQLite never creates the ledger with a permissive
+        // umask-derived mode. Then open without CREATE.
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(path)
+            .map_err(|_| AppError::Io)?
+            .sync_all()
+            .map_err(|_| AppError::Io)?;
     } else {
         if !file_exists_no_follow(path)? {
             return Err(AppError::VaultMissing);
@@ -120,13 +131,9 @@ pub fn open_ledger(
         }
     }
 
-    let flags = if create {
-        OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_CREATE
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX
-    } else {
-        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX
-    };
+    // Never pass CREATE for the ledger: an existing path must decrypt, and a
+    // creation flow pre-created the 0600 file above.
+    let flags = OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX;
     let conn = Connection::open_with_flags(path, flags).map_err(|_| AppError::Database)?;
 
     // Key first. Absolutely nothing may be executed before this.
@@ -136,14 +143,16 @@ pub fn open_ledger(
     let info = verify_cipher(&conn)?;
     configure(&conn)?;
 
-    if create {
-        // The file must exist and must not look like plaintext SQLite.
-        if !file_exists_no_follow(path)? {
-            return Err(AppError::Io);
+    // Enforce 0600 on the ledger and any sidecars the cipher created.
+    enforce_private_file(path)?;
+    for suffix in ["-wal", "-shm"] {
+        let side = std::path::PathBuf::from(format!("{}{suffix}", path.display()));
+        if side.exists() {
+            enforce_private_file(&side)?;
         }
-        if looks_like_plaintext_sqlite(path).unwrap_or(false) {
-            return Err(AppError::PlaintextDatabase);
-        }
+    }
+    if create && looks_like_plaintext_sqlite(path).unwrap_or(false) {
+        return Err(AppError::PlaintextDatabase);
     }
     Ok((conn, info))
 }

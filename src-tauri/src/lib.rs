@@ -2,9 +2,15 @@ pub mod commands;
 pub mod error;
 pub mod ipc;
 pub mod security;
+pub mod services;
 pub mod state;
+pub mod storage;
+#[cfg(test)]
+pub mod test_support;
 
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::Manager;
+use crate::state::AppState;
 
 const CSP_SAFE_TITLE: &str = "cardigan_money";
 
@@ -31,6 +37,9 @@ fn harden_process() {
     unsafe {
         let limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
         libc::setrlimit(libc::RLIMIT_CORE, &limit);
+        // Every file the process creates is owner-only by default; explicit
+        // mode checks remain in the filesystem layer.
+        libc::umask(0o077);
     }
     // Panic hook: debug builds may name the failing location to aid local
     // development; release builds emit a fixed message with no payload.
@@ -84,6 +93,37 @@ pub fn run() {
             let state = state::AppState::new(app_data.clone()).map_err(|e| e.code())?;
             app.manage(state);
 
+            let lock_item = MenuItem::with_id(
+                app,
+                "lock-now",
+                "Lock Now",
+                true,
+                Some("CmdOrCtrl+L"),
+            )?;
+            let quit_item = PredefinedMenuItem::quit(app, Some("Quit cardigan_money"))?;
+            let app_menu = Submenu::with_items(
+                app,
+                "cardigan_money",
+                true,
+                &[&lock_item, &PredefinedMenuItem::separator(app)?, &quit_item],
+            )?;
+            let edit_menu = Submenu::with_items(
+                app,
+                "Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(app, None)?,
+                    &PredefinedMenuItem::redo(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::cut(app, None)?,
+                    &PredefinedMenuItem::copy(app, None)?,
+                    &PredefinedMenuItem::paste(app, None)?,
+                    &PredefinedMenuItem::select_all(app, None)?,
+                ],
+            )?;
+            let menu = Menu::with_items(app, &[&app_menu, &edit_menu])?;
+            app.set_menu(menu)?;
+
             let window = tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -106,11 +146,43 @@ pub fn run() {
             .build()?;
             harden_native_window(&window);
             window.show()?;
+            security::lock::spawn_monitor(app.handle().clone());
+
+            #[cfg(debug_assertions)]
+            if std::env::var("CARDIGAN_MONEY_NATIVE_SHEET_SMOKE").as_deref() == Ok("1") {
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    match security::secure_input::smoke_test(&handle) {
+                        Ok(()) => eprintln!(
+                            "NATIVE_SHEET_SMOKE=passed: sheet presented and cancelled"
+                        ),
+                        Err(_) => eprintln!("NATIVE_SHEET_SMOKE=failed"),
+                    }
+                    let _ = handle.exit(0);
+                });
+            }
             Ok(())
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == "lock-now" {
+                let state = app.state::<AppState>();
+                state.lock(app, "manual");
+            }
         })
         .invoke_handler(tauri::generate_handler![commands::gateway]);
 
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running cardigan_money");
+    let app = builder
+        .build(tauri::generate_context!())
+        .expect("error while building cardigan_money");
+
+    app.run(|app, event| {
+        if matches!(
+            event,
+            tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+        ) {
+            let state = app.state::<AppState>();
+            state.quitting.store(true, std::sync::atomic::Ordering::SeqCst);
+            state.lock(app, "quit");
+        }
+    });
 }

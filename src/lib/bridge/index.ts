@@ -66,5 +66,16 @@ export function validateEnvelopeFor(commandName: CommandName, raw: unknown): unk
 }
 
 export { BridgeError };
-export type { AppInfo, VaultStatus, HealthCheck, CommandName } from "./contract";
+export type {
+  AppInfo,
+  VaultStatus,
+  HealthCheck,
+  CommandName,
+  VaultState,
+  Settings,
+  SettingsPatch,
+  SecuritySummary,
+  SecurityEvent,
+  ThemeChoice,
+} from "./contract";
 export const _internals = { z } as const;

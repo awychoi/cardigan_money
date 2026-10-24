@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
-import type { AppInfo } from "../lib/bridge";
+import type { AppInfo, Settings, VaultState } from "../lib/bridge";
+import { SettingsView } from "../features/settings/SettingsView";
+import { Button } from "../components/Button";
 
 type View = "overview" | "cards" | "transactions" | "suppliers" | "settings";
 
@@ -15,11 +17,23 @@ const MONTH_LABEL = new Intl.DateTimeFormat(undefined, { month: "long", year: "n
 
 export function AppShell({
   info,
+  vault,
   usingMock,
+  notice,
+  onDismissNotice,
+  onLock,
+  onRefreshVault,
+  onSettingsChanged,
   themeControl,
 }: {
   info: AppInfo;
+  vault: VaultState;
   usingMock: boolean;
+  notice: string | null;
+  onDismissNotice: () => void;
+  onLock: () => Promise<void>;
+  onRefreshVault: () => Promise<void>;
+  onSettingsChanged: (settings: Settings) => void;
   themeControl: ReactNode;
 }) {
   const [view, setView] = useState<View>("overview");
@@ -61,15 +75,24 @@ export function AppShell({
             Sync now
           </button>
           {themeControl}
-          <button type="button" className="btn btn-ghost" aria-label="Lock now" disabled>
+          <Button variant="ghost" aria-label="Lock now" onClick={() => void onLock()}>
             Lock
-          </button>
+          </Button>
         </div>
       </header>
 
       {usingMock ? (
         <div className="demo-banner" role="status">
           Mock desktop bridge — browser test mode. No real ledger is open.
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div className="notice-bar" role="status">
+          <span>{notice}</span>
+          <button type="button" className="icon-btn" aria-label="Dismiss notice" onClick={onDismissNotice}>
+            ×
+          </button>
         </div>
       ) : null}
 
@@ -88,16 +111,21 @@ export function AppShell({
       </nav>
 
       <main className="content" id="main-content">
-        {view === "overview" ? (
+        {view === "settings" ? (
+          <SettingsView vault={vault} onSettingsChanged={onSettingsChanged} onLock={onLock} />
+        ) : view === "overview" ? (
           <section className="empty-state" aria-labelledby="overview-title">
             <h1 id="overview-title">Your cards, in one quiet place.</h1>
             <p className="muted">
-              The secure shell is running{info.vaultExists ? " with an existing vault" : ""}. Account setup,
-              the encrypted ledger, and the calendar-month dashboard arrive in the next stages.
+              The vault is unlocked. Account setup, the calendar-month dashboard, and the ledger
+              arrive in the next stages.
             </p>
             <p className="fine-print">
               No financial data is loaded in this build stage. Nothing on this screen contacts a network.
             </p>
+            <button type="button" className="btn btn-ghost btn-small" onClick={() => void onRefreshVault()}>
+              Refresh security status
+            </button>
           </section>
         ) : (
           <section className="empty-state" aria-labelledby="placeholder-title">
@@ -105,14 +133,16 @@ export function AppShell({
               {VIEWS.find((item) => item.id === view)?.label ?? "View"}
             </h1>
             <p className="muted">This view is not connected to the ledger yet.</p>
-            <p className="fine-print">Build stage 1 — secure shell and typed bridge.</p>
+            <p className="fine-print">Build stage 2 — encrypted vault and lock lifecycle.</p>
           </section>
         )}
       </main>
 
       <footer className="footer">
         <span>Encrypted local ledger · no telemetry</span>
-        <span>v{info.version}</span>
+        <span>
+          v{info.version} · SQLCipher {vault.security?.cipherVersion ?? ""}
+        </span>
       </footer>
     </div>
   );

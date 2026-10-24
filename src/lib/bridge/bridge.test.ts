@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { command, usingMockBridge } from "./index";
-import { isCommandName, zAppInfo, zVaultStatus } from "./contract";
+import { isCommandName, zAppInfo, zVaultState } from "./contract";
 import { BridgeError, friendlyError, toBridgeError } from "./errors";
 
 describe("bridge contract", () => {
@@ -12,7 +12,7 @@ describe("bridge contract", () => {
     const info = await command("app_info", {});
     expect(zAppInfo.parse(info).name).toBe("cardigan_money");
     const status = await command("vault_status", {});
-    expect(zVaultStatus.parse(status).mode).toBe("real");
+    expect(zVaultState.parse(status).mode).toBe("real");
   });
 
   it("rejects unknown command names before dispatch", async () => {

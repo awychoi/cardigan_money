@@ -20,7 +20,7 @@ Effort is expressed as sequence and phase gates, not calendar dates. Plaid appro
 | --- | --- | --- |
 | 0 | Foundation, threat model, crypto design, SQLCipher and Plaid feasibility | **Complete** |
 | 1 | Tauri shell, command gateway, renderer lockdown | **Complete** |
-| 2 | Vault envelope, native secret input, lock lifecycle, migrations | Not started |
+| 2 | Vault envelope, native secret input, lock lifecycle, migrations | **Complete** (owner passphrase-entry smoke pending) |
 | 3 | Domain rules, input bounds, calendar-month accounting | Not started |
 | 4 | Onboarding, accounts, settings, theme, security settings | Not started |
 | 5 | Demo data and read-only dashboard | Not started |

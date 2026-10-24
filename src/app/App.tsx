@@ -1,40 +1,41 @@
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AppShell } from "./AppShell";
-import { ThemeToggle, type ThemeChoice } from "../components/ThemeToggle";
-import { command, usingMockBridge, type AppInfo } from "../lib/bridge";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { VaultGate } from "../features/vault/VaultGate";
+import { command, usingMockBridge, type AppInfo, type Settings, type VaultState } from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { logEvent } from "../lib/logging";
 
-const THEME_KEY = "cm.theme";
-type BootState =
+type Boot =
   | { kind: "loading" }
-  | { kind: "ready"; info: AppInfo }
+  | { kind: "ready"; info: AppInfo; vault: VaultState }
   | { kind: "error"; message: string };
 
-function readStoredTheme(): ThemeChoice {
-  try {
-    const value = window.localStorage.getItem(THEME_KEY);
-    return value === "light" || value === "dark" || value === "system" ? value : "system";
-  } catch {
-    return "system";
+const THEME_MEDIA = "(prefers-color-scheme: dark)";
+
+function applyTheme(theme: Settings["theme"]): void {
+  if (theme === "system") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", theme);
   }
 }
 
 export function App() {
-  const [boot, setBoot] = useState<BootState>({ kind: "loading" });
-  const [theme, setTheme] = useState<ThemeChoice>(readStoredTheme);
+  const [boot, setBoot] = useState<Boot>({ kind: "loading" });
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const info = await command("app_info", {});
-        const health = await command("health_check", {});
-        if (!cancelled && health.ok) {
-          setBoot({ kind: "ready", info });
-          logEvent("bridge_ready", { ok: true });
-        }
+        const [info, health, vault] = await Promise.all([
+          command("app_info", {}),
+          command("health_check", {}),
+          command("vault_status", {}),
+        ]);
+        if (!cancelled && health.ok) setBoot({ kind: "ready", info, vault });
       } catch (error) {
         if (cancelled) return;
         setBoot({ kind: "error", message: friendlyError(error) });
@@ -46,21 +47,97 @@ export function App() {
     };
   }, []);
 
+  const theme = boot.kind === "ready" ? (boot.vault.settings?.theme ?? "system") : "system";
+
   useEffect(() => {
-    if (theme === "system") {
-      document.documentElement.removeAttribute("data-theme");
-    } else {
-      document.documentElement.setAttribute("data-theme", theme);
-    }
-    try {
-      // Non-financial preference only. Never store ledger data or secrets here.
-      window.localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      // Storage may be disabled; the theme still applies for this session.
-    }
+    applyTheme(theme);
+    if (theme !== "system") return;
+    const media = window.matchMedia?.(THEME_MEDIA);
+    if (!media) return;
+    const onChange = () => applyTheme("system");
+    media.addEventListener?.("change", onChange);
+    return () => media.removeEventListener?.("change", onChange);
   }, [theme]);
 
-  const changeTheme = useCallback((next: ThemeChoice) => setTheme(next), []);
+  // The Rust side enforces the lock; this listener only clears the renderer.
+  useEffect(() => {
+    if (usingMockBridge) return;
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        const stop = await listen("vault:locked", () => {
+          setNotice("The vault was locked.");
+          setBoot((current) =>
+            current.kind === "ready"
+              ? {
+                  ...current,
+                  vault: { ...current.vault, unlocked: false, settings: null, security: null },
+                }
+              : current,
+          );
+        });
+        if (cancelled) stop();
+        else unlisten = stop;
+      } catch {
+        // If event subscription fails the UI still cannot read the ledger: the
+        // Rust session is already closed and commands fail with vault_locked.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+
+  const handleOpened = useCallback((vault: VaultState) => {
+    setNotice(null);
+    setBoot((current) => (current.kind === "ready" ? { ...current, vault } : current));
+  }, []);
+
+  const handleLock = useCallback(async () => {
+    try {
+      const vault = await command("vault_lock", {});
+      setNotice("The vault is locked.");
+      setBoot((current) => (current.kind === "ready" ? { ...current, vault } : current));
+    } catch (error) {
+      setNotice(friendlyError(error));
+    }
+  }, []);
+
+  const handleSettingsChanged = useCallback((settings: Settings) => {
+    setBoot((current) =>
+      current.kind === "ready"
+        ? { ...current, vault: { ...current.vault, settings } }
+        : current,
+    );
+  }, []);
+
+  const handleTheme = useCallback(
+    async (next: Settings["theme"]) => {
+      if (boot.kind !== "ready" || !boot.vault.unlocked) {
+        applyTheme(next);
+        return;
+      }
+      try {
+        const result = await command("settings_update", { theme: next });
+        handleSettingsChanged(result.settings);
+      } catch (error) {
+        setNotice(friendlyError(error));
+      }
+    },
+    [boot, handleSettingsChanged],
+  );
+
+  const handleRefreshVault = useCallback(async () => {
+    try {
+      const vault = await command("vault_status", {});
+      setBoot((current) => (current.kind === "ready" ? { ...current, vault } : current));
+    } catch {
+      // Leave the current view; the lock event or next command will correct it.
+    }
+  }, []);
 
   if (boot.kind === "loading") {
     return (
@@ -90,12 +167,29 @@ export function App() {
     );
   }
 
+  if (!boot.vault.unlocked) {
+    return (
+      <>
+        <VaultGate exists={boot.vault.exists} onOpened={handleOpened} />
+        <div className="gate-banner" role="status">
+          {usingMockBridge ? "Mock desktop bridge — browser test mode." : ""}
+        </div>
+      </>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <AppShell
         info={boot.info}
+        vault={boot.vault}
         usingMock={usingMockBridge}
-        themeControl={<ThemeToggle theme={theme} onChange={changeTheme} />}
+        notice={notice}
+        onDismissNotice={() => setNotice(null)}
+        onLock={handleLock}
+        onRefreshVault={handleRefreshVault}
+        onSettingsChanged={handleSettingsChanged}
+        themeControl={<ThemeToggle theme={theme} onChange={handleTheme} />}
       />
     </ErrorBoundary>
   );
