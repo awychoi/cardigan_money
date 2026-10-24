@@ -784,11 +784,15 @@ pub fn execute<R: tauri::Runtime>(
             let connections = sync::list_connections(state)?;
             let recent_runs = sync::recent_runs(state, 10)?;
             let runtime = sync::runtime_status(state)?;
+            let provider_live = state.mode() == crate::state::SessionMode::Real
+                && crate::providers::plaid::load_sandbox_credentials(state.credentials.as_ref())
+                    .map(|value| value.is_some())
+                    .unwrap_or(false);
             GatewayResponse::ok(SyncStatusView {
                 connections,
                 recent_runs,
                 runtime,
-                provider_live: false,
+                provider_live,
             })
         }
         "sync_now" => {

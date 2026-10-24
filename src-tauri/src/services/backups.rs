@@ -1039,6 +1039,24 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
     app: &AppHandle<R>,
 ) -> AppResult<VaultState> {
     state.require_real("erase data in demo mode")?;
+    // Remove provider Keychain material before dropping the encrypted DB, so a
+    // crypto-erase does not leave Plaid credentials behind in the login keychain.
+    let credential_refs: Vec<String> = state
+        .with_db(|conn, _h, _s| {
+            let mut stmt = conn.prepare("SELECT credential_ref FROM connections WHERE provider = 'plaid'")?;
+            let rows = stmt
+                .query_map([], |row| row.get::<_, String>(0))?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(rows)
+        })
+        .unwrap_or_default();
+    for credential_ref in credential_refs {
+        let _ = state.credentials.delete(
+            &crate::providers::plaid::access_token_account(&credential_ref),
+        );
+    }
+    let _ = state.credentials.delete(crate::security::keychain::ACCOUNT_CLIENT_ID);
+    let _ = state.credentials.delete(crate::security::keychain::ACCOUNT_SECRET);
     state.lock(app, "crypto_erase");
     remove_tree(&state.app_data.join("vault"));
     remove_tree(&state.app_data.join("backups"));

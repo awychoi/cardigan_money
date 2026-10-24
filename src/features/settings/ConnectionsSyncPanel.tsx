@@ -179,7 +179,9 @@ export function ConnectionsSyncPanel({
         committed, and keeps previously reported values when a stream is partially unavailable. The
         renderer never sees provider tokens. Scheduled windows are 08:00 and 20:00 local time; a
         scheduled run is skipped while locked and retried inside the five-minute window.
-        {!status?.providerLive ? " Live Plaid linking is not enabled in this build; CSV import works without a provider." : null}
+        {!status?.providerLive
+          ? " Add Sandbox credentials below to enable live linking; CSV import works without a provider."
+          : " Sandbox credentials are configured; Production remains disabled."}
       </p>
       {error ? (
         <p className="inline-error" role="alert">

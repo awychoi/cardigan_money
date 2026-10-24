@@ -23,7 +23,7 @@ Do not send the secret, access token, public token, link token, or Hosted Link U
    - Rust creates a Hosted Link token (`hosted_link: {}`, products `transactions`, optional `liabilities`) and opens only `https://secure.plaid.com/...` via the Tauri opener. The URL is a short-lived bearer and is never logged/persisted.
    - Rust polls `/link/token/get` with backoff, then exchanges the public token in Rust.
    - The access token is stored in Keychain under a random credential reference; the connection row contains only that opaque reference.
-5. Choose a Sandbox institution with a credit card; only Plaid `credit` accounts are imported into this card ledger.
+5. Choose a Sandbox institution with a credit card; for example First Platypus Bank (`ins_109508`) using Sandbox username `user_transactions_dynamic` and any non-blank password. Only Plaid `credit` accounts are imported into this card ledger. If the app imports 0 accounts, the chosen Item had no credit-card account; remove it or link a different Sandbox Item.
 6. Initial Transactions Sync + balances run; Liabilities is attempted but shown unavailable/partial if the Item or plan lacks it.
 
 ## Reconnect

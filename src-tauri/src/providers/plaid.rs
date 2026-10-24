@@ -303,7 +303,10 @@ impl PlaidClient {
     }
 
     pub fn balances(&self) -> ProviderResult<AccountsResponse> {
-        self.post("/accounts/balance/get", json!({}))
+        // `/accounts/get` returns cached balances and does not require a separate
+        // Balance product beyond Transactions. `/accounts/balance/get` is the
+        // real-time Balance product and is intentionally not required here.
+        self.post("/accounts/get", json!({}))
     }
 
     pub fn transactions_sync(&self, cursor: Option<&str>) -> ProviderResult<TransactionsSyncResponse> {
