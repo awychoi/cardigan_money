@@ -354,7 +354,7 @@ A separate read-only review agent examined backup/restore, sync, gateway validat
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **153 Rust passed** (1 ignored 50k perf), **23 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **154 Rust passed** (1 ignored 50k perf), **23 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
 - Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; live Plaid is **blocked** (no credentials/authorized Item); fresh-install restore unsupported; ad-hoc/non-notarized.
