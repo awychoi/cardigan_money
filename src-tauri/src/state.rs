@@ -14,6 +14,8 @@ use crate::security::ratelimit::RateLimiter;
 use crate::security::vault::{VaultHeader, VaultPaths};
 use crate::storage::events::record_event;
 use crate::services::imports::ImportJobs;
+use crate::services::plaid_link::PlaidLinkRuntime;
+use crate::security::keychain::{CredentialStore, KeychainStore};
 use crate::storage::settings::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,6 +76,8 @@ pub struct AppState {
     pub imports: ImportJobs,
     pub sync_gate: Mutex<()>,
     pub sync_runtime: Mutex<crate::services::sync::SyncRuntimeStatus>,
+    pub credentials: std::sync::Arc<dyn CredentialStore>,
+    pub plaid_link: Mutex<PlaidLinkRuntime>,
     pub quitting: AtomicBool,
     pub close_prompt_open: AtomicBool,
 }
@@ -91,6 +95,8 @@ impl AppState {
             imports: Mutex::new(std::collections::HashMap::new()),
             sync_gate: Mutex::new(()),
             sync_runtime: Mutex::new(Default::default()),
+            credentials: std::sync::Arc::new(KeychainStore),
+            plaid_link: Mutex::new(PlaidLinkRuntime::default()),
             quitting: AtomicBool::new(false),
             close_prompt_open: AtomicBool::new(false),
         })

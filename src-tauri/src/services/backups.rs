@@ -8,7 +8,7 @@
 //! passphrase). Automatic backups therefore need no retained passphrase.
 
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;

@@ -1,6 +1,7 @@
 pub mod csv;
 pub mod mock;
 pub mod network;
+pub mod plaid;
 
 use serde::Serialize;
 

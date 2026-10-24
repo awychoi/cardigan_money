@@ -57,6 +57,14 @@ function initialState() {
 const mockState = initialState();
 let mockBackups: import("../lib/bridge/contract").BackupItem[] = [];
 let mockSyncRuns: import("../lib/bridge/contract").SyncRunView[] = [];
+let mockPlaidConfigured = false;
+let mockPlaidLink = {
+  state: "idle",
+  message: null as string | null,
+  connectionId: null as string | null,
+  expiresAt: null as string | null,
+};
+let mockPlaidConnection: import("../lib/bridge/contract").ConnectionView | null = null;
 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
@@ -412,10 +420,91 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       resetMockData();
       data = vaultState();
       break;
+    case "plaid_status":
+      requireUnlocked();
+      data = {
+        plaid: {
+          configured: mockPlaidConfigured,
+          environment: "sandbox",
+          linkAvailable: mockPlaidConfigured,
+          message: mockPlaidConfigured
+            ? "Sandbox credentials are stored in the macOS Keychain."
+            : "Add Plaid Sandbox credentials in the native setup sheet.",
+        },
+      };
+      break;
+    case "plaid_setup":
+      requireUnlocked();
+      mockPlaidConfigured = true;
+      data = {
+        plaid: {
+          configured: true,
+          environment: "sandbox",
+          linkAvailable: true,
+          message: "Sandbox credentials are stored in the macOS Keychain.",
+        },
+      };
+      break;
+    case "plaid_link_start":
+      requireUnlocked();
+      mockPlaidLink = {
+        state: "waiting",
+        message: "Complete the Plaid Sandbox flow in your browser.",
+        connectionId: null,
+        expiresAt: "2026-10-24T00:30:00Z",
+      };
+      mockPlaidConnection = {
+        id: "mock-plaid-connection",
+        provider: "plaid",
+        environment: "sandbox",
+        institutionName: "Sandbox Bank",
+        status: "healthy",
+        lastAttemptAt: "2026-10-24T00:00:00Z",
+        lastSuccessAt: "2026-10-24T00:00:00Z",
+        sanitizedError: null,
+        hasCursor: true,
+        accountCount: 1,
+      };
+      data = { link: structuredClone(mockPlaidLink) };
+      break;
+    case "plaid_link_status":
+      requireUnlocked();
+      if (mockPlaidLink.state === "waiting") {
+        mockPlaidLink = {
+          ...mockPlaidLink,
+          state: "linked",
+          message: mockPlaidLink.connectionId
+            ? "Sandbox Item reconnected. Syncing again."
+            : "Sandbox Item linked. Syncing transactions and balances.",
+          connectionId: mockPlaidLink.connectionId ?? "mock-plaid-connection",
+        };
+      }
+      data = { link: structuredClone(mockPlaidLink) };
+      break;
+    case "plaid_link_cancel":
+      requireUnlocked();
+      mockPlaidLink = {
+        state: "cancelled",
+        message: "Plaid link cancelled.",
+        connectionId: null,
+        expiresAt: null,
+      };
+      data = { link: structuredClone(mockPlaidLink) };
+      break;
+    case "plaid_reconnect":
+      requireUnlocked();
+      mockPlaidLink = {
+        state: "waiting",
+        message: "Reconnect the Sandbox Item in your browser.",
+        connectionId: (payload as { connectionId: string }).connectionId,
+        expiresAt: "2026-10-24T00:30:00Z",
+      };
+      data = { link: structuredClone(mockPlaidLink) };
+      break;
     case "sync_status":
       requireUnlocked();
       data = {
-        connections: [],
+        connections: mockPlaidConnection ? [structuredClone(mockPlaidConnection)] : [],
         recentRuns: structuredClone(mockSyncRuns),
         runtime: {
           running: false,

@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { command, type SyncStatus } from "../../lib/bridge";
+import {
+  command,
+  type PlaidLinkStatus,
+  type PlaidStatus,
+  type SyncStatus,
+} from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 
@@ -11,6 +16,8 @@ export function ConnectionsSyncPanel({
   readOnly: boolean;
 }) {
   const [status, setStatus] = useState<SyncStatus | null>(null);
+  const [plaid, setPlaid] = useState<PlaidStatus | null>(null);
+  const [link, setLink] = useState<PlaidLinkStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -25,8 +32,102 @@ export function ConnectionsSyncPanel({
 
   useEffect(() => {
     void load();
+    if (!readOnly) {
+      void (async () => {
+        try {
+          const result = await command("plaid_status", {});
+          setPlaid(result.plaid);
+        } catch (caught) {
+          setError(friendlyError(caught));
+        }
+      })();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [readOnly]);
+
+  useEffect(() => {
+    if (readOnly || !link || (link.state !== "waiting" && link.state !== "starting")) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void (async () => {
+        try {
+          const result = await command("plaid_link_status", {});
+          setLink(result.link);
+          if (result.link.state === "linked") {
+            setPlaid((current) => (current ? { ...current, configured: true } : current));
+            await load();
+            onSyncFinished();
+          } else if (result.link.state === "error" || result.link.state === "expired") {
+            setError(result.link.message ?? "Plaid link failed.");
+          }
+        } catch (caught) {
+          setError(friendlyError(caught));
+        }
+      })();
+    }, 2000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [link?.state, readOnly]);
+
+  async function configurePlaid() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await command("plaid_setup", {});
+      setPlaid(result.plaid);
+      setMessage("Sandbox credentials saved to the macOS Keychain.");
+      await load();
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function startLink() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await command("plaid_link_start", {});
+      setLink(result.link);
+      if (result.link.message) setMessage(result.link.message);
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reconnect(connectionId: string) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await command("plaid_reconnect", { connectionId });
+      setLink(result.link);
+      setMessage(result.link.message ?? "Reconnect the Sandbox Item in your browser.");
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelLink() {
+    setBusy(true);
+    try {
+      const result = await command("plaid_link_cancel", {});
+      setLink(result.link);
+      setMessage("Plaid link cancelled.");
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function runSync() {
     setBusy(true);
@@ -70,9 +171,8 @@ export function ConnectionsSyncPanel({
     <section className="panel panel-wide" aria-labelledby="connections-title">
       <h2 id="connections-title">Connections &amp; sync</h2>
       <p className="inline-notice" role="note">
-        Live Plaid linking is unavailable in this build: no owner Plaid credentials or authorized
-        Item were available. The offline, CSV, and demo workflows remain fully usable. See
-        docs/plaid-feasibility.md for the concrete blocker and verification requirements.
+        Plaid is Sandbox-only in this build. Live bank coverage is not claimed until a Sandbox Item
+        is linked and synced successfully. The offline, CSV, and demo workflows remain fully usable.
       </p>
       <p className="fine-print">
         Sync runs in Rust after unlock, advances each connection's cursor only after the page is
@@ -90,6 +190,51 @@ export function ConnectionsSyncPanel({
         <p className="inline-notice" role="status">
           {message}
         </p>
+      ) : null}
+
+      {!readOnly ? (
+        <div className="plaid-setup">
+          <h3>Plaid Sandbox</h3>
+          <p className="fine-print">
+            Client ID and Sandbox secret are entered in a native sheet and stored only in the macOS
+            Keychain. The renderer never receives them. This build permits Sandbox only; Production
+            linking stays disabled until Sandbox is verified.
+          </p>
+          <div className="button-row">
+            <Button variant="secondary" onClick={configurePlaid} disabled={busy}>
+              {plaid?.configured ? "Replace Sandbox credentials…" : "Add Sandbox credentials…"}
+            </Button>
+            {plaid?.configured ? (
+              <Button
+                variant="primary"
+                onClick={startLink}
+                disabled={busy || (link !== null && (link.state === "waiting" || link.state === "starting"))}
+              >
+                Link a Sandbox institution…
+              </Button>
+            ) : null}
+            {link?.state === "waiting" || link?.state === "starting" ? (
+              <Button variant="ghost" onClick={cancelLink} disabled={busy}>
+                Cancel link
+              </Button>
+            ) : null}
+          </div>
+          {link?.state === "waiting" ? (
+            <p className="inline-notice" role="status">
+              Waiting for the Plaid Sandbox flow in your browser… This window will update when the
+              Item is added.
+            </p>
+          ) : null}
+          {link?.state === "linked" ? (
+            <p className="inline-notice" role="status">
+              {link.message ?? "Linked. Connection ID is held locally; no token is shown."}
+            </p>
+          ) : null}
+          <p className="fine-print">
+            Capabilities requested: Transactions (required), Balance, and optional Liabilities.
+            Liabilities is shown as unavailable rather than assumed when the Item or plan lacks it.
+          </p>
+        </div>
       ) : null}
 
       <div className="button-row">
@@ -120,6 +265,7 @@ export function ConnectionsSyncPanel({
               <th scope="col">Status</th>
               <th scope="col">Last success</th>
               <th scope="col">Accounts</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -143,6 +289,20 @@ export function ConnectionsSyncPanel({
                 </td>
                 <td>{connection.lastSuccessAt ? connection.lastSuccessAt.slice(0, 10) : "Never"}</td>
                 <td>{connection.accountCount}</td>
+                <td>
+                  {connection.provider === "plaid" && connection.status !== "healthy" ? (
+                    <Button
+                      variant="ghost"
+                      className="btn-small"
+                      onClick={() => void reconnect(connection.id)}
+                      disabled={busy}
+                    >
+                      Reconnect…
+                    </Button>
+                  ) : (
+                    <span className="fine-print">—</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

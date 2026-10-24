@@ -18,7 +18,7 @@ pub enum SecurePurpose {
     ChangeNew,
     RestoreBackup,
     ExportPassword,
-    PlaidClientSecret,
+    PlaidSetup,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -74,11 +74,11 @@ fn spec(purpose: SecurePurpose) -> PromptSpec {
             action: "Export",
             cancel: "Cancel",
         },
-        SecurePurpose::PlaidClientSecret => PromptSpec {
-            title: "Plaid client secret",
-            message: "Enter the Plaid client secret. It is stored only in the macOS Keychain, never in the ledger or an export.",
-            labels: &["Client secret"],
-            action: "Save",
+        SecurePurpose::PlaidSetup => PromptSpec {
+            title: "Plaid Sandbox credentials",
+            message: "Enter the Plaid client ID and Sandbox secret. They are stored only in the macOS Keychain (WhenUnlockedThisDeviceOnly, not synchronized), never in the ledger, logs, renderer, or exports. Use Sandbox credentials only for this phase.",
+            labels: &["Client ID", "Sandbox secret"],
+            action: "Save credentials",
             cancel: "Cancel",
         },
     }
@@ -269,7 +269,7 @@ mod tests {
             SecurePurpose::ChangeNew,
             SecurePurpose::RestoreBackup,
             SecurePurpose::ExportPassword,
-            SecurePurpose::PlaidClientSecret,
+            SecurePurpose::PlaidSetup,
         ] {
             let spec = spec(purpose);
             assert!(!spec.title.is_empty());

@@ -18,6 +18,7 @@ use crate::services::exports::ExportResult;
 use crate::services::imports::{self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview};
 use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
 use crate::services::dashboard::{self, Dashboard};
+use crate::services::plaid_link::{self, PlaidLinkStatus, PlaidStatus};
 use crate::services::sync::{self, ConnectionView, SyncRunView, SyncRuntimeStatus, SyncSummary};
 use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
@@ -107,6 +108,18 @@ struct BatchListPayload {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ExportPayload {
     query: LedgerQuery,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlaidStatusView {
+    plaid: PlaidStatus,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlaidLinkView {
+    link: PlaidLinkStatus,
 }
 
 #[derive(Debug, Serialize)]
@@ -712,6 +725,59 @@ pub fn execute<R: tauri::Runtime>(
             let _: EmptyPayload = request.decode_payload()?;
             let view = backups::crypto_erase(state, app)?;
             GatewayResponse::ok(view)
+        }
+        "plaid_status" => {
+            state.require_real("configure Plaid in demo mode")?;
+            let _: EmptyPayload = request.decode_payload()?;
+            state.with_db(|_conn, _header, _settings| Ok(()))?;
+            let plaid = plaid_link::status(state)?;
+            GatewayResponse::ok(PlaidStatusView { plaid })
+        }
+        "plaid_setup" => {
+            state.require_real("configure Plaid in demo mode")?;
+            state.rate_limit("plaid_setup", 3, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            state.with_db(|_conn, _header, _settings| Ok(()))?;
+            let Some(mut values) = crate::security::secure_input::ask(
+                app,
+                crate::security::secure_input::SecurePurpose::PlaidSetup,
+            )?
+            else {
+                return Err(AppError::Cancelled);
+            };
+            if values.len() != 2 {
+                return Err(AppError::NativeInput);
+            }
+            let secret = values.pop().ok_or(AppError::NativeInput)?;
+            let client_id = values.pop().ok_or(AppError::NativeInput)?;
+            let plaid = plaid_link::save_credentials(state, client_id, secret)?;
+            GatewayResponse::ok(PlaidStatusView { plaid })
+        }
+        "plaid_link_start" => {
+            state.require_real("link Plaid in demo mode")?;
+            state.rate_limit("plaid_link_start", 3, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let link = plaid_link::start_link(state, app)?;
+            GatewayResponse::ok(PlaidLinkView { link })
+        }
+        "plaid_link_status" => {
+            state.require_real("link Plaid in demo mode")?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let link = plaid_link::get_status(state)?;
+            GatewayResponse::ok(PlaidLinkView { link })
+        }
+        "plaid_reconnect" => {
+            state.require_real("reconnect Plaid in demo mode")?;
+            state.rate_limit("plaid_reconnect", 3, 60)?;
+            let payload: ConnectionIdPayload = request.decode_payload()?;
+            let link = plaid_link::start_reconnect(state, app, &payload.connection_id)?;
+            GatewayResponse::ok(PlaidLinkView { link })
+        }
+        "plaid_link_cancel" => {
+            state.require_real("link Plaid in demo mode")?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let link = plaid_link::cancel(state)?;
+            GatewayResponse::ok(PlaidLinkView { link })
         }
         "sync_status" => {
             let _: EmptyPayload = request.decode_payload()?;

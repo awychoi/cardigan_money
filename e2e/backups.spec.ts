@@ -70,3 +70,15 @@ test("demo theme toggle applies immediately without a vault-locked warning", asy
   await expect(page.getByText(/vault is locked/i)).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });
+
+test("configures Sandbox credentials and links a mock Plaid Item", async ({ page }) => {
+  await openUnlocked(page);
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Plaid Sandbox" })).toBeVisible();
+  await page.getByRole("button", { name: /Add Sandbox credentials/ }).click();
+  await expect(page.getByText(/Sandbox credentials saved/)).toBeVisible();
+  await page.getByRole("button", { name: "Link a Sandbox institution…" }).click();
+  await expect(page.getByText(/Waiting for the Plaid Sandbox flow/)).toBeVisible();
+  await expect(page.getByText(/Sandbox Item linked/)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole("cell", { name: "Sandbox Bank" })).toBeVisible();
+});

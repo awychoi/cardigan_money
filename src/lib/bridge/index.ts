@@ -104,5 +104,7 @@ export type {
   SyncRunView,
   SyncStatus,
   SyncSummary,
+  PlaidStatus,
+  PlaidLinkStatus,
 } from "./contract";
 export const _internals = { z } as const;

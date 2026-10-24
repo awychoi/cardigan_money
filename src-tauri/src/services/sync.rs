@@ -11,6 +11,9 @@ use crate::domain::dates::{choose_reporting_date, format_date, parse_date, DateS
 use crate::domain::text::{clean_text, normalize_merchant, MAX_CATEGORY_CHARS, MAX_DESCRIPTION_CHARS};
 use crate::error::{AppError, AppResult};
 use crate::providers::mock::MockProvider;
+use crate::providers::plaid::{
+    load_access_token, load_sandbox_credentials, PlaidClient, PlaidProvider,
+};
 use crate::providers::{
     Capability, ProviderAccount, ProviderBalance, ProviderClient, ProviderErrorKind,
     ProviderLiability, ProviderTransaction,
@@ -230,18 +233,42 @@ fn load_connections(conn: &Connection) -> AppResult<Vec<ConnectionRow>> {
     Ok(rows)
 }
 
-fn provider_for(connection: &ConnectionRow) -> AppResult<Box<dyn ProviderClient>> {
+fn provider_for(state: &AppState, connection: &ConnectionRow) -> AppResult<Box<dyn ProviderClient>> {
     match connection.provider.as_str() {
         "mock" => Ok(Box::new(MockProvider::default())),
-        "plaid" => Err(AppError::Blocked("live Plaid adapter is not configured")),
+        "plaid" => {
+            if connection.environment != "sandbox" {
+                return Err(AppError::Blocked("Production Plaid is disabled until Sandbox verification"));
+            }
+            let credentials = load_sandbox_credentials(state.credentials.as_ref())?
+                .ok_or(AppError::ProviderNotConfigured)?;
+            let token = load_access_token(state.credentials.as_ref(), &connection.credential_ref)?
+                .ok_or(AppError::ProviderNotConfigured)?;
+            let client = PlaidClient::new(credentials, Some(token))
+                .map_err(|_| AppError::ProviderNotConfigured)?;
+            Ok(Box::new(PlaidProvider::new(client)))
+        }
         _ => Err(AppError::Blocked("unsupported provider")),
     }
 }
 
 fn sync_connection(state: &AppState, connection: &ConnectionRow, trigger: &str) -> AppResult<ConnectionSyncResult> {
-    let client = provider_for(connection)?;
+    let client = provider_for(state, connection)?;
     let result = sync_connection_with_client(state, connection, client.as_ref(), trigger);
     result
+}
+
+pub fn sync_connection_now(
+    state: &AppState,
+    connection_id: &str,
+    trigger: &str,
+) -> AppResult<ConnectionSyncResult> {
+    let _guard = state
+        .sync_gate
+        .try_lock()
+        .map_err(|_| AppError::Blocked("a sync is already running"))?;
+    let connection = connection_by_id(state, connection_id)?;
+    sync_connection(state, &connection, trigger)
 }
 
 struct RunTracker {
@@ -345,15 +372,20 @@ fn ensure_accounts(
             } else {
                 None
             };
+            let account_type = match account.account_type.as_str() {
+                "credit_card" | "charge_card" | "line_of_credit" => account.account_type.as_str(),
+                _ => "other",
+            };
             conn.execute(
                 "INSERT INTO accounts (id, issuer, display_name, last_four, account_type, currency, \
                     credit_limit_minor, include_in_overview, archived, source_kind, created_at, updated_at) \
-                 VALUES (?1, ?2, ?3, ?4, 'credit_card', ?5, NULL, 1, 0, 'provider', ?6, ?6)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, 1, 0, 'provider', ?7, ?7)",
                 rusqlite::params![
                     id,
                     issuer,
                     clean_text(&account.name, 120, false).unwrap_or_else(|_| "Provider account".into()),
                     last_four,
+                    account_type,
                     account.currency,
                     now
                 ],
@@ -390,6 +422,20 @@ fn apply_page(
     let mut modified = 0;
     let mut removed = 0;
     for change in changes {
+        if change.removed {
+            if let Ok(id) = tx.query_row(
+                "SELECT id FROM transactions WHERE provider_transaction_id = ?1 AND removed = 0",
+                [&change.provider_transaction_id],
+                |row| row.get::<_, String>(0),
+            ) {
+                tx.execute(
+                    "UPDATE transactions SET removed = 1, updated_at = ?2 WHERE id = ?1",
+                    rusqlite::params![id, now],
+                )?;
+                removed += 1;
+            }
+            continue;
+        }
         let Some(account_id) = accounts.get(&change.provider_account_id) else {
             continue;
         };
@@ -400,16 +446,6 @@ fn apply_page(
                 |row| row.get(0),
             )
             .ok();
-        if change.removed {
-            if let Some(id) = existing {
-                tx.execute(
-                    "UPDATE transactions SET removed = 1, updated_at = ?2 WHERE id = ?1",
-                    rusqlite::params![id, now],
-                )?;
-                removed += 1;
-            }
-            continue;
-        }
         let authorized = change.authorized_date.as_deref().and_then(|v| parse_date(v).ok());
         let posted = change.posted_date.as_deref().and_then(|v| parse_date(v).ok());
         let (reporting, source) = choose_reporting_date(authorized, posted, None)
@@ -542,6 +578,12 @@ fn apply_balances(
         let Some(account_id) = accounts.get(&balance.provider_account_id) else {
             continue;
         };
+        if let Some(limit) = balance.credit_limit_minor {
+            conn.execute(
+                "UPDATE accounts SET credit_limit_minor = ?2, updated_at = ?3 WHERE id = ?1",
+                rusqlite::params![account_id, limit, now],
+            )?;
+        }
         conn.execute(
             "INSERT INTO balance_snapshots (id, account_id, current_balance_minor, available_credit_minor, \
                 credit_limit_minor, currency, retrieved_at, provider_as_of, provenance, source_connection_id) \
@@ -913,11 +955,27 @@ pub fn connection_by_id(state: &AppState, id: &str) -> AppResult<ConnectionRow> 
 }
 
 pub fn disconnect(state: &AppState, connection_id: &str) -> AppResult<()> {
+    let connection = connection_by_id(state, connection_id)?;
+    if connection.provider == "plaid" {
+        if let Ok(client) = provider_for(state, &connection) {
+            // Best-effort remote revoke; local disconnect always proceeds.
+            let _ = client.revoke();
+        }
+        let _ = state.credentials.delete(&crate::providers::plaid::access_token_account(
+            &connection.credential_ref,
+        ));
+    }
     state.with_db(|conn, _h, _s| {
         conn.execute(
             "UPDATE connections SET status = 'disconnected', cursor = NULL, updated_at = ?2 WHERE id = ?1",
             rusqlite::params![connection_id, now_rfc3339()],
         )?;
+        let _ = record_event(
+            conn,
+            "credential_removed",
+            "success",
+            Some(serde_json::json!({ "provider": connection.provider })),
+        );
         Ok(())
     })
 }

@@ -687,6 +687,26 @@ export type SyncRuntime = z.infer<typeof zSyncRuntime>;
 export type SyncStatus = z.infer<typeof zSyncStatus>;
 export type SyncSummary = z.infer<typeof zSyncSummary>;
 
+
+export const zPlaidStatus = z
+  .object({
+    configured: z.boolean(),
+    environment: z.string(),
+    linkAvailable: z.boolean(),
+    message: z.string().nullable(),
+  })
+  .strict();
+export const zPlaidLinkStatus = z
+  .object({
+    state: z.string(),
+    message: z.string().nullable(),
+    connectionId: z.string().nullable(),
+    expiresAt: z.string().nullable(),
+  })
+  .strict();
+export type PlaidStatus = z.infer<typeof zPlaidStatus>;
+export type PlaidLinkStatus = z.infer<typeof zPlaidLinkStatus>;
+
 export type Settings = z.infer<typeof zSettings>;
 export type SettingsPatch = z.infer<typeof zSettingsPatch>;
 export type SecuritySummary = z.infer<typeof zSecuritySummary>;
@@ -774,6 +794,15 @@ export interface CommandDefs {
     request: { connectionId: string };
     response: { deleted: boolean };
   };
+  plaid_status: { request: Record<string, never>; response: { plaid: PlaidStatus } };
+  plaid_setup: { request: Record<string, never>; response: { plaid: PlaidStatus } };
+  plaid_link_start: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
+  plaid_link_status: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
+  plaid_link_cancel: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
+  plaid_reconnect: {
+    request: { connectionId: string };
+    response: { link: PlaidLinkStatus };
+  };
 }
 
 export type CommandName = keyof CommandDefs;
@@ -843,6 +872,12 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   sync_now: zEmpty,
   sync_runs_list: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
   connection_disconnect: z.object({ connectionId: z.string().min(1).max(64) }).strict(),
+  plaid_status: zEmpty,
+  plaid_setup: zEmpty,
+  plaid_link_start: zEmpty,
+  plaid_link_status: zEmpty,
+  plaid_link_cancel: zEmpty,
+  plaid_reconnect: z.object({ connectionId: z.string().min(1).max(64) }).strict(),
 };
 
 export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["response"]> } = {
@@ -894,6 +929,12 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   sync_now: zSyncSummary,
   sync_runs_list: z.object({ runs: z.array(zSyncRunView) }).strict(),
   connection_disconnect: z.object({ deleted: z.boolean() }).strict(),
+  plaid_status: z.object({ plaid: zPlaidStatus }).strict(),
+  plaid_setup: z.object({ plaid: zPlaidStatus }).strict(),
+  plaid_link_start: z.object({ link: zPlaidLinkStatus }).strict(),
+  plaid_link_status: z.object({ link: zPlaidLinkStatus }).strict(),
+  plaid_link_cancel: z.object({ link: zPlaidLinkStatus }).strict(),
+  plaid_reconnect: z.object({ link: zPlaidLinkStatus }).strict(),
 };
 
 export const zGatewayEnvelope = z

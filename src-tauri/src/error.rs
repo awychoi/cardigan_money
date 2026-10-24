@@ -48,6 +48,10 @@ pub enum AppError {
     NativeInput,
     #[error("credential store failed")]
     Keychain,
+    #[error("provider is not configured")]
+    ProviderNotConfigured,
+    #[error("provider error: {0}")]
+    Provider(&'static str),
     #[error("too many attempts")]
     RateLimited,
     #[error("schema version is newer than this build")]
@@ -79,6 +83,11 @@ impl AppError {
             AppError::Blocked(_) => "blocked",
             AppError::NativeInput => "native_input_failed",
             AppError::Keychain => "keychain_error",
+            AppError::ProviderNotConfigured => "provider_not_configured",
+            AppError::Provider(message) => {
+                let _ = message;
+                "provider_error"
+            }
             AppError::RateLimited => "rate_limited",
             AppError::SchemaTooNew => "schema_too_new",
             AppError::Internal => "internal_error",
@@ -97,6 +106,8 @@ impl AppError {
             AppError::PermissionDenied(_) => "A local file or folder has unsafe permissions.".into(),
             AppError::InvalidInput(_) => "One or more values were invalid.".into(),
             AppError::Blocked(m) => format!("This action is unavailable: {m}"),
+            AppError::ProviderNotConfigured => "No provider credentials are configured. Add Sandbox credentials in Settings first.".into(),
+            AppError::Provider(message) => message.to_string(),
             AppError::SchemaTooNew => "This ledger was created by a newer app version. Update the app before opening it.".into(),
             other => other.to_string(),
         }
