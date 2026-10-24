@@ -796,6 +796,7 @@ export interface CommandDefs {
   };
   plaid_status: { request: Record<string, never>; response: { plaid: PlaidStatus } };
   plaid_setup: { request: Record<string, never>; response: { plaid: PlaidStatus } };
+  plaid_test: { request: Record<string, never>; response: { plaid: PlaidStatus } };
   plaid_link_start: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
   plaid_link_status: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
   plaid_link_cancel: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
@@ -874,6 +875,7 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   connection_disconnect: z.object({ connectionId: z.string().min(1).max(64) }).strict(),
   plaid_status: zEmpty,
   plaid_setup: zEmpty,
+  plaid_test: zEmpty,
   plaid_link_start: zEmpty,
   plaid_link_status: zEmpty,
   plaid_link_cancel: zEmpty,
@@ -931,6 +933,7 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   connection_disconnect: z.object({ deleted: z.boolean() }).strict(),
   plaid_status: z.object({ plaid: zPlaidStatus }).strict(),
   plaid_setup: z.object({ plaid: zPlaidStatus }).strict(),
+  plaid_test: z.object({ plaid: zPlaidStatus }).strict(),
   plaid_link_start: z.object({ link: zPlaidLinkStatus }).strict(),
   plaid_link_status: z.object({ link: zPlaidLinkStatus }).strict(),
   plaid_link_cancel: z.object({ link: zPlaidLinkStatus }).strict(),

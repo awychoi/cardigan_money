@@ -445,6 +445,18 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         },
       };
       break;
+    case "plaid_test":
+      requireUnlocked();
+      if (!mockPlaidConfigured) throw new BridgeError("provider_not_configured", "No provider credentials.");
+      data = {
+        plaid: {
+          configured: true,
+          environment: "sandbox",
+          linkAvailable: true,
+          message: "Sandbox credentials are stored in the macOS Keychain.",
+        },
+      };
+      break;
     case "plaid_link_start":
       requireUnlocked();
       mockPlaidLink = {

@@ -247,7 +247,7 @@ fn poll_link<R: tauri::Runtime>(
         }
         if let Some(connection_id) = reconnect_connection_id.as_deref() {
             if response.session_finished() {
-                finish_reconnect(&app, connection_id);
+                finish_reconnect(&app, &client, connection_id);
                 return;
             }
             continue;
@@ -418,8 +418,23 @@ pub fn start_reconnect<R: tauri::Runtime>(
     link_status(state)
 }
 
-fn finish_reconnect<R: tauri::Runtime>(app: &tauri::AppHandle<R>, connection_id: &str) {
+fn finish_reconnect<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    client: &PlaidClient,
+    connection_id: &str,
+) {
     let Some(state) = app.try_state::<AppState>() else { return };
+    // Update mode has no new public token; verify the existing access token
+    // actually works before declaring the connection healthy.
+    if let Err(error) = client.accounts() {
+        set_status(
+            &state,
+            "error",
+            Some(error.safe_message.into()),
+            Some(connection_id.to_string()),
+        );
+        return;
+    }
     let now = now_rfc3339();
     let updated = state.with_db(|conn, _h, _s| {
         conn.execute(
@@ -450,6 +465,17 @@ pub fn cancel(state: &AppState) -> AppResult<PlaidLinkStatus> {
     drop(runtime);
     set_status(state, "cancelled", Some("Plaid link cancelled.".into()), None);
     link_status(state)
+}
+
+pub fn test_credentials(state: &AppState) -> AppResult<PlaidStatus> {
+    state.require_real("test Plaid credentials in demo mode")?;
+    let credentials = load_sandbox_credentials(state.credentials.as_ref())?
+        .ok_or(AppError::ProviderNotConfigured)?;
+    let client = PlaidClient::new(credentials, None).map_err(|_| AppError::ProviderNotConfigured)?;
+    client
+        .create_hosted_link_token("cardigan-money-credential-test")
+        .map_err(provider_app_error)?;
+    status(state)
 }
 
 pub fn get_status(state: &AppState) -> AppResult<PlaidLinkStatus> {

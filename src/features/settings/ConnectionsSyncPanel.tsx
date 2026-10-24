@@ -86,6 +86,20 @@ export function ConnectionsSyncPanel({
     }
   }
 
+  async function testCredentials() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await command("plaid_test", {});
+      setMessage("Plaid accepted the Sandbox credentials.");
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function startLink() {
     setBusy(true);
     setError(null);
@@ -206,6 +220,11 @@ export function ConnectionsSyncPanel({
             <Button variant="secondary" onClick={configurePlaid} disabled={busy}>
               {plaid?.configured ? "Replace Sandbox credentials…" : "Add Sandbox credentials…"}
             </Button>
+            {plaid?.configured ? (
+              <Button variant="ghost" onClick={testCredentials} disabled={busy}>
+                Test credentials
+              </Button>
+            ) : null}
             {plaid?.configured ? (
               <Button
                 variant="primary"

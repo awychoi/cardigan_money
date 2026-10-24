@@ -753,6 +753,13 @@ pub fn execute<R: tauri::Runtime>(
             let plaid = plaid_link::save_credentials(state, client_id, secret)?;
             GatewayResponse::ok(PlaidStatusView { plaid })
         }
+        "plaid_test" => {
+            state.require_real("configure Plaid in demo mode")?;
+            state.rate_limit("plaid_test", 3, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let plaid = plaid_link::test_credentials(state)?;
+            GatewayResponse::ok(PlaidStatusView { plaid })
+        }
         "plaid_link_start" => {
             state.require_real("link Plaid in demo mode")?;
             state.rate_limit("plaid_link_start", 3, 60)?;

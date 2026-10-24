@@ -56,6 +56,7 @@ impl NetworkPolicy {
             .redirect(Policy::none())
             .connect_timeout(CONNECT_TIMEOUT)
             .timeout(TOTAL_TIMEOUT)
+            .no_proxy()
             .user_agent("cardigan_money/0.1 (local desktop app)")
             .build()
             .map_err(|_| AppError::Internal)
