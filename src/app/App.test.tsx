@@ -96,15 +96,18 @@ describe("app shell", () => {
     await user.click(screen.getByRole("button", { name: "Finish setup" }));
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Settings" }));
+    await user.click(screen.getByRole("button", { name: "Accounts" }));
     expect((await screen.findAllByText("Wizard Card", { exact: true })).length).toBeGreaterThan(0);
   });
 
   it("shows real cipher, KDF, and security events in settings", async () => {
     const user = await unlock();
     await user.click(screen.getByRole("button", { name: "Settings" }));
+    await user.click(screen.getByRole("button", { name: "About" }));
     expect(await screen.findByText("SQLCipher")).toBeInTheDocument();
     expect(screen.getAllByText(/4\.6\.1 community/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Argon2id/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Security events" }));
     expect((await screen.findAllByText(/unlock success/i)).length).toBeGreaterThan(0);
     expect(document.querySelector("input[type='password']")).toBeNull();
     expect(document.body.textContent ?? "").not.toContain("correct horse");

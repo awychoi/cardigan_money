@@ -98,6 +98,7 @@ This plan maps the specification's required tests (§16) to commands and phases.
 | Financial/domain | `src-tauri/src/domain/*` unit tests; `tests/ledger.rs`, `tests/domain_fixtures.rs`, `tests/properties.rs` |
 | History/trend | `tests/ledger.rs` (`spend_history`), `src/mocks/data.test.ts`, `src/lib/bridge/bridge.test.ts` |
 | Ledger presentation | `src/features/dashboard/ledgerPresentation.test.ts`, `e2e/dashboard.spec.ts` |
+| Settings sections | `e2e/settings.spec.ts`, `e2e/helpers.ts` (`openSettingsSection`) |
 | Vault/encryption | `src-tauri/tests/vault_cipher.rs`, `tests/vault_flow.rs`, `tests/backups.rs` |
 | Database/sync | `tests/sync.rs`, `tests/vault_flow.rs` (migrations), `tests/demo.rs` |
 | Import | `tests/imports.rs` |

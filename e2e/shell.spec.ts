@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openLocked, openUnlocked } from "./helpers";
+import { openLocked, openSettingsSection, openUnlocked } from "./helpers";
 
 test.describe("secure shell (browser mock)", () => {
   test("starts locked with no password input", async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe("secure shell (browser mock)", () => {
       "aria-pressed",
       "true",
     );
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "About");
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await expect(page.getByText(/4\.6\.1 community/).first()).toBeVisible();
     await expect(page.getByText(/Argon2id/)).toBeVisible();
@@ -96,14 +96,14 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByRole("button", { name: "Continue without a provider" }).click();
     await page.getByRole("button", { name: "Finish setup" }).click();
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Accounts");
     await expect(page.getByRole("cell", { name: "Wizard Card", exact: true })).toBeVisible();
     await expect(page.getByText("Chase").first()).toBeVisible();
   });
 
   test("manages accounts in settings and archives reversibly", async ({ page }) => {
     await openUnlocked(page);
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Accounts");
     await page.getByRole("button", { name: "Add account" }).click();
     await page.getByLabel("Issuer").fill("Bilt");
     await page.getByLabel("Display name").fill("Local Test Card");
@@ -127,11 +127,11 @@ test.describe("secure shell (browser mock)", () => {
 
   test("persists the window close behavior setting", async ({ page }) => {
     await openUnlocked(page);
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Lock & idle");
     await page.getByLabel("When the window closes").selectOption("hide");
     await expect(page.getByText("Saved.")).toBeVisible();
     await page.getByRole("button", { name: "Overview" }).click();
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Lock & idle");
     await expect(page.getByLabel("When the window closes")).toHaveValue("hide");
   });
 

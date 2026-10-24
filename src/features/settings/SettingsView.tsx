@@ -17,6 +17,17 @@ import { ImportExportPanel } from "./ImportExportPanel";
 import { BackupsPanel } from "./BackupsPanel";
 import { ConnectionsSyncPanel } from "./ConnectionsSyncPanel";
 
+type SectionId =
+  | "appearance"
+  | "lock"
+  | "accounts"
+  | "connections"
+  | "backups"
+  | "rules"
+  | "import"
+  | "events"
+  | "about";
+
 export function SettingsView({
   vault,
   onSettingsChanged,
@@ -47,6 +58,7 @@ export function SettingsView({
   const [timezone, setTimezone] = useState(settings?.timezone ?? "America/New_York");
   const [autoLock, setAutoLock] = useState(settings?.autoLockMinutes ?? 15);
   const [busy, setBusy] = useState(false);
+  const [section, setSection] = useState<SectionId>("appearance");
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +124,23 @@ export function SettingsView({
     }
   }
 
+  const sections: Array<{ id: SectionId; label: string }> = [
+    { id: "appearance", label: "Appearance" },
+    { id: "lock", label: "Lock & idle" },
+    { id: "accounts", label: "Accounts" },
+    ...(demo
+      ? []
+      : ([
+          { id: "connections", label: "Connections & sync" },
+          { id: "backups", label: "Backups & recovery" },
+          { id: "rules", label: "Merchant rules" },
+          { id: "import", label: "Import & export" },
+        ] as const)),
+    { id: "events", label: "Security events" },
+    { id: "about", label: "About" },
+  ];
+  const active = sections.some((item) => item.id === section) ? section : "appearance";
+
   return (
     <section className="settings" aria-labelledby="settings-title">
       <header className="page-heading">
@@ -135,279 +164,317 @@ export function SettingsView({
         </p>
       ) : null}
 
-      <div className="settings-grid">
-        <section className="panel panel-wide" aria-labelledby="appearance-title">
-          <h2 id="appearance-title">Appearance</h2>
-          <div className="setting-row">
-            <div>
-              <div className="setting-label">Mode</div>
-              <p className="fine-print">
-                Follow the system or pin light or dark. Every theme provides both modes.
-              </p>
-            </div>
-            <div className="mode-seg" role="group" aria-label="Appearance mode">
-              {(["light", "system", "dark"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={settings.theme === mode}
-                  onClick={() => void update({ theme: mode })}
+      <div className="settings-layout">
+        <nav className="settings-nav" aria-label="Settings sections">
+          {sections.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`settings-nav-item${
+                active === item.id ? " settings-nav-item-active" : ""
+              }`}
+              aria-current={active === item.id ? "page" : undefined}
+              onClick={() => setSection(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="settings-section">
+          {active === "appearance" ? (
+            <section className="panel panel-wide" aria-labelledby="appearance-title">
+              <h2 id="appearance-title">Appearance</h2>
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Mode</div>
+                  <p className="fine-print">
+                    Follow the system or pin light or dark. Every theme provides both modes.
+                  </p>
+                </div>
+                <div className="mode-seg" role="group" aria-label="Appearance mode">
+                  {(["light", "system", "dark"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      aria-pressed={settings.theme === mode}
+                      onClick={() => void update({ theme: mode })}
+                    >
+                      {mode === "light" ? "Light" : mode === "dark" ? "Dark" : "System"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="hr" />
+              <ThemePicker
+                value={settings.themeId}
+                mode={previewMode}
+                onChange={(themeId) => void update({ themeId })}
+              />
+            </section>
+          ) : null}
+
+          {active === "lock" ? (
+            <section className="panel panel-wide" aria-labelledby="lock-title">
+              <h2 id="lock-title">Lock &amp; idle</h2>
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Idle auto-lock</div>
+                  <p className="fine-print">
+                    The vault locks in Rust after this much system-wide inactivity. Screen lock and
+                    sleep always lock.
+                  </p>
+                </div>
+                <select
+                  aria-label="Idle auto-lock minutes"
+                  value={autoLock}
+                  onChange={(event) => setAutoLock(Number(event.target.value))}
+                  disabled={busy}
                 >
-                  {mode === "light" ? "Light" : mode === "dark" ? "Dark" : "System"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="hr" />
-          <ThemePicker
-            value={settings.themeId}
-            mode={previewMode}
-            onChange={(themeId) => void update({ themeId })}
-          />
-        </section>
+                  {[1, 5, 15, 30, 60, 120, 240].map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {minutes} min
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="setting-row">
+                <Button
+                  variant="secondary"
+                  disabled={busy || autoLock === settings.autoLockMinutes}
+                  onClick={() => update({ autoLockMinutes: autoLock })}
+                >
+                  Apply timeout
+                </Button>
+              </div>
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Lock on system events</div>
+                  <p className="fine-print">
+                    Screen lock, sleep, fast user switching, logout, and quit. Always enforced.
+                  </p>
+                </div>
+                <span className="status-pill status-ok">Enforced</span>
+              </div>
 
-        <section className="panel" aria-labelledby="lock-title">
-          <h2 id="lock-title">Locking</h2>
-          <div className="setting-row">
-            <div>
-              <div className="setting-label">Idle auto-lock</div>
+              <div className="hr" />
+              <h3 className="settings-subhead">Window close behavior</h3>
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">When the window closes</div>
+                  <p className="fine-print">
+                    Hiding is not a lock: the app and scheduler keep running, the idle timer
+                    continues, and screen lock or sleep still locks the vault.
+                  </p>
+                </div>
+                <select
+                  aria-label="When the window closes"
+                  value={settings.closeBehavior}
+                  onChange={(event) =>
+                    void update({
+                      closeBehavior: event.target.value as Settings["closeBehavior"],
+                    })
+                  }
+                  disabled={busy}
+                >
+                  <option value="unset">Ask each time</option>
+                  <option value="hide">Hide</option>
+                  <option value="quit">Quit</option>
+                </select>
+              </div>
+
+              <div className="hr" />
+              <h3 className="settings-subhead">Calendar &amp; timezone</h3>
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Reporting timezone</div>
+                  <p className="fine-print">Calendar months are evaluated in this timezone.</p>
+                </div>
+                <input
+                  aria-label="Reporting timezone"
+                  value={timezone}
+                  onChange={(event) => setTimezone(event.target.value)}
+                  spellCheck={false}
+                  disabled={busy}
+                  className="text-input"
+                />
+              </div>
+              <div className="setting-row">
+                <Button
+                  variant="secondary"
+                  disabled={busy || timezone === settings.timezone}
+                  onClick={() => update({ timezone })}
+                >
+                  Save timezone
+                </Button>
+              </div>
+
+              <div className="hr" />
+              <h3 className="settings-subhead">Passphrase</h3>
+              {!demo ? (
+                <div className="button-row">
+                  <Button variant="secondary" disabled={busy} onClick={changePassphrase}>
+                    Change passphrase…
+                  </Button>
+                </div>
+              ) : (
+                <p className="fine-print">Passphrase change is unavailable in demo mode.</p>
+              )}
               <p className="fine-print">
-                The vault locks in Rust after this much system-wide inactivity. Screen lock and
-                sleep always lock.
+                Changing the passphrase rotates the data encryption key. Older backups remain
+                readable only with the old passphrase. There is no recovery if every passphrase is
+                lost.
               </p>
-            </div>
-            <select
-              aria-label="Idle auto-lock minutes"
-              value={autoLock}
-              onChange={(event) => setAutoLock(Number(event.target.value))}
-              disabled={busy}
-            >
-              {[1, 5, 15, 30, 60, 120, 240].map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {minutes} min
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="setting-row">
-            <Button
-              variant="secondary"
-              disabled={busy || autoLock === settings.autoLockMinutes}
-              onClick={() => update({ autoLockMinutes: autoLock })}
-            >
-              Apply timeout
-            </Button>
-          </div>
-          <div className="setting-row">
-            <div>
-              <div className="setting-label">Lock on system events</div>
-              <p className="fine-print">
-                Screen lock, sleep, fast user switching, logout, and quit. Always enforced.
-              </p>
-            </div>
-            <span className="status-pill status-ok">Enforced</span>
-          </div>
-        </section>
+            </section>
+          ) : null}
 
-        <AccountManager onChanged={onAccountsChanged} readOnly={demo} />
+          {active === "accounts" ? (
+            <>
+              <AccountManager onChanged={onAccountsChanged} readOnly={demo} />
+              {!demo ? <ManualPaymentPanel onChanged={onDataChanged} /> : null}
+            </>
+          ) : null}
 
-        {!demo ? (
-          <>
+          {active === "connections" && !demo ? (
             <ConnectionsSyncPanel onSyncFinished={onDataChanged} readOnly={false} />
+          ) : null}
+
+          {active === "backups" && !demo ? (
             <BackupsPanel
               onDataChanged={onDataChanged}
               onVaultChanged={onVaultChanged}
               lastBackupAt={settings.lastBackupAt}
               lastBackupStatus={settings.lastBackupStatus}
             />
-            <ManualPaymentPanel onChanged={onDataChanged} />
-            <MerchantRulesPanel onChanged={onDataChanged} />
-            <ImportExportPanel onChanged={onDataChanged} />
-          </>
-        ) : null}
+          ) : null}
 
-        <section className="panel" aria-labelledby="close-title">
-          <h2 id="close-title">Window close behavior</h2>
-          <div className="setting-row">
-            <div>
-              <div className="setting-label">When the window closes</div>
+          {active === "rules" && !demo ? <MerchantRulesPanel onChanged={onDataChanged} /> : null}
+
+          {active === "import" && !demo ? <ImportExportPanel onChanged={onDataChanged} /> : null}
+
+          {active === "events" ? (
+            <section className="panel panel-wide" aria-labelledby="events-title">
+              <h2 id="events-title">Security events</h2>
+              {events.length === 0 ? (
+                <p className="muted">No security events recorded yet.</p>
+              ) : (
+                <table className="events-table">
+                  <caption className="sr-only">Recent security events</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Time</th>
+                      <th scope="col">Event</th>
+                      <th scope="col">Outcome</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map((event) => (
+                      <tr key={event.id}>
+                        <td>{new Date(event.createdAt).toLocaleString()}</td>
+                        <td>{event.eventType.replaceAll("_", " ")}</td>
+                        <td>
+                          <span
+                            className={`status-pill ${
+                              event.outcome === "success"
+                                ? "status-ok"
+                                : event.outcome === "failure"
+                                  ? "status-fail"
+                                  : "status-info"
+                            }`}
+                          >
+                            {event.outcome}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
               <p className="fine-print">
-                Hiding is not a lock: the app and scheduler keep running, the idle timer continues,
-                and screen lock or sleep still locks the vault.
+                Security events contain no secrets, tokens, account numbers, or financial payloads.
               </p>
-            </div>
-            <select
-              aria-label="When the window closes"
-              value={settings.closeBehavior}
-              onChange={(event) =>
-                void update({
-                  closeBehavior: event.target.value as Settings["closeBehavior"],
-                })
-              }
-              disabled={busy}
-            >
-              <option value="unset">Ask each time</option>
-              <option value="hide">Hide</option>
-              <option value="quit">Quit</option>
-            </select>
-          </div>
-        </section>
+            </section>
+          ) : null}
 
-        <section className="panel" aria-labelledby="timezone-title">
-          <h2 id="timezone-title">Calendar &amp; timezone</h2>
-          <div className="setting-row">
-            <div>
-              <div className="setting-label">Reporting timezone</div>
-              <p className="fine-print">Calendar months are evaluated in this timezone.</p>
-            </div>
-            <input
-              aria-label="Reporting timezone"
-              value={timezone}
-              onChange={(event) => setTimezone(event.target.value)}
-              spellCheck={false}
-              disabled={busy}
-              className="text-input"
-            />
-          </div>
-          <div className="setting-row">
-            <Button
-              variant="secondary"
-              disabled={busy || timezone === settings.timezone}
-              onClick={() => update({ timezone })}
-            >
-              Save timezone
-            </Button>
-          </div>
-        </section>
+          {active === "about" ? (
+            <section className="panel panel-wide" aria-labelledby="about-title">
+              <h2 id="about-title">About</h2>
+              <p className="fine-print">
+                cardigan_money is a local-first, single-user encrypted ledger. There is no server
+                component and no telemetry.
+              </p>
+              {vault.security ? (
+                <dl className="facts">
+                  <div>
+                    <dt>SQLCipher</dt>
+                    <dd>{vault.security.cipherVersion}</dd>
+                  </div>
+                  <div>
+                    <dt>Provider</dt>
+                    <dd>{vault.security.cipherProvider}</dd>
+                  </div>
+                  <div>
+                    <dt>Key derivation</dt>
+                    <dd>{vault.security.kdfSummary}</dd>
+                  </div>
+                  <div>
+                    <dt>Key generation</dt>
+                    <dd>{vault.security.generation}</dd>
+                  </div>
+                  <div>
+                    <dt>Vault ID</dt>
+                    <dd>
+                      <code>{vault.security.vaultIdPrefix}…</code>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Last integrity check</dt>
+                    <dd>{vault.security.lastIntegrityCheckAt ?? "Unknown"}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="muted">Security status is unavailable.</p>
+              )}
 
-        <section className="panel" aria-labelledby="security-title">
-          <h2 id="security-title">Security</h2>
-          {vault.security ? (
-            <dl className="facts">
-              <div>
-                <dt>SQLCipher</dt>
-                <dd>{vault.security.cipherVersion}</dd>
+              <div className="hr" />
+              <h3 className="settings-subhead">Demo mode</h3>
+              <p className="fine-print">
+                Demo mode is a separate database with synthetic cards for exploring the dashboard.
+                It cannot open the real ledger, read the Keychain, import real CSV, or create
+                backups or exports. Opening demo closes the real session; you will need your
+                passphrase again.
+              </p>
+              <div className="button-row">
+                {demo ? (
+                  <>
+                    <Button variant="secondary" onClick={() => void onResetDemo()} disabled={busy}>
+                      Reset demo data
+                    </Button>
+                    <Button variant="ghost" onClick={() => void onOpenDemo()} disabled={busy}>
+                      Reopen demo
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="secondary" onClick={() => void onOpenDemo()} disabled={busy}>
+                    Open demo (synthetic)…
+                  </Button>
+                )}
               </div>
-              <div>
-                <dt>Provider</dt>
-                <dd>{vault.security.cipherProvider}</dd>
-              </div>
-              <div>
-                <dt>Key derivation</dt>
-                <dd>{vault.security.kdfSummary}</dd>
-              </div>
-              <div>
-                <dt>Key generation</dt>
-                <dd>{vault.security.generation}</dd>
-              </div>
-              <div>
-                <dt>Vault ID</dt>
-                <dd>
-                  <code>{vault.security.vaultIdPrefix}…</code>
-                </dd>
-              </div>
-              <div>
-                <dt>Last integrity check</dt>
-                <dd>{vault.security.lastIntegrityCheckAt ?? "Unknown"}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="muted">Security status is unavailable.</p>
-          )}
-          {!demo ? (
-            <div className="button-row">
-              <Button variant="secondary" disabled={busy} onClick={changePassphrase}>
-                Change passphrase…
-              </Button>
-            </div>
-          ) : (
-            <p className="fine-print">Passphrase change is unavailable in demo mode.</p>
-          )}
-          <p className="fine-print">
-            Changing the passphrase rotates the data encryption key. Older backups remain readable
-            only with the old passphrase. There is no recovery if every passphrase is lost.
-          </p>
-        </section>
 
-        <section className="panel" aria-labelledby="demo-title">
-          <h2 id="demo-title">Demo mode</h2>
-          <p className="fine-print">
-            Demo mode is a separate database with synthetic cards for exploring the dashboard. It
-            cannot open the real ledger, read the Keychain, import real CSV, or create backups or
-            exports. Opening demo closes the real session; you will need your passphrase again.
-          </p>
-          <div className="button-row">
-            {demo ? (
-              <>
-                <Button variant="secondary" onClick={() => void onResetDemo()} disabled={busy}>
-                  Reset demo data
+              <div className="hr" />
+              <h3 className="settings-subhead">Quit</h3>
+              <p className="fine-print">
+                Quitting closes the database, zeroizes the session, and stops scheduled syncing. The
+                passphrase is required again at next launch.
+              </p>
+              <div className="button-row">
+                <Button variant="secondary" onClick={quitApp} disabled={busy}>
+                  Quit cardigan_money
                 </Button>
-                <Button variant="ghost" onClick={() => void onOpenDemo()} disabled={busy}>
-                  Reopen demo
-                </Button>
-              </>
-            ) : (
-              <Button variant="secondary" onClick={() => void onOpenDemo()} disabled={busy}>
-                Open demo (synthetic)…
-              </Button>
-            )}
-          </div>
-        </section>
-
-        <section className="panel" aria-labelledby="quit-title">
-          <h2 id="quit-title">Quit</h2>
-          <p className="fine-print">
-            Quitting closes the database, zeroizes the session, and stops scheduled syncing. The
-            passphrase is required again at next launch.
-          </p>
-          <div className="button-row">
-            <Button variant="secondary" onClick={quitApp} disabled={busy}>
-              Quit cardigan_money
-            </Button>
-          </div>
-        </section>
-
-        <section className="panel panel-wide" aria-labelledby="events-title">
-          <h2 id="events-title">Recent security events</h2>
-          {events.length === 0 ? (
-            <p className="muted">No security events recorded yet.</p>
-          ) : (
-            <table className="events-table">
-              <caption className="sr-only">Recent security events</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col">Event</th>
-                  <th scope="col">Outcome</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id}>
-                    <td>{new Date(event.createdAt).toLocaleString()}</td>
-                    <td>{event.eventType.replaceAll("_", " ")}</td>
-                    <td>
-                      <span
-                        className={`status-pill ${
-                          event.outcome === "success"
-                            ? "status-ok"
-                            : event.outcome === "failure"
-                              ? "status-fail"
-                              : "status-info"
-                        }`}
-                      >
-                        {event.outcome}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <p className="fine-print">
-            Security events contain no secrets, tokens, account numbers, or financial payloads.
-          </p>
-        </section>
+              </div>
+            </section>
+          ) : null}
+        </div>
       </div>
     </section>
   );

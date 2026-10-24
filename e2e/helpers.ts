@@ -10,3 +10,14 @@ export async function openUnlocked(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Unlock vault" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 }
+
+/**
+ * Settings renders one section at a time. Tests must navigate to the section
+ * that owns a control before interacting with it.
+ */
+export async function openSettingsSection(page: Page, section: string): Promise<void> {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const item = page.getByRole("button", { name: section, exact: true });
+  await item.click();
+  await expect(item).toHaveAttribute("aria-current", "page");
+}

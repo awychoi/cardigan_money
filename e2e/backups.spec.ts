@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { openUnlocked } from "./helpers";
+import { openSettingsSection, openUnlocked } from "./helpers";
 
 test.describe("backup and recovery UI (browser mock)", () => {
   test("creates, lists, restores, and deletes an encrypted backup", async ({ page }) => {
     await openUnlocked(page);
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Backups & recovery");
     await page.getByRole("button", { name: "Back up now" }).click();
     await expect(page.getByText(/Encrypted backup created/)).toBeVisible();
     await expect(page.getByText("manual").first()).toBeVisible();
@@ -20,14 +20,14 @@ test.describe("backup and recovery UI (browser mock)", () => {
 
   test("portable export reports a separate-password container", async ({ page }) => {
     await openUnlocked(page);
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Backups & recovery");
     await page.getByRole("button", { name: "Portable encrypted export…" }).click();
     await expect(page.getByText(/Portable encrypted export written/)).toBeVisible();
   });
 
   test("crypto-erase requires the typed confirmation and returns to the gate", async ({ page }) => {
     await openUnlocked(page);
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Backups & recovery");
     await page.getByRole("button", { name: "Erase all local data…" }).click();
     const confirmButton = page.getByRole("button", { name: "Erase all local data…" });
     await expect(confirmButton).toBeDisabled();
@@ -41,7 +41,10 @@ test.describe("backup and recovery UI (browser mock)", () => {
     await page.goto("/");
     await page.getByRole("button", { name: /Open demo/ }).click();
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Backups & recovery", exact: true })).toHaveCount(
+      0,
+    );
     await expect(page.getByText("Backups & recovery")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Erase all local data…" })).toHaveCount(0);
   });
@@ -51,7 +54,7 @@ test.describe("sync status UI (browser mock)", () => {
   test("shows the provider-free state and disables manual sync", async ({ page }) => {
     await openUnlocked(page);
     await expect(page.getByText(/No provider connected/).first()).toBeVisible();
-    await page.getByRole("button", { name: "Settings" }).click();
+    await openSettingsSection(page, "Connections & sync");
     await expect(page.getByRole("heading", { name: "Connections & sync" })).toBeVisible();
     await expect(page.getByText(/No provider connected. Import a CSV/)).toBeVisible();
     await expect(
@@ -73,7 +76,7 @@ test("demo theme toggle applies immediately without a vault-locked warning", asy
 
 test("configures Sandbox credentials and links a mock Plaid Item", async ({ page }) => {
   await openUnlocked(page);
-  await page.getByRole("button", { name: "Settings" }).click();
+  await openSettingsSection(page, "Connections & sync");
   await expect(page.getByRole("heading", { name: "Plaid Sandbox" })).toBeVisible();
   await page.getByRole("button", { name: /Add Sandbox credentials/ }).click();
   await expect(page.getByText(/Sandbox credentials saved/)).toBeVisible();

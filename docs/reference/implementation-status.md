@@ -18,7 +18,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 8 | Sync engine, scheduler, mock provider | **Complete** (mock provider; no live provider call) |
 | 9 | Plaid adapter and verified linking (conditional) | **Sandbox verified**; Production disabled; live reconnect and Keychain ACL inspection unverified |
 | 10 | Independent security review, performance, packaging, handoff | **In progress** — automated evidence complete; owner native smoke and distribution signing outstanding |
-| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Phases 0–4 complete**; Phase 5 next |
+| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Phases 0–5 complete**; Phase 6 next |
 
 ## 2. Phase 0 — foundation and feasibility
 
@@ -359,7 +359,7 @@ See `docs/integrations/plaid-verification-2026-10-24.md`.
 - **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (36 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
 - **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready. This hash is historical: rebuild and record a new hash after any source change.
 - **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
-- **Automated suites (current):** 161 Rust (plus ignored release perf test), 71 Vitest, 38 Playwright; `pnpm build` + artifact scan passed.
+- **Automated suites (current):** 161 Rust (plus ignored release perf test), 71 Vitest, 40 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
 A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: [`docs/security/independent-review-2026-10-23.md`](../security/independent-review-2026-10-23.md).
@@ -368,7 +368,7 @@ A separate read-only review agent examined backup/restore, sync, gateway validat
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **161 Rust passed** (1 ignored 50k perf), **71 Vitest**, **38 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **161 Rust passed** (1 ignored 50k perf), **71 Vitest**, **40 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
 - Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; fresh-install restore unsupported; ad-hoc/non-notarized.
@@ -447,6 +447,28 @@ The review's settings hardening initially required a vault header even in demo m
 - Day totals are internally consistent with the rows shown and explicitly page-local: **yes**.
 - Credits are no longer rendered as errors; rust is reserved for excluded rows: **yes**.
 
+## 3m. UI overhaul — Phase 5: Settings sectioning (2026-10-24)
+
+### Implemented
+- Left section list with one section rendered at a time: Appearance, Lock & idle, Accounts, Connections & sync, Backups & recovery, Merchant rules, Import & export, Security events, About.
+- Demo mode hides Connections & sync, Backups & recovery, Merchant rules, and Import & export; Accounts remains visible read-only. Security events and About remain available.
+- Control placement: idle auto-lock, system-event locking, window close behavior, reporting timezone, and passphrase change live in **Lock & idle**; manual payment metadata lives with **Accounts**; security facts, demo mode, and quit live in **About**; crypto-erase stays in **Backups & recovery** with its typed confirmation.
+- `openSettingsSection(page, name)` added to `e2e/helpers.ts`; the backup, edit, shell, and new settings specs use it.
+
+### Actual test runs
+
+| Command | Result |
+| --- | --- |
+| `pnpm test` | 71 passed, including the updated App settings tests |
+| `pnpm test:e2e` | 40 passed, including 2 new settings tests for section isolation and demo visibility |
+| `pnpm verify:all` | typecheck, lint, Prettier, Vitest, build, Playwright, rustfmt, clippy, 161 Rust tests all pass |
+
+### Exit gate
+- All settings-driven specs green: **yes**.
+- No control unreachable: **yes** (each old control is in a named section; the account, backup, rule, import, close-behavior, and security tests exercise them).
+- One section at a time: **yes** (new Playwright test).
+- 1100 px clean: **yes** (visual check; no horizontal overflow).
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -497,6 +519,6 @@ Measured 2026-10-23 in release on a 50,000-transaction encrypted dataset (`cargo
 
 ## 9. Next phase
 
-The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): Phases 0–4 are implemented; **Phase 5 (Settings sectioning) is next**, followed by polish.
+The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): Phases 0–5 are implemented; **Phase 6 (polish) is next**.
 
 Release blockers are not UI work: owner native smoke, the Production Plaid decision, fresh-install restore (or an explicit docs limitation), and distribution signing remain outstanding.

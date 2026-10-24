@@ -1,6 +1,6 @@
 # UI overhaul plan (2026-10)
 
-Status: **Phases 0–4 implemented (2026-10-24); Phase 5 next.** Written 2026-10-24.
+Status: **Phases 0–5 implemented (2026-10-24); Phase 6 next.** Written 2026-10-24.
 Scope: charts, the Overview rebuild, the Transactions re-grade, and Settings sectioning.
 This is the only live plan; the initial build plan is archived at
 [archive/2026-10-initial-build-plan.md](archive/2026-10-initial-build-plan.md).
@@ -253,6 +253,21 @@ consistent with the rows shown (and only full-month if backend grouping is added
   [helpers.ts](../../e2e/helpers.ts) and update those specs in the same commit.
 
 **Exit gate:** all settings-driven specs green; no control is unreachable; 1100 px clean.
+
+**Implemented 2026-10-24.**
+
+- Left section list, one section rendered at a time: Appearance, Lock & idle, Accounts,
+  Connections & sync, Backups & recovery, Merchant rules, Import & export, Security events, About.
+  Demo mode hides the four real-vault sections; Accounts stays read-only.
+- Control placement: window close behavior, reporting timezone, and passphrase change live in
+  **Lock & idle**; manual payment metadata sits with **Accounts**; security facts, demo mode, and
+  quit live in **About**; crypto-erase remains inside **Backups & recovery** with its typed
+  confirmation.
+- `openSettingsSection(page, name)` added to [helpers.ts](../../e2e/helpers.ts) and used by the
+  backup, edit, shell, and new settings specs. The security spec only checks the Settings heading,
+  so it still lands on Appearance.
+- Two new e2e tests cover section isolation, control reachability, and demo section visibility.
+  Playwright is now 40 tests; Vitest stays 71.
 
 ---
 
