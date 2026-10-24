@@ -25,6 +25,6 @@ Reviewer: a separate review subagent (not the implementer), read-only. Scope: ba
 - Live Plaid and live institution coverage are not implemented or verified.
 
 ## Follow-up evidence
-- `cargo test` after fixes: 143 passed (1 ignored 50k perf), including 9 backup tests and the new demo-mode guard test.
+- `cargo test` after fixes: 144 passed (1 ignored 50k perf), including 9 backup tests and the new demo-mode guard test.
 - `cargo audit`: 0 vulnerabilities (5 allowed Linux/unmaintained warnings). `cargo deny check`: all ok. `pnpm audit`: clean.
-- Hardened artifact rebuilt and re-signed after these fixes. Final binary SHA-256: `04100993ed70e91efca8b3efedf32994f25a967420fa0c269c0a54a13b0e442e`; `codesign --verify --deep --strict` passes (ad-hoc).
+- Hardened artifact rebuilt and re-signed after these fixes. Final binary SHA-256: `9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08`; `codesign --verify --deep --strict` passes (ad-hoc).

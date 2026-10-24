@@ -381,8 +381,18 @@ pub fn execute<R: tauri::Runtime>(
         }
         "settings_update" => {
             let patch: SettingsPatch = request.decode_payload()?;
-            let (updated, session_vault_id, session_generation) =
+            // Settings are writable in demo mode, but the demo session has no
+            // vault header. Capture the right session identity for each mode.
+            let mode = state.mode();
+            let (updated, session_identity) =
                 state.with_db(|conn, header, current| {
+                    let identity = match mode {
+                        crate::state::SessionMode::Demo => None,
+                        crate::state::SessionMode::Real => {
+                            let header = header.cloned().ok_or(AppError::Locked)?;
+                            Some((header.vault_id, header.generation))
+                        }
+                    };
                     let next = apply_patch(current, patch)?;
                     save_settings(conn, &next)?;
                     crate::storage::events::record_event(
@@ -391,23 +401,24 @@ pub fn execute<R: tauri::Runtime>(
                         "success",
                         None,
                     )?;
-                    let header = header.cloned().ok_or(AppError::Locked)?;
-                    Ok((next, header.vault_id, header.generation))
+                    Ok((next, identity))
                 })?;
             {
-                // Do not repopulate a session that locked, switched to demo, or
+                // Do not repopulate a session that locked, switched mode, or
                 // opened another vault while the write was in flight.
                 let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
                 let same_session = guard.is_unlocked()
-                    && guard.mode() == crate::state::SessionMode::Real
-                    && guard
-                        .header
-                        .as_ref()
-                        .map(|header| {
-                            header.vault_id == session_vault_id
-                                && header.generation == session_generation
-                        })
-                        .unwrap_or(false);
+                    && guard.mode() == mode
+                    && match session_identity {
+                        None => true,
+                        Some((vault_id, generation)) => guard
+                            .header
+                            .as_ref()
+                            .map(|header| {
+                                header.vault_id == vault_id && header.generation == generation
+                            })
+                            .unwrap_or(false),
+                    };
                 if same_session {
                     guard.settings = Some(updated.clone());
                 }
@@ -932,6 +943,26 @@ mod tests {
             let err = execute(&app, &state, req(command, json!({}))).unwrap_err();
             assert_eq!(err.code(), "blocked", "{command}");
         }
+    }
+
+    #[test]
+    fn demo_theme_update_is_applied_and_kept_in_memory() {
+        let app = app();
+        let state = state();
+        execute(&app, &state, req("demo_open", json!({}))).unwrap();
+        let updated = execute(
+            &app,
+            &state,
+            req("settings_update", json!({"theme": "dark"})),
+        )
+        .unwrap();
+        assert_eq!(updated["settings"]["theme"], "dark");
+        let fetched = execute(&app, &state, req("settings_get", json!({}))).unwrap();
+        assert_eq!(fetched["settings"]["theme"], "dark");
+        assert_eq!(
+            state.session.lock().unwrap().settings.as_ref().unwrap().theme,
+            crate::storage::settings::Theme::Dark
+        );
     }
 
     #[test]

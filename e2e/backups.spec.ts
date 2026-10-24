@@ -59,3 +59,14 @@ test.describe("sync status UI (browser mock)", () => {
     ).toBeDisabled();
   });
 });
+
+test("demo theme toggle applies immediately without a vault-locked warning", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Open demo/ }).click();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  const toggle = page.getByRole("button", { name: /Appearance: System/ });
+  await toggle.click();
+  await expect(page.getByRole("button", { name: /Appearance: Light/ })).toBeVisible();
+  await expect(page.getByText(/vault is locked/i)).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
