@@ -86,7 +86,7 @@ pnpm tauri build
 # artifact: src-tauri/target/release/bundle/macos/cardigan_money.app
 codesign --force --deep --sign - "src-tauri/target/release/bundle/macos/cardigan_money.app"
 codesign --verify --deep --strict "src-tauri/target/release/bundle/macos/cardigan_money.app"
-shasum -a 256 "src-tauri/target/release/bundle/macos/cardigan_money.app/Contents/MacOS/cardigan_money"
+shasum -a 256 "src-tauri/target/release/bundle/macos/cardigan_money.app/Contents/MacOS/cardigan-money"
 ```
 
 The build is ad-hoc signed for local use only. It does not use a Developer ID, hardened runtime, notarization, or App Sandbox, and must not be represented as distribution-ready.

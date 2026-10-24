@@ -94,11 +94,11 @@ This plan maps the specification's required tests (§16) to commands and phases.
 
 | Spec area | Where |
 | --- | --- |
-| Financial/domain | `src-tauri/src/domain/*` unit tests; `tests/domain.rs` |
+| Financial/domain | `src-tauri/src/domain/*` unit tests; `tests/ledger.rs`, `tests/domain_fixtures.rs`, `tests/properties.rs` |
 | Vault/encryption | `src-tauri/tests/vault_cipher.rs`, `tests/vault_flow.rs`, `tests/backups.rs` |
-| Database/sync | `tests/sync.rs`, `tests/migrations.rs` |
-| Import | `tests/csv.rs` |
-| Security | `tests/security.rs`, Playwright `e2e/security.spec.ts`, capability/CSP assertions |
+| Database/sync | `tests/sync.rs`, `tests/vault_flow.rs` (migrations), `tests/demo.rs` |
+| Import | `tests/imports.rs` |
+| Security | `tests/vault_cipher.rs`, `tests/backups.rs`, `tests/plaid.rs`, `tests/plaid_report.rs`, Playwright `e2e/security.spec.ts`, capability/CSP assertions |
 | UI | `src/**/*.test.tsx`, `e2e/*.spec.ts` |
 | Performance | `tests/perf.rs` (ignored by default; run explicitly) |
 

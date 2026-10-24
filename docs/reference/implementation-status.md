@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 9 Sandbox verification (2026-10-24); owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production is disabled.
+Last updated: 2026-10-24. Phase 10 is a local release candidate for the offline/demo/CSV scope; the UI overhaul is the current plan ([plans/ui-overhaul-2026-10.md](../plans/ui-overhaul-2026-10.md)). Owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production Plaid is disabled.
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -15,9 +15,9 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 5 | Demo data and read-only dashboard | **Complete** |
 | 6 | Edits, manual metadata, CSV import/export security | **Complete** |
 | 7 | Encrypted backup, restore, rotation, recovery | **Complete** |
-| 8 | Sync engine, scheduler, mock provider | Not started |
-| 9 | Plaid adapter and verified linking (conditional) | Not started |
-| 10 | Independent security review, performance, packaging, handoff | Not started |
+| 8 | Sync engine, scheduler, mock provider | **Complete** (mock provider; no live provider call) |
+| 9 | Plaid adapter and verified linking (conditional) | **Sandbox verified**; Production disabled; live reconnect and Keychain ACL inspection unverified |
+| 10 | Independent security review, performance, packaging, handoff | **In progress** — automated evidence complete; owner native smoke and distribution signing outstanding |
 
 ## 2. Phase 0 — foundation and feasibility
 
@@ -349,31 +349,28 @@ This is **Sandbox-only**. Production is disabled. No live bank/real financial da
 - Browser/network-level inspection of Hosted Link handling.
 See `docs/integrations/plaid-verification-2026-10-24.md`.
 
-
-No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/integrations/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.
-
 ## 3i. Phase 10 — hardening, performance, packaging, handoff (in progress)
 
 ### Completed evidence
 - **Performance:** 50k encrypted transactions measured in release (`cargo test --release --test perf -- --ignored --nocapture`): warm search **13.1 ms**, month change **32.3 ms**, dashboard **40.5 ms**, cached dashboard after unlock **41.6 ms**, cold unlock **2.08 s**. Targets met/approximately met; details and debug comparison in `docs/operations/performance.md`.
 - **Adversarial verification:** documented matrix in `docs/operations/adversarial-verification.md`: plain-SQLite rejection, wrong passphrase, DB/header/backup tamper, wrong-vault restore, symlink/path rejection, malformed/oversized CSV, formula injection, extra/oversized IPC fields, cursor failure, lock mid-sync, pending double-count, network URL/body caps, locked restore, concurrent sync, renderer sinks/localStorage/dev mock.
 - **Dependency/build audit:** `cargo audit` shows **0 vulnerabilities**; 5 allowed Linux/unmaintained warnings (glib family/GTK, not used on macOS). `cargo deny check` all ok. `pnpm audit` → no known vulnerabilities. `pnpm install --frozen-lockfile` is the documented install. No repository secrets were added.
-- **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (34 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
-- **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready.
+- **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (36 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
+- **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready. This hash is historical: rebuild and record a new hash after any source change.
 - **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
-- **Automated suites:** 141 Rust (plus ignored release perf test), 23 Vitest, 34 Playwright; `pnpm build` + artifact scan passed.
+- **Automated suites (current):** 155 Rust (plus ignored release perf test), 28 Vitest, 36 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
-A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: `docs/security-review-2026-10-23.md`.
+A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: [`docs/security/independent-review-2026-10-23.md`](../security/independent-review-2026-10-23.md).
 
 ### Post-review regression fix (demo theme)
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **154 Rust passed** (1 ignored 50k perf), **23 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **155 Rust passed** (1 ignored 50k perf), **28 Vitest**, **36 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
-- Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; live Plaid is **blocked** (no credentials/authorized Item); fresh-install restore unsupported; ad-hoc/non-notarized.
+- Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; fresh-install restore unsupported; ad-hoc/non-notarized.
 - The offline/demo/CSV scope is implemented and evidenced. The project is not represented as distribution-ready or watertight.
 
 ## 4. Toolchain and environment
@@ -395,54 +392,37 @@ The review's settings hardening initially required a vault header even in demo m
 | SEC-01 fail-open encryption | **Mitigated and tested**: key-first, cipher/provider checks, plaintext rejection, plain-SQLite negative build, wrong-key non-destructiveness. `cipher_status` unsupported on 4.6.1 and handled explicitly. |
 | SEC-02 passphrase in renderer | **Implemented**: native AppKit secure input for create/unlock/change; no HTML password field; renderer receives only outcomes. Native passphrase entry itself awaits the owner smoke. |
 | SEC-03 circular key hierarchy | **Mitigated**: external authenticated header; in-memory-only DEK. |
-| SEC-04 backup vs. no-prompt | Designed (header-embedded wrapped DEK); implementation Phase 7. |
+| SEC-04 backup vs. no-prompt | **Implemented**: self-contained authenticated containers carry their own wrapped DEK; restore always asks for the backup passphrase. Restore requires an unlocked existing vault with the same vault ID; fresh-install restore is not supported. |
 | SEC-05 lock lifecycle | **Implemented** in Rust: manual, screen lock, sleep, session switch, quit, idle timeout; connection close + DEK drop + renderer clear + lock event. OS-trigger verification pending owner smoke. |
-| SEC-06 Plaid desktop flow | **Documented blocker**: Hosted Link + polling, no credentials, unverified. |
-| SEC-07 renderer privilege/network | **Mitigated for the shell**: CSP, one capability, gateway, nav/new-window blocking, no remote content. Native release verification pending Phase 10. |
-| SEC-08 Keychain/signing | Design recorded; Keychain implementation Phase 8/9; signing ad-hoc in Phase 10. |
-| SEC-09 security deferred | Phases 0–2 gates enforced; Phase 0–2 evidence recorded here. |
+| SEC-06 Plaid desktop flow | **Sandbox verified**: Hosted Link + polling + token exchange + Transactions Sync against Sandbox Items. Production is disabled and unverified. |
+| SEC-07 renderer privilege/network | **Mitigated for the shell**: CSP, one capability, gateway, nav/new-window blocking, no remote content. Native release verification pending owner smoke. |
+| SEC-08 Keychain/signing | **Keychain implemented** for provider credentials (`WhenUnlockedThisDeviceOnly`, non-synchronizable). Signing is ad-hoc; ACL inspection and notarization are not done. |
+| SEC-09 security deferred | Phases 0–2 gates enforced; evidence recorded here. |
 | SEC-10 supply chain | Lockfiles, pinned toolchains, audits, explicit build-script allowlist (`esbuild`, `@tailwindcss/oxide`). |
 | SEC-11 logs/crash/state restoration | Core dumps disabled; redacting logger off by default; state restoration disabled. Crash diagnostics in debug only. |
-| SEC-12..20 | Corresponding features are not built yet; controls are designed in the spec and tracked per phase. |
+| SEC-12..20 | Retired mapping: the original specification rows no longer map one-to-one onto this build. Current controls and evidence are the per-phase sections above and the dated reviews. |
 
 Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested to the extent this environment allows; their native OS-trigger portions remain owner-smoke items and are not claimed as verified.
 
 ## 6. Blockers and external dependencies
 
-- **Plaid:** no owner account or credentials. Live linking is unavailable and unverified. Hosted Link flow requires a real Sandbox test with Hosted Link enabled and a redirect URI decision; see `docs/integrations/plaid-feasibility.md`.
-- **Real CSV samples:** none supplied. Only a generic mapper will be built; no issuer presets will be invented.
-- **Native smoke tests:** the DSH build sandbox blocks writes to `~/Library/Application Support`, `~/Library/WebKit`, and the login Keychain. Native development runs use a debug-only app-data override. Standard-path launch, Keychain ACL, screen-capture protection, and screen-lock notifications must be verified by the owner on the built `.app` outside this sandbox (checklist in `docs/reference/test-plan.md`).
+- **Plaid:** Sandbox linking is implemented and verified against owner-supplied Items. Production is disabled in code; enabling it needs an owner decision, Production credentials, and a new verification pass. Live reconnect/update mode and Keychain ACL inspection remain unverified.
+- **Fresh-install restore:** unsupported. A self-contained backup can only be restored into an existing unlocked vault with the same vault ID. Until a vault-gate restore flow exists, preserve the app-data vault directory alongside backups; see [backup/recovery](../operations/backup-recovery.md#limitations).
+- **Real CSV samples:** none supplied. The app ships a generic mapping flow; no issuer presets are invented.
+- **Native smoke tests:** the DSH build sandbox blocks writes to `~/Library/Application Support`, `~/Library/WebKit`, and the login Keychain. Native development runs use a debug-only app-data override. Standard-path launch, Keychain ACL, screen-capture protection, and screen-lock notifications must be verified by the owner on the built `.app` outside this sandbox (checklist in [native smoke](../operations/native-smoke.md)).
 - **Signing:** ad-hoc only; no stable local signing identity has been created (owner may choose one later). Note that Keychain ACL prompts may change across rebuilds.
 - **Screen capture verification:** cannot be observed from this environment without Screen Recording permission; not claimed.
 
 ## 7. Live institutions verified
 
-**None.** No Plaid account, Sandbox link, or institution has been tested. No institution or product coverage is claimed. Demo fixtures are synthetic and will be labeled as demo.
+**Sandbox only.** Charles Schwab (2 credit accounts, 18 provider transactions) and Chase (0 credit accounts; depository-only Item) were linked in Plaid Sandbox. No Production Item, real institution, or real financial data has been used. See [the verification record](../integrations/plaid-verification-2026-10-24.md).
 
 ## 8. Performance
 
-No performance target has been measured yet (no ledger/dashboard). Do not treat any target as met. The 50,000-transaction encrypted benchmark is Phase 10 work.
+Measured 2026-10-23 in release on a 50,000-transaction encrypted dataset (`cargo test --release --test perf -- --ignored --nocapture`): warm search **13.1 ms**, month change **32.3 ms**, dashboard **40.5 ms**, cached dashboard after unlock **41.6 ms**, cold unlock **2.08 s**. Targets met or approximately met; methodology and debug comparison are in [performance](../operations/performance.md).
 
 ## 9. Next phase
 
-Phase 10 is completing independent-review disposition and owner native smoke. Phase 9 (conditional) requires owner Plaid credentials and a live/sandbox Item. No account or credentials are available in this environment, so the adapter, Keychain credential handoff, Hosted Link polling, and live verification are **not claimed complete**. Phase 10 hardening continues in parallel.
+The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): `spend_history`, theme schema, chart components, Overview rebuild, Transactions re-grade, and Settings sectioning.
 
-## 10. Superseded next-phase note
-
-Phase 8 will add the sync engine, scheduler, mock-provider integration, cursor safety/idempotency, concurrent triggers, partial failure handling, lock-during-sync, and the network allowlist/TLS/response-cap layer.
-
-## 10. Superseded next-phase note
-
-Phase 7 will implement the self-contained authenticated backup container, automatic retention, native restore with read-only validation, portable encrypted exports with a separate password, passphrase rotation using the journal, crypto-erase, and recovery documentation/tests.
-
-## 10. Superseded next-phase note
-
-Phase 6 will add transaction overrides, merchant rules, manual payment metadata, and the Rust-owned CSV import/export workflow with batch tracking, duplicate review, rollback, formula-injection defenses, and 0600 exports.
-
-## 10. Superseded next-phase note
-
-Phase 5 will build demo mode (separate database, fixed synthetic key, deterministic 150+ transaction fixture generator, mock provider), and the read-only overview/cards/ledger/supplier views backed by the Phase 3 services, with persistent demo labeling and demo isolation tests.
-
-## 10. Superseded next-phase note
-
-Phase 3 will add the financial schema (accounts, snapshots, transactions, overrides, merchant rules, imports, sync runs), integer-cent money and date-only types, calendar-month eligibility and summary functions, parameterized repositories with enum-only identifiers, and the domain test suite including reconciliation, DST/leap-day, pending/posted, refunds, exclusions, and SQL-injection attempts.
+Release blockers are not UI work: owner native smoke, the Production Plaid decision, fresh-install restore (or an explicit docs limitation), and distribution signing remain outstanding.
