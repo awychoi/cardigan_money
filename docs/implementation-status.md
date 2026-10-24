@@ -319,7 +319,19 @@ Sync-specific assertions: three pages/three transactions, two accounts, two bala
 
 Known limits: only the mock provider is wired; an existing `plaid` connection fails closed until the Phase 9 adapter is configured. Scheduled runs are tested through the window matcher, not by waiting for wall-clock windows. The scheduler thread does not yet observe sleep/wake explicitly; on wake the window matcher still applies.
 
-## 3h. Phase 9 — Plaid adapter (conditional) — IMPLEMENTED; VERIFICATION BLOCKED
+## 3h. Phase 9 — Plaid adapter (conditional) — SANDBOX VERIFIED
+
+### Live Sandbox evidence (2026-10-24)
+Owner-supplied reports from build `2ef8b68...` (see `docs/plaid-verification-2026-10-24.md`):
+
+| Connection | Status | Accounts | Provider transactions | Cursor | Liabilities |
+| --- | --- | ---: | ---: | --- | --- |
+| Charles Schwab (Sandbox) | healthy | 2 | 18 | present | available_but_null (partial) |
+| Chase (Sandbox) | healthy | 0 | 0 | present | available_but_null (partial) |
+
+A full quit/reopen + sync kept Charles Schwab at 2 accounts / 18 transactions with `+0` new transactions, demonstrating persisted-cursor continuity and no duplication. Balances added 2 snapshots per run (append-only). The Chase Item had no credit-card accounts; the app intentionally imports only Plaid `credit` accounts, so it remains a healthy 0-account connection.
+
+This is **Sandbox-only**. Production is disabled. No live bank/real financial data was used. Keychain attribute inspection and reconnect/update-mode live behavior remain owner smoke items; the functional link/token round trip and initial sync are verified.
 
 ### Implemented
 - macOS Keychain store (generic password, `WhenUnlockedThisDeviceOnly`, non-synchronizable) for Sandbox client ID/secret and per-connection access tokens; native AppKit setup sheet; renderer never receives credentials.
@@ -330,15 +342,12 @@ Known limits: only the mock provider is wired; an existing `plaid` connection fa
 - UI: Sandbox setup/replace, link/cancel/waiting/linked status, connection table, reconnect action, capabilities copy; demo disabled.
 - Tests: Keychain memory store/credential scoping, link-session parsing, mapping fixtures, URL validation, mock UI flow. Live Sandbox verification is **not yet recorded**.
 
-### Verification status (honest)
-The owner reported that the native-sheet flow and Hosted Link/Item link **succeeded** while testing build `2ef8b68...`/its predecessor. This is owner-reported, not independently observed. No sanitized verification report, institution name, account count, transaction/balance counts, liability availability, restart/cursor evidence, Keychain attribute inspection, or reconnect confirmation has been provided. Therefore:
-
-- The adapter/linking implementation is code- and mock-tested, but **live transaction/balance sync is NOT recorded as verified**.
-- Phase 9 remains **BLOCKED** on owner-supplied evidence, not marked complete.
-- No live institution coverage or Production support is claimed.
-- Native sheet/Keychain behavior is owner-reported only.
-
-To unblock: open the `2ef8b68...` build, sync, click **Show verification report → Copy report**, paste it, then repeat after a full quit/reopen. Optionally force/repair a reconnect. Do not include secrets, tokens, or Hosted Link URLs.
+### Explicitly not verified
+- Production/live institution coverage (disabled).
+- Keychain attribute/ACL inspection in Keychain Access (functional round trip verified).
+- Reconnect/update-mode live repair (implemented and mocked; connection stayed healthy).
+- Browser/network-level inspection of Hosted Link handling.
+See `docs/plaid-verification-2026-10-24.md`.
 
 
 No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.

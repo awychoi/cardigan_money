@@ -173,4 +173,4 @@ All retrieved **2026-10-23**: [Hosted Link](https://plaid.com/docs/link/hosted-l
 
 ## Current status (2026-10-24)
 
-The Sandbox adapter and Hosted Link flow are **implemented**. Sandbox verification with owner credentials is **pending**; no live Item or institution coverage is claimed yet. See `docs/plaid-guide.md` for the owner test. No link URL, link token, public token, access token, or client secret is exposed to the renderer. Production remains disabled.
+The Sandbox adapter and Hosted Link flow are **implemented and Sandbox-verified** (2026-10-24): Charles Schwab Sandbox, 2 credit-card accounts, 18 transactions, balances, persisted cursor across restart, no duplicates. Liabilities returned `available_but_null` honestly. Production remains disabled; no real institution coverage is claimed. See `docs/plaid-guide.md` and `docs/plaid-verification-2026-10-24.md`. No link URL, link token, public token, access token, or client secret is exposed to the renderer.

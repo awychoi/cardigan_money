@@ -2,7 +2,7 @@
 
 A local-first macOS app for one person's credit-card balances and calendar-month spending. Tauri 2, React, TypeScript, Rust, and a SQLCipher-encrypted ledger.
 
-> **Status: Phase 10 local release candidate (offline/demo/CSV scope).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups/restore, portable exports, crypto-erase, sync engine/scheduler against a mock provider, and hardening are implemented. **Live Plaid linking is blocked:** no owner credentials or authorized Item were available, so there is no verified institution coverage. This is an ad-hoc-signed local build, not distribution-ready.
+> **Status: Phase 10 local release candidate (offline/demo/CSV scope, Plaid Sandbox verified).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups/restore, portable exports, crypto-erase, sync engine/scheduler, and hardening are implemented. Plaid **Sandbox** linking/sync is verified against Sandbox Items; **Production/live institutions remain disabled and unverified**. This is an ad-hoc-signed local build, not distribution-ready.
 
 ## What it is
 
@@ -95,6 +95,8 @@ Implemented and covered by service-level tests; native dialogs remain owner smok
 - [Threat model](docs/threat-model.md)
 - [Security architecture](docs/security-architecture.md)
 - [Plaid feasibility](docs/plaid-feasibility.md)
+- [Plaid setup guide](docs/plaid-guide.md)
+- [Sandbox verification record](docs/plaid-verification-2026-10-24.md)
 - [Test plan](docs/test-plan.md)
 - [Decision log](docs/decisions.md)
 - [Implementation status](docs/implementation-status.md)
