@@ -1,6 +1,6 @@
 # UI overhaul plan (2026-10)
 
-Status: **Phases 0–5 implemented (2026-10-24); Phase 6 next.** Written 2026-10-24.
+Status: **Phases 0–6 implemented (2026-10-24); complete.** Written 2026-10-24.
 Scope: charts, the Overview rebuild, the Transactions re-grade, and Settings sectioning.
 This is the only live plan; the initial build plan is archived at
 [archive/2026-10-initial-build-plan.md](archive/2026-10-initial-build-plan.md).
@@ -276,6 +276,20 @@ consistent with the rows shown (and only full-month if backend grouping is added
 Empty/loading states for charts, skeleton for the Overview while `dashboard_get` is in flight,
 dark-mode QA for every theme, screenshots for [theming.md](../design/theming.md), and a final
 `pnpm verify` plus `cargo test`.
+
+**Implemented 2026-10-24.**
+
+- `OverviewSkeleton` mirrors the 12-column Overview while `dashboard_get` is in flight, announces
+  itself with `role="status"`, and respects calm/reduced-motion by disabling the shimmer.
+- The trend panel has a 12-bar loading skeleton; ring, ranked bars, and trend all have explicit
+  empty states. Chart empty states retain their hidden tables.
+- Visual QA covered all three themes in light and dark at 1440×960 and 1100×760: Ledger ring,
+  Graphite topbar + ranked bars + 6-month trend, Editorial serif + ring + 6 categories. No
+  horizontal overflow; legends, due rail, attention card, and Settings sections stayed legible.
+- Screenshots were reviewed against the existing proposal images; new binaries are not committed
+  because they age faster than the theme contract. The theming guide records the QA and the
+  automated contrast checks remain the floor.
+- Final `pnpm verify:all` and `cargo test` are green (72 Vitest, 40 Playwright, 161 Rust).
 
 ---
 

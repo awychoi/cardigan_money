@@ -9,6 +9,7 @@ import {
 } from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { OverviewView } from "../features/dashboard/OverviewView";
+import { OverviewSkeleton } from "../features/dashboard/OverviewSkeleton";
 import { CardsView } from "../features/dashboard/CardsView";
 import { LedgerView } from "../features/dashboard/LedgerView";
 import { SettingsView } from "../features/settings/SettingsView";
@@ -392,9 +393,7 @@ export function AppShell({
               </Button>
             </section>
           ) : loading && !dashboard ? (
-            <p className="muted" role="status">
-              Loading the encrypted ledger…
-            </p>
+            <OverviewSkeleton />
           ) : dashboard ? (
             view === "overview" ? (
               <OverviewView

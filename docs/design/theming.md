@@ -245,6 +245,21 @@ Regenerate the editor schema after changing `src/theme/schema.ts`:
 pnpm theme:schema
 ```
 
+### Visual QA (2026-10-24)
+
+After the Overview rebuild, the three bundled themes were rendered at 1440×960 and 1100×760 in
+both modes:
+
+- **Ledger** — sidebar, ring composition, 12-month trend.
+- **Graphite** — topbar, ranked bars, 6-month trend, compact density.
+- **Editorial** — sidebar, serif display, ring, six categories plus Other, calm motion.
+
+Legends, the due rail, the attention card, and the sectioned Settings layout stayed legible, and
+there was no horizontal overflow. The automated contrast matrix remains the floor; VoiceOver and
+native macOS behavior are still owner smoke items. The proposal images in this folder remain the
+visual reference; screenshots are not duplicated here because they age faster than the theme
+contract.
+
 ---
 
 ## 6. What themes cannot change (and where to go instead)

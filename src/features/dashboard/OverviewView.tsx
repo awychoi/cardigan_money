@@ -357,7 +357,18 @@ export function OverviewView({
             aria-label="Spending trend"
           >
             {trendLoading && !history ? (
-              <p className="chart-empty">Loading trend…</p>
+              <div className="chart-skeleton" role="status" aria-label="Loading spending trend">
+                <span className="sr-only">Loading spending trend…</span>
+                <span
+                  className="skeleton-block skeleton-line skeleton-line-short"
+                  aria-hidden="true"
+                />
+                <span className="chart-skeleton-bars" aria-hidden="true">
+                  {[35, 55, 42, 68, 50, 72, 60, 80, 66, 90, 74, 95].map((height, index) => (
+                    <span className="skeleton-block" key={index} style={{ height: `${height}%` }} />
+                  ))}
+                </span>
+              </div>
             ) : trendError ? (
               <p className="inline-error" role="alert">
                 Trend unavailable: {trendError}

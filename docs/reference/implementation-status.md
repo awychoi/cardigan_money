@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: 2026-10-24. Phase 10 is a local release candidate for the offline/demo/CSV scope; the UI overhaul is the current plan ([plans/ui-overhaul-2026-10.md](../plans/ui-overhaul-2026-10.md)). Owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production Plaid is disabled.
+Last updated: 2026-10-24. Phase 10 is a local release candidate for the offline/demo/CSV scope; the UI overhaul (Phases 0–6) is complete. Owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production Plaid is disabled.
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -18,7 +18,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 8 | Sync engine, scheduler, mock provider | **Complete** (mock provider; no live provider call) |
 | 9 | Plaid adapter and verified linking (conditional) | **Sandbox verified**; Production disabled; live reconnect and Keychain ACL inspection unverified |
 | 10 | Independent security review, performance, packaging, handoff | **In progress** — automated evidence complete; owner native smoke and distribution signing outstanding |
-| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Phases 0–5 complete**; Phase 6 next |
+| UI | UI overhaul: spend_history, charts, Overview, Transactions, Settings | **Complete** (Phases 0–6) |
 
 ## 2. Phase 0 — foundation and feasibility
 
@@ -359,7 +359,7 @@ See `docs/integrations/plaid-verification-2026-10-24.md`.
 - **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (36 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
 - **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready. This hash is historical: rebuild and record a new hash after any source change.
 - **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
-- **Automated suites (current):** 161 Rust (plus ignored release perf test), 71 Vitest, 40 Playwright; `pnpm build` + artifact scan passed.
+- **Automated suites (current):** 161 Rust (plus ignored release perf test), 72 Vitest, 40 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
 A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: [`docs/security/independent-review-2026-10-23.md`](../security/independent-review-2026-10-23.md).
@@ -368,7 +368,7 @@ A separate read-only review agent examined backup/restore, sync, gateway validat
 The review's settings hardening initially required a vault header even in demo mode. Saving a demo theme wrote SQLite but then returned “vault is locked” after the save, so the UI did not update until re-open. Fixed by capturing mode-specific session identity (demo has no header) before the write and updating in-memory settings for the still-current demo session. Regression tests: Rust `commands::tests::demo_theme_update_is_applied_and_kept_in_memory` and Playwright demo theme toggle. This regression was introduced by the review fix and is now covered.
 
 ### Phase 10 exit-gate status
-- Automated suites: **161 Rust passed** (1 ignored 50k perf), **71 Vitest**, **40 Playwright**; release perf met search/month targets; artifact scan passed.
+- Automated suites: **161 Rust passed** (1 ignored 50k perf), **72 Vitest**, **40 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
 - Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; fresh-install restore unsupported; ad-hoc/non-notarized.
@@ -469,6 +469,28 @@ The review's settings hardening initially required a vault header even in demo m
 - One section at a time: **yes** (new Playwright test).
 - 1100 px clean: **yes** (visual check; no horizontal overflow).
 
+## 3n. UI overhaul — Phase 6: polish (2026-10-24)
+
+### Implemented
+- `OverviewSkeleton` mirrors the 12-column Overview while `dashboard_get` is in flight, announces itself with `role="status"`, and disables shimmer for calm/reduced-motion.
+- The trend panel has a 12-bar loading skeleton; ring, ranked bars, and trend keep explicit empty states and hidden tables.
+- Visual QA covered Ledger, Graphite, and Editorial in light and dark at 1440×960 and 1100×760: composition variants, 6/12-month trends, due rail, attention card, balances, and sectioned Settings. No horizontal overflow or illegible text; the theme contrast matrix remains authoritative.
+- No screenshots are committed; the existing proposal images remain the visual reference and the theming guide records the QA.
+
+### Actual test runs
+
+| Command | Result |
+| --- | --- |
+| `pnpm test` | 72 passed, including `OverviewSkeleton` |
+| `pnpm test:e2e` | 40 passed |
+| `pnpm verify:all` | typecheck, lint, Prettier, Vitest, build, Playwright, rustfmt, clippy, 161 Rust tests all pass |
+
+### Exit gate
+- Empty/loading states: **yes**.
+- Dark-mode QA for every theme: **yes** (six theme/mode combinations).
+- Final full gate: **yes**.
+- Goal: the UI overhaul plan is complete; remaining work is release-level (native smoke, Production Plaid decision, fresh-install restore, signing).
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -519,6 +541,6 @@ Measured 2026-10-23 in release on a 50,000-transaction encrypted dataset (`cargo
 
 ## 9. Next phase
 
-The initial build is complete for the offline/demo/CSV scope. The current plan is the [UI overhaul](../plans/ui-overhaul-2026-10.md): Phases 0–5 are implemented; **Phase 6 (polish) is next**.
+The initial build is complete for the offline/demo/CSV scope, and the [UI overhaul](../plans/ui-overhaul-2026-10.md) (Phases 0–6) is complete.
 
 Release blockers are not UI work: owner native smoke, the Production Plaid decision, fresh-install restore (or an explicit docs limitation), and distribution signing remain outstanding.

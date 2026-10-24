@@ -410,3 +410,137 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Loading skeletons */
+
+.overview-skeleton {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.skeleton-panel {
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: var(--card-pad);
+}
+
+.skeleton-hero {
+  grid-column: span 7;
+}
+
+.skeleton-due {
+  grid-column: span 5;
+}
+
+.skeleton-composition {
+  grid-column: span 5;
+}
+
+.skeleton-trend {
+  grid-column: span 7;
+}
+
+.skeleton-balances {
+  grid-column: span 7;
+}
+
+.skeleton-attention {
+  grid-column: span 5;
+}
+
+.skeleton-block {
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
+  background-size: 200% 100%;
+  border-radius: 6px;
+  display: block;
+}
+
+.skeleton-line {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-line-short {
+  width: 30%;
+}
+
+.skeleton-line-mid {
+  width: 65%;
+}
+
+.skeleton-line-hero {
+  height: 50px;
+  width: 55%;
+}
+
+.skeleton-strip {
+  height: 34px;
+}
+
+.skeleton-ring {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  margin: 8px auto;
+  width: min(200px, 70%);
+}
+
+.skeleton-chart {
+  height: 170px;
+}
+
+.chart-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chart-skeleton-bars {
+  align-items: end;
+  display: grid;
+  gap: calc(var(--gap) * 0.45);
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  height: 170px;
+}
+
+.chart-skeleton-bars .skeleton-block {
+  border-radius: 3px 3px 0 0;
+  width: 100%;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+:root[data-motion="calm"] .skeleton-block {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .skeleton-hero,
+  .skeleton-due,
+  .skeleton-composition,
+  .skeleton-trend,
+  .skeleton-balances,
+  .skeleton-attention {
+    grid-column: 1 / -1;
+  }
+}

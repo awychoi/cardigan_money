@@ -2,7 +2,7 @@
 
 A local-first macOS app for one person's credit-card balances and calendar-month spending. Tauri 2, React, TypeScript, Rust, and a SQLCipher-encrypted ledger.
 
-> **Status: Phase 10 local release candidate (offline/demo/CSV scope, Plaid Sandbox verified).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups/restore, portable exports, crypto-erase, sync engine/scheduler, and hardening are implemented. Plaid **Sandbox** linking/sync is verified against Sandbox Items; **Production/live institutions remain disabled and unverified**. The UI overhaul is underway: the spend history, theme chart options, chart components, Overview rebuild, Transactions re-grade, and Settings sectioning are implemented; final polish is next. This is an ad-hoc-signed local build, not distribution-ready.
+> **Status: Phase 10 local release candidate (offline/demo/CSV scope, Plaid Sandbox verified).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups/restore, portable exports, crypto-erase, sync engine/scheduler, and hardening are implemented. Plaid **Sandbox** linking/sync is verified against Sandbox Items; **Production/live institutions remain disabled and unverified**. The UI overhaul is complete: spend history, theme chart options, chart components, the Overview rebuild, the Transactions re-grade, and Settings sectioning. This is an ad-hoc-signed local build, not distribution-ready.
 
 ## What it is
 
@@ -107,7 +107,7 @@ Implemented and covered by service-level tests; native dialogs remain owner smok
 
 Start at [docs/README.md](docs/README.md) — the map of plans, security, operations, and reference docs.
 
-- [Current plan: UI overhaul](docs/plans/ui-overhaul-2026-10.md)
+- [Completed plan: UI overhaul](docs/plans/ui-overhaul-2026-10.md)
 - [Implementation status](docs/reference/implementation-status.md) — what is built and what is still unverified
 - [Security policy](SECURITY.md) · [architecture](docs/security/architecture.md) · [threat model](docs/security/threat-model.md)
 - [Theming](docs/design/theming.md) · [UI direction](docs/design/proposal.md)

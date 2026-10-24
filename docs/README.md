@@ -8,7 +8,7 @@ groups below.
 
 | I want to… | Read |
 |---|---|
-| know what we are building next | [plans/ui-overhaul-2026-10.md](plans/ui-overhaul-2026-10.md) |
+| see the completed UI overhaul | [plans/ui-overhaul-2026-10.md](plans/ui-overhaul-2026-10.md) |
 | know what is actually built and verified | [reference/implementation-status.md](reference/implementation-status.md) |
 | know why a technical choice was made | [reference/decisions.md](reference/decisions.md) |
 | understand the security posture | [SECURITY.md](../SECURITY.md), [security/architecture.md](security/architecture.md), [security/threat-model.md](security/threat-model.md) |
@@ -28,7 +28,7 @@ groups below.
 
 **Plans**
 
-- [plans/ui-overhaul-2026-10.md](plans/ui-overhaul-2026-10.md) — current: charts, Overview, Transactions, Settings
+- [plans/ui-overhaul-2026-10.md](plans/ui-overhaul-2026-10.md) — completed: charts, Overview, Transactions, Settings
 - [plans/archive/2026-10-initial-build-plan.md](plans/archive/2026-10-initial-build-plan.md) — archived
 
 **Security**
