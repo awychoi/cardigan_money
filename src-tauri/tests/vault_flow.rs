@@ -238,20 +238,60 @@ fn lock_closes_connections_zeroizes_session_and_records_the_event() {
 fn initial_schema_version_is_recorded_and_migrations_are_checksummed() {
     let (_tmp, state, _app) = setup();
     let view = create(&state, pass(PASS)).unwrap();
-    assert_eq!(view.security.as_ref().unwrap().schema_version, 1);
+    assert_eq!(view.security.as_ref().unwrap().schema_version, 2);
     state
         .with_db(|conn, _header, _settings| {
             let (version, name, checksum): (u32, String, String) = conn
                 .query_row(
-                    "SELECT version, name, checksum FROM schema_migrations",
+                    "SELECT version, name, checksum FROM schema_migrations ORDER BY version DESC LIMIT 1",
                     [],
                     |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                 )
                 .map_err(|_| AppError::Database)?;
-            assert_eq!(version, 1);
+            assert_eq!(version, 2);
             assert!(!name.is_empty());
             assert_eq!(checksum.len(), 64);
             Ok(())
         })
         .unwrap();
+}
+
+#[test]
+fn settings_survive_lock_and_unlock() {
+    let (_tmp, state, _app) = setup();
+    create(&state, pass(PASS)).unwrap();
+    state
+        .with_db(|conn, _header, current| {
+            let mut next = current.clone();
+            next.theme = cardigan_money_lib::storage::settings::Theme::Dark;
+            next.auto_lock_minutes = 30;
+            next.close_behavior = cardigan_money_lib::storage::settings::CloseBehavior::Hide;
+            next.onboarding_completed = true;
+            cardigan_money_lib::storage::settings::save_settings(conn, &next)
+        })
+        .unwrap();
+    lock(&state);
+    let view = unlock(&state, pass(PASS)).unwrap();
+    let settings = view.settings.unwrap();
+    assert_eq!(settings.theme, cardigan_money_lib::storage::settings::Theme::Dark);
+    assert_eq!(settings.auto_lock_minutes, 30);
+    assert_eq!(
+        settings.close_behavior,
+        cardigan_money_lib::storage::settings::CloseBehavior::Hide
+    );
+    assert!(settings.onboarding_completed);
+}
+
+#[test]
+fn updated_settings_survive_relock_and_are_validated() {
+    let (_tmp, state, _app) = setup();
+    create(&state, pass(PASS)).unwrap();
+    let invalid = state.with_db(|conn, _header, current| {
+        let mut next = current.clone();
+        next.auto_lock_minutes = 0;
+        cardigan_money_lib::storage::settings::save_settings(conn, &next)
+    });
+    assert!(invalid.is_err(), "invalid auto-lock must not be persisted");
+    let settings = unlock(&state, pass(PASS)).unwrap().settings.unwrap();
+    assert_eq!(settings.auto_lock_minutes, 15);
 }

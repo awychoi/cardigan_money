@@ -58,6 +58,7 @@ pub struct AppState {
     pub unlock_failures: AtomicU32,
     pub rate: Mutex<RateLimiter>,
     pub quitting: AtomicBool,
+    pub close_prompt_open: AtomicBool,
 }
 
 impl AppState {
@@ -71,6 +72,7 @@ impl AppState {
             unlock_failures: AtomicU32::new(0),
             rate: Mutex::new(RateLimiter::default()),
             quitting: AtomicBool::new(false),
+            close_prompt_open: AtomicBool::new(false),
         })
     }
 

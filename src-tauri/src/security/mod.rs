@@ -3,6 +3,7 @@ pub mod cipher_check;
 pub mod crypto;
 pub mod files;
 pub mod lock;
+pub mod native_dialog;
 pub mod ratelimit;
 pub mod secure_input;
 pub mod vault;

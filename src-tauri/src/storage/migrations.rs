@@ -16,11 +16,18 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "initial_metadata_settings_events",
-    sql: include_str!("../../migrations/0001_initial.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "initial_metadata_settings_events",
+        sql: include_str!("../../migrations/0001_initial.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "domain_accounts_transactions",
+        sql: include_str!("../../migrations/0002_domain.sql"),
+    },
+];
 
 pub fn supported_schema_version() -> u32 {
     MIGRATIONS.last().map(|m| m.version).unwrap_or(0)
@@ -118,8 +125,9 @@ mod tests {
 
     #[test]
     fn supported_version_matches_latest_migration() {
-        assert_eq!(supported_schema_version(), 1);
+        assert_eq!(supported_schema_version(), 2);
         assert_eq!(MIGRATIONS[0].version, 1);
-        assert!(!checksum(MIGRATIONS[0].sql).is_empty());
+        assert_eq!(MIGRATIONS[1].version, 2);
+        assert!(!checksum(MIGRATIONS[1].sql).is_empty());
     }
 }

@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App";
-import { __resetMockBridge, __setMockVaultState } from "../mocks/bridge";
+import { __resetMockBridge, __setMockSettings, __setMockVaultState } from "../mocks/bridge";
 
 async function unlock() {
   const user = userEvent.setup();
@@ -17,6 +17,7 @@ describe("app shell", () => {
   beforeEach(() => {
     window.localStorage.clear();
     __resetMockBridge();
+    __setMockSettings({ onboardingCompleted: true });
     __setMockVaultState({ vaultExists: true, unlocked: false });
   });
 
@@ -64,6 +65,38 @@ describe("app shell", () => {
     await user.click(toggle);
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
     expect(Object.keys(window.localStorage)).toEqual([]);
+  });
+
+  it("walks the onboarding wizard by skipping every optional step", async () => {
+    __setMockSettings({ onboardingCompleted: false });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Unlock vault" }));
+    expect(await screen.findByText("Add your first account.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Skip for now" }));
+    expect(await screen.findByText("Connect a provider later.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
+    expect(await screen.findByText("You are ready.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Finish setup" }));
+    expect(await screen.findByText("Your cards, in one quiet place.")).toBeInTheDocument();
+  });
+
+  it("adds an account through the onboarding wizard", async () => {
+    __setMockSettings({ onboardingCompleted: false });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Unlock vault" }));
+    await screen.findByText("Add your first account.");
+    await user.type(screen.getByLabelText("Issuer"), "Chase");
+    await user.type(screen.getByLabelText("Display name"), "Sapphire Reserve");
+    await user.type(screen.getByLabelText(/Last four/), "1234");
+    await user.click(screen.getByRole("button", { name: "Add account" }));
+    expect(await screen.findByText(/Added Sapphire Reserve/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
+    await user.click(screen.getByRole("button", { name: "Finish setup" }));
+    expect(await screen.findByText("Your cards, in one quiet place.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByText("Sapphire Reserve")).toBeInTheDocument();
   });
 
   it("shows real cipher, KDF, and security events in settings", async () => {

@@ -118,6 +118,56 @@ export const zEventsRequest = z
   .object({ limit: z.number().int().min(1).max(100).optional() })
   .strict();
 
+
+export const zAccountType = z.enum(["credit_card", "charge_card", "line_of_credit", "other"]);
+
+export const zAccountPayload = z
+  .object({
+    issuer: z.string().trim().min(1).max(80),
+    displayName: z.string().trim().min(1).max(120),
+    lastFour: z
+      .string()
+      .trim()
+      .regex(/^\d{4}$/)
+      .nullable(),
+    accountType: zAccountType,
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    creditLimit: z.string().trim().max(40).nullable(),
+    includeInOverview: z.boolean(),
+  })
+  .strict();
+
+export const zAccount = z
+  .object({
+    id: z.string(),
+    issuer: z.string(),
+    displayName: z.string(),
+    lastFour: z.string().nullable(),
+    accountType: z.string(),
+    currency: z.string(),
+    creditLimitMinor: z.number().int().nullable(),
+    includeInOverview: z.boolean(),
+    archived: z.boolean(),
+    sourceKind: z.enum(["manual", "provider", "demo"]),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+export const zAccountsView = z.object({ accounts: z.array(zAccount) }).strict();
+export const zAccountsListRequest = z
+  .object({ includeArchived: z.boolean().optional() })
+  .strict();
+export const zAccountUpdateRequest = z
+  .object({ id: z.string().min(1).max(64), account: zAccountPayload })
+  .strict();
+export const zAccountArchiveRequest = z
+  .object({ id: z.string().min(1).max(64), archived: z.boolean() })
+  .strict();
+
+export type Account = z.infer<typeof zAccount>;
+export type AccountPayload = z.infer<typeof zAccountPayload>;
+
 export type Settings = z.infer<typeof zSettings>;
 export type SettingsPatch = z.infer<typeof zSettingsPatch>;
 export type SecuritySummary = z.infer<typeof zSecuritySummary>;
@@ -141,6 +191,11 @@ export interface CommandDefs {
   settings_update: { request: SettingsPatch; response: { settings: Settings } };
   security_status: { request: Record<string, never>; response: { security: SecuritySummary } };
   security_events_list: { request: { limit?: number }; response: { events: SecurityEvent[] } };
+  accounts_list: { request: { includeArchived?: boolean }; response: { accounts: Account[] } };
+  account_create: { request: AccountPayload; response: Account };
+  account_update: { request: { id: string; account: AccountPayload }; response: Account };
+  account_archive: { request: { id: string; archived: boolean }; response: Account };
+  app_quit: { request: Record<string, never>; response: { quitting: boolean } };
 }
 
 export type CommandName = keyof CommandDefs;
@@ -159,6 +214,11 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   settings_update: zSettingsPatch,
   security_status: zEmpty,
   security_events_list: zEventsRequest,
+  accounts_list: zAccountsListRequest,
+  account_create: zAccountPayload,
+  account_update: zAccountUpdateRequest,
+  account_archive: zAccountArchiveRequest,
+  app_quit: zEmpty,
 };
 
 export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["response"]> } = {
@@ -173,6 +233,11 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   settings_update: zSettingsView,
   security_status: zSecurityView,
   security_events_list: zEventsView,
+  accounts_list: zAccountsView,
+  account_create: zAccount,
+  account_update: zAccount,
+  account_archive: zAccount,
+  app_quit: z.object({ quitting: z.boolean() }).strict(),
 };
 
 export const zGatewayEnvelope = z

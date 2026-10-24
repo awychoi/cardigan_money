@@ -8,7 +8,9 @@ use crate::services::{security as security_service, vault as vault_service};
 use crate::services::vault::SecuritySummary;
 use crate::state::AppState;
 use crate::storage::events::SecurityEvent;
+use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
+use crate::domain::money::parse_currency_amount;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -19,6 +21,73 @@ struct EmptyPayload {}
 struct EventsPayload {
     #[serde(default)]
     limit: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AccountsListPayload {
+    #[serde(default)]
+    include_archived: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AccountPayload {
+    issuer: String,
+    display_name: String,
+    last_four: Option<String>,
+    account_type: String,
+    currency: String,
+    credit_limit: Option<String>,
+    include_in_overview: bool,
+}
+
+impl AccountPayload {
+    fn into_input(self) -> AppResult<AccountInput> {
+        let account_type = AccountType::parse(&self.account_type)?;
+        let currency = self.currency.trim().to_uppercase();
+        let credit_limit_minor = match self.credit_limit {
+            None => None,
+            Some(value) if value.trim().is_empty() => None,
+            Some(value) => {
+                let minor = parse_currency_amount(&value, &currency)
+                    .map_err(|_| AppError::InvalidInput("credit limit"))?;
+                if minor <= 0 || minor > 1_000_000_000_000 {
+                    return Err(AppError::InvalidInput("credit limit"));
+                }
+                Some(minor)
+            }
+        };
+        Ok(AccountInput {
+            issuer: self.issuer,
+            display_name: self.display_name,
+            last_four: self.last_four,
+            account_type,
+            currency,
+            credit_limit_minor,
+            include_in_overview: self.include_in_overview,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AccountUpdatePayload {
+    id: String,
+    account: AccountPayload,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AccountArchivePayload {
+    id: String,
+    archived: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountsView {
+    pub accounts: Vec<Account>,
 }
 
 #[derive(Debug, Serialize)]
@@ -162,6 +231,52 @@ pub fn execute<R: tauri::Runtime>(
             let summary: SecuritySummary = security_service::summary(state)?;
             GatewayResponse::ok(SecurityView { security: summary })
         }
+        "accounts_list" => {
+            let payload: AccountsListPayload = request.decode_payload()?;
+            let include_archived = payload.include_archived.unwrap_or(false);
+            let accounts = state.with_db(|conn, _header, _settings| {
+                accounts::list(conn, include_archived)
+            })?;
+            GatewayResponse::ok(AccountsView { accounts })
+        }
+        "account_create" => {
+            let payload: AccountPayload = request.decode_payload()?;
+            let input = payload.into_input()?;
+            let created = state.with_db(|conn, _header, _settings| {
+                let count: i64 = conn
+                    .query_row("SELECT count(*) FROM accounts", [], |row| row.get(0))
+                    .map_err(|_| AppError::Database)?;
+                if count >= 100 {
+                    return Err(AppError::Blocked("account limit reached"));
+                }
+                accounts::create_manual(conn, &input)
+            })?;
+            GatewayResponse::ok(created)
+        }
+        "account_update" => {
+            let payload: AccountUpdatePayload = request.decode_payload()?;
+            let input = payload.account.into_input()?;
+            let updated = state.with_db(|conn, _header, _settings| {
+                accounts::update_manual(conn, &payload.id, &input)
+            })?;
+            GatewayResponse::ok(updated)
+        }
+        "account_archive" => {
+            let payload: AccountArchivePayload = request.decode_payload()?;
+            let updated = state.with_db(|conn, _header, _settings| {
+                accounts::set_archived(conn, &payload.id, payload.archived)
+            })?;
+            GatewayResponse::ok(updated)
+        }
+        "app_quit" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            state
+                .quitting
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+            state.lock(app, "quit");
+            app.exit(0);
+            GatewayResponse::ok(serde_json::json!({ "quitting": true }))
+        }
         "security_events_list" => {
             let payload: EventsPayload = request.decode_payload()?;
             let limit = payload.limit.unwrap_or(20);
@@ -287,6 +402,42 @@ mod tests {
         for forbidden in ["passphrase", "secret", "token", "dek", "kek", "password"] {
             assert!(!text.contains(forbidden), "app_info leaked a {forbidden}-shaped field");
         }
+    }
+
+    #[test]
+    fn account_payload_parses_credit_limit_as_decimal_cents() {
+        let payload = AccountPayload {
+            issuer: "Chase".into(),
+            display_name: "Sapphire".into(),
+            last_four: Some("1234".into()),
+            account_type: "credit_card".into(),
+            currency: "usd".into(),
+            credit_limit: Some("$12,500.00".into()),
+            include_in_overview: true,
+        };
+        let input = payload.into_input().unwrap();
+        assert_eq!(input.currency, "USD");
+        assert_eq!(input.credit_limit_minor, Some(1_250_000));
+        let bad = AccountPayload {
+            issuer: "Chase".into(),
+            display_name: "Sapphire".into(),
+            last_four: Some("12".into()),
+            account_type: "credit_card".into(),
+            currency: "USD".into(),
+            credit_limit: Some("12.5".into()),
+            include_in_overview: true,
+        };
+        assert!(bad.into_input().is_ok());
+        let bad_currency = AccountPayload {
+            issuer: "Chase".into(),
+            display_name: "Sapphire".into(),
+            last_four: None,
+            account_type: "credit_card".into(),
+            currency: "XYZ".into(),
+            credit_limit: None,
+            include_in_overview: true,
+        };
+        assert!(bad_currency.into_input().is_ok());
     }
 
     #[test]

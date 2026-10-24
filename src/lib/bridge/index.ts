@@ -77,5 +77,7 @@ export type {
   SecuritySummary,
   SecurityEvent,
   ThemeChoice,
+  Account,
+  AccountPayload,
 } from "./contract";
 export const _internals = { z } as const;

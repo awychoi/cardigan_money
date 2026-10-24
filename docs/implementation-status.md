@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 2 exit (2026-10-23, America/New_York).
+Last updated: Phase 4 exit (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -10,8 +10,8 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 0 | Foundation, threat model, crypto design, SQLCipher and Plaid feasibility | **Complete** |
 | 1 | Tauri shell, command gateway, renderer lockdown | **Complete** |
 | 2 | Vault envelope, native secret input, lock lifecycle, migrations | **Complete** (implementation + automated evidence; owner passphrase-entry smoke pending) |
-| 3 | Domain rules, input bounds, calendar-month accounting | Not started |
-| 4 | Onboarding, accounts, settings, theme, security settings | Not started |
+| 3 | Domain rules, input bounds, calendar-month accounting | **Complete** |
+| 4 | Onboarding, accounts, settings, theme, security settings | **Complete** (native close/passphrase smoke pending owner) |
 | 5 | Demo data and read-only dashboard | Not started |
 | 6 | Edits, manual metadata, CSV import/export security | Not started |
 | 7 | Encrypted backup, restore, rotation, recovery | Not started |
@@ -136,6 +136,62 @@ This is the honesty document: it records what was built, what actually ran, and 
 - Screen lock/sleep/fast-user-switching/logout could not be induced or observed in this environment. The code paths are implemented; do not describe them as verified.
 - Keychain is not touched yet (Phase 8/9).
 
+## 3b. Phase 3 — domain rules and calendar-month accounting
+
+### Completed
+- Migration 2 adds the full financial schema: `accounts`, `connections`, `account_sources`, `balance_snapshots`, `payment_snapshots`, `manual_payment_metadata`, `transactions`, `transaction_overrides`, `merchant_rules`, `import_batches`, `import_rows`, `sync_runs`, `sync_steps`. STRICT tables, CHECK constraints, foreign keys, partial unique provider identity, and query indexes.
+- Money: signed integer minor units; decimal-string parser (currency symbols, validated thousands grouping, parentheses, exact precision, no binary floats), supported currency exponents, ±1e12 bound, property tests.
+- Dates: strict date-only parsing, calendar `Month` ranges `[start, first day of next month)`, timezone-aware current month (default America/New_York), leap day/year-boundary/DST tests, reporting-date rule (authorization → posted → explicit manual) with provenance.
+- Text: NUL/control/bidi rejection, length caps, single-line collapsing, NFKC merchant normalization, display-safe sanitization, LIKE escaping.
+- Ledger query layer: closed enums for status/type/sort, parameterized queries only, bounded date range (731 days), account filter cap (20), page cap (200/10 000), search length cap, escaped LIKE, deterministic tie-breaking, eligible/pending subtotals computed by SQL.
+- Calendar-month summary service: gross purchases, negative refunds, fees/interest, net, pending subtotal, counts, per-supplier and per-category breakdowns, exact reconciliation, other-currency row count.
+- Overview service: latest balances, current known total with missing count (never zero-filled), provider and manual payment facts kept independent, valid-through expiry, upcoming 14-day window with unknown amounts not summed, statement balance never used as remaining due.
+- Account repository: validated manual account create/update/archive/list; account commands and tests.
+- Deterministic domain fixtures covering leap day, DST dates, year boundary, pending/posted pair, later-month refund, fees/interest, payment/transfer/exclusion, identical same-amount purchases, non-USD row, unknown vs zero payment metadata.
+
+### Actual test runs
+| Suite | Result |
+| --- | --- |
+| `cargo test` | 59 lib + 3 accounts + 2 domain_fixtures + 8 ledger + 4 properties + 7 vault_cipher + 11 vault_flow = **94 passed**, 0 failed |
+| `pnpm test` | 23 passed |
+| `pnpm test:e2e` | 14 passed |
+| `pnpm build` + artifact scan | Passed |
+
+Notable assertions: October fixture gross 11 500 / refunds −2 500 / fees 700 / net 9 700 / pending 7 500 with exact supplier and category reconciliation; September purchase 9 000 with October refund −2 500; leap-day 1 111; DST months 2 222 and 3 333; Dec 31 4 444 not January; two identical Café purchases counted twice; injection-shaped search/ sort rejected with the accounts table intact.
+
+### Phase 3 exit gate check
+- All financial/domain tests in spec §16: **covered** (see suite and fixture assertions).
+- Supplier/category totals reconcile exactly: **yes** (`reconciliation.exact` asserted).
+- Historical month does not change current balances/obligations: **yes** (overview has no month input; test compares months).
+- Unknown metadata never becomes zero / no payment due: **yes**.
+- DST, leap day, year boundaries: **yes**.
+- SQL injection/malformed input fails safely; no dynamic identifier interpolation: **yes** (closed enums + parameters; tests).
+- Domain layer is the only source of totals: **yes** — no frontend financial calculation exists.
+
+## 3c. Phase 4 — onboarding, accounts, settings, theme
+
+### Completed
+- Post-unlock onboarding wizard: optional first account, provider step that explains live linking is unavailable and never requests credentials, finish; every non-passphrase step skippable; completion persisted in encrypted settings. No demo data is seeded.
+- Manual account management: list, create, edit, archive/restore, include-in-overview, credit limit parsed in Rust from a decimal string, validation and text cleaning, archival keeps history.
+- Empty account state with an Add account action; account list in Settings with source labels and reversible archive confirmation.
+- Settings: theme (DB-persisted), timezone, idle auto-lock, close behavior, quit, security section with cipher/KDF/generation/vault prefix/last integrity, recent events, passphrase change.
+- First-close behavior: native AppKit dialog with Hide / Quit / Cancel and a “remember this choice” checkbox; stored in encrypted settings; hide keeps scheduler/idle timer; reopen shows the window; quit locks and exits. Decision logic unit-tested; native dialog presentation is compiled and awaits owner smoke.
+- `app_quit` command; theme no longer stored in localStorage (only encrypted settings).
+- Account and settings restrictions on locked vault; no provider required.
+
+### Actual test runs
+- `cargo test --test accounts`: 3 passed (create/update/archive/validation/cleaning).
+- `cargo test --test vault_flow settings`: 2 passed (settings survive lock/unlock; invalid settings rejected).
+- `pnpm test`: 23 passed (wizard skip, account add, lock/unlock, theme, settings status).
+- `pnpm test:e2e`: 14 passed (wizard with account, archive/restore, close-behavior persistence, locked gate).
+
+### Phase 4 exit gate check
+- New user can create a vault and add an account or finish with none: **backend and mock flow verified**; native passphrase entry still owner smoke.
+- Restart preserves accounts/theme/close behavior/auto-lock: **Rust persistence tests pass**; native restart owner smoke.
+- First close asks once/later follows: **decision + persistence tested**; native dialog presentation owner smoke.
+- Passphrase change via native sheet: **implemented and Rust-tested**; native entry owner smoke.
+- No provider required: **yes**.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -184,5 +240,9 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 No performance target has been measured yet (no ledger/dashboard). Do not treat any target as met. The 50,000-transaction encrypted benchmark is Phase 10 work.
 
 ## 9. Next phase
+
+Phase 5 will build demo mode (separate database, fixed synthetic key, deterministic 150+ transaction fixture generator, mock provider), and the read-only overview/cards/ledger/supplier views backed by the Phase 3 services, with persistent demo labeling and demo isolation tests.
+
+## 10. Superseded next-phase note
 
 Phase 3 will add the financial schema (accounts, snapshots, transactions, overrides, merchant rules, imports, sync runs), integer-cent money and date-only types, calendar-month eligibility and summary functions, parameterized repositories with enum-only identifiers, and the domain test suite including reconciliation, DST/leap-day, pending/posted, refunds, exclusions, and SQL-injection attempts.

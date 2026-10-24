@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import type { AppInfo, Settings, VaultState } from "../lib/bridge";
+import { useEffect, useState, type ReactNode } from "react";
+import { command, type AppInfo, type Settings, type VaultState } from "../lib/bridge";
 import { SettingsView } from "../features/settings/SettingsView";
 import { Button } from "../components/Button";
 
@@ -37,6 +37,21 @@ export function AppShell({
   themeControl: ReactNode;
 }) {
   const [view, setView] = useState<View>("overview");
+  const [accountCount, setAccountCount] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await command("accounts_list", {});
+        if (!cancelled) setAccountCount(result.accounts.length);
+      } catch {
+        if (!cancelled) setAccountCount(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -116,12 +131,30 @@ export function AppShell({
         ) : view === "overview" ? (
           <section className="empty-state" aria-labelledby="overview-title">
             <h1 id="overview-title">Your cards, in one quiet place.</h1>
-            <p className="muted">
-              The vault is unlocked. Account setup, the calendar-month dashboard, and the ledger
-              arrive in the next stages.
-            </p>
+            {accountCount === 0 ? (
+              <>
+                <p className="muted">
+                  No accounts yet. Add your first account manually; no bank connection is required,
+                  and the app is usable with an empty ledger.
+                </p>
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setView("settings")}
+                  >
+                    Add account
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="muted">
+                The vault is unlocked. The calendar-month dashboard and the unified ledger arrive in
+                the next build stage.
+              </p>
+            )}
             <p className="fine-print">
-              No financial data is loaded in this build stage. Nothing on this screen contacts a network.
+              Nothing on this screen contacts a network. Missing provider data is never shown as zero.
             </p>
             <button type="button" className="btn btn-ghost btn-small" onClick={() => void onRefreshVault()}>
               Refresh security status

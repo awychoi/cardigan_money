@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod domain;
 pub mod error;
 pub mod ipc;
 pub mod security;
@@ -11,6 +12,7 @@ pub mod test_support;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::Manager;
 use crate::state::AppState;
+use crate::storage::settings::CloseBehavior;
 
 const CSP_SAFE_TITLE: &str = "cardigan_money";
 
@@ -76,6 +78,75 @@ fn harden_native_window(window: &tauri::WebviewWindow) {
 
 #[cfg(not(target_os = "macos"))]
 fn harden_native_window(_window: &tauri::WebviewWindow) {}
+
+fn persist_close_behavior<R: tauri::Runtime>(app: &tauri::AppHandle<R>, behavior: CloseBehavior) {
+    use crate::storage::settings::save_settings;
+    let state = app.state::<AppState>();
+    let updated = state
+        .with_db(|conn, _header, current| {
+            let mut next = current.clone();
+            next.close_behavior = behavior;
+            save_settings(conn, &next)?;
+            crate::storage::events::record_event(conn, "settings_changed", "success", None)?;
+            Ok(next)
+        })
+        .ok();
+    if let Some(next) = updated {
+        if let Ok(mut session) = state.session.lock() {
+            session.settings = Some(next);
+        }
+    }
+}
+
+fn handle_close_request<R: tauri::Runtime>(window: &tauri::Window<R>, app: &tauri::AppHandle<R>) {
+    let state = app.state::<AppState>();
+    if state.quitting.load(std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    // A locked vault has no settings to consult; allow the close/quit.
+    let Ok(behavior) = state.with_db(|_conn, _header, settings| Ok(settings.close_behavior)) else {
+        return;
+    };
+    match crate::security::native_dialog::decision(behavior) {
+        crate::security::native_dialog::CloseDecision::Hide => {
+            let _ = window.hide();
+        }
+        crate::security::native_dialog::CloseDecision::Quit => {
+            app.exit(0);
+        }
+        crate::security::native_dialog::CloseDecision::Ask => {
+            if state.close_prompt_open.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                return;
+            }
+            let app = app.clone();
+            let window = window.clone();
+            std::thread::spawn(move || {
+                use crate::security::native_dialog::CloseAction;
+                let result = crate::security::native_dialog::close_choice(&app);
+                app.state::<AppState>()
+                    .close_prompt_open
+                    .store(false, std::sync::atomic::Ordering::SeqCst);
+                if let Ok(choice) = result {
+                    if choice.remember && choice.action != CloseAction::Cancel {
+                        let behavior = match choice.action {
+                            CloseAction::Hide => CloseBehavior::Hide,
+                            CloseAction::Quit => CloseBehavior::Quit,
+                            CloseAction::Cancel => CloseBehavior::Unset,
+                        };
+                        persist_close_behavior(&app, behavior);
+                    }
+                    match choice.action {
+                        CloseAction::Hide => {
+                            let _ = window.hide();
+                        }
+                        CloseAction::Quit => app.exit(0),
+                        CloseAction::Cancel => {}
+                    }
+                }
+            });
+        }
+    }
+}
 
 pub fn run() {
     harden_process();
@@ -169,6 +240,25 @@ pub fn run() {
                 state.lock(app, "manual");
             }
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let state = window.app_handle().state::<AppState>();
+                if state.quitting.load(std::sync::atomic::Ordering::SeqCst) {
+                    return;
+                }
+                // The locked gate may be closed without a settings read.
+                if state
+                    .session
+                    .lock()
+                    .map(|session| !session.is_unlocked())
+                    .unwrap_or(true)
+                {
+                    return;
+                }
+                api.prevent_close();
+                handle_close_request(window, window.app_handle());
+            }
+        })
         .invoke_handler(tauri::generate_handler![commands::gateway]);
 
     let app = builder
@@ -176,6 +266,12 @@ pub fn run() {
         .expect("error while building cardigan_money");
 
     app.run(|app, event| {
+        if let tauri::RunEvent::Reopen { .. } = event {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }
         if matches!(
             event,
             tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit

@@ -9,6 +9,7 @@ import {
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { ThemeToggle } from "../../components/ThemeToggle";
+import { AccountManager } from "../accounts/AccountManager";
 
 export function SettingsView({
   vault,
@@ -62,6 +63,17 @@ export function SettingsView({
     } catch (caught) {
       setError(friendlyError(caught));
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function quitApp() {
+    setBusy(true);
+    setError(null);
+    try {
+      await command("app_quit", {});
+    } catch (caught) {
+      setError(friendlyError(caught));
       setBusy(false);
     }
   }
@@ -158,6 +170,35 @@ export function SettingsView({
           </div>
         </section>
 
+        <AccountManager />
+
+        <section className="panel" aria-labelledby="close-title">
+          <h2 id="close-title">Window close behavior</h2>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">When the window closes</div>
+              <p className="fine-print">
+                Hiding is not a lock: the app and scheduler keep running, the idle timer continues,
+                and screen lock or sleep still locks the vault.
+              </p>
+            </div>
+            <select
+              aria-label="When the window closes"
+              value={settings.closeBehavior}
+              onChange={(event) =>
+                void update({
+                  closeBehavior: event.target.value as Settings["closeBehavior"],
+                })
+              }
+              disabled={busy}
+            >
+              <option value="unset">Ask each time</option>
+              <option value="hide">Hide</option>
+              <option value="quit">Quit</option>
+            </select>
+          </div>
+        </section>
+
         <section className="panel" aria-labelledby="timezone-title">
           <h2 id="timezone-title">Calendar &amp; timezone</h2>
           <div className="setting-row">
@@ -228,6 +269,19 @@ export function SettingsView({
             Changing the passphrase rotates the data encryption key. Older backups remain readable
             only with the old passphrase. There is no recovery if every passphrase is lost.
           </p>
+        </section>
+
+        <section className="panel" aria-labelledby="quit-title">
+          <h2 id="quit-title">Quit</h2>
+          <p className="fine-print">
+            Quitting closes the database, zeroizes the session, and stops scheduled syncing. The
+            passphrase is required again at next launch.
+          </p>
+          <div className="button-row">
+            <Button variant="secondary" onClick={quitApp} disabled={busy}>
+              Quit cardigan_money
+            </Button>
+          </div>
         </section>
 
         <section className="panel panel-wide" aria-labelledby="events-title">

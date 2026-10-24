@@ -3,6 +3,7 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AppShell } from "./AppShell";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { VaultGate } from "../features/vault/VaultGate";
+import { OnboardingWizard } from "../features/onboarding/OnboardingWizard";
 import { command, usingMockBridge, type AppInfo, type Settings, type VaultState } from "../lib/bridge";
 import { friendlyError } from "../lib/bridge/errors";
 import { logEvent } from "../lib/logging";
@@ -175,6 +176,12 @@ export function App() {
           {usingMockBridge ? "Mock desktop bridge — browser test mode." : ""}
         </div>
       </>
+    );
+  }
+
+  if (boot.vault.settings && !boot.vault.settings.onboardingCompleted) {
+    return (
+      <OnboardingWizard settings={boot.vault.settings} onFinished={handleSettingsChanged} />
     );
   }
 

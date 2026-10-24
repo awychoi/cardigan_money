@@ -3,6 +3,8 @@ import {
   API_VERSION,
   isCommandName,
   type CommandName,
+  type Account,
+  type AccountPayload,
   type SecurityEvent,
   type SecuritySummary,
   type Settings,
@@ -16,8 +18,9 @@ import {
  * commands. Vite aliases this module to `bridge.disabled.ts` in production, so
  * the mock cannot ship. The fixed cipher strings identify it as a mock.
  */
+const params = new URLSearchParams(window.location.search);
+
 function initialState() {
-  const params = new URLSearchParams(window.location.search);
   const empty = params.get("mockVault") === "empty";
   return {
     vaultExists: !empty,
@@ -28,12 +31,13 @@ function initialState() {
 }
 
 const mockState = initialState();
+let accounts: Account[] = [];
 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
   theme: "system",
   closeBehavior: "unset",
-  onboardingCompleted: false,
+  onboardingCompleted: params.get("mockOnboarding") !== "1",
   autoLockMinutes: 15,
   lockOnSystemEvents: true,
   contentProtection: true,
@@ -55,6 +59,41 @@ function recordEvent(eventType: string, outcome: SecurityEvent["outcome"]): void
     metadata: null,
   });
   mockState.events = mockState.events.slice(0, 100);
+}
+
+function creditLimitToMinor(value: string | null): number | null {
+  if (!value || value.trim() === "") return null;
+  const normalized = value.replace(/[$,]/g, "").trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    throw new BridgeError("invalid_input", "Invalid credit limit.");
+  }
+  const minor = Math.round(Number(normalized) * 100);
+  if (!Number.isFinite(minor) || minor <= 0) {
+    throw new BridgeError("invalid_input", "Invalid credit limit.");
+  }
+  return minor;
+}
+
+function nowIso(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+function accountFromPayload(payload: AccountPayload): Account {
+  const now = nowIso();
+  return {
+    id: crypto.randomUUID(),
+    issuer: payload.issuer,
+    displayName: payload.displayName,
+    lastFour: payload.lastFour,
+    accountType: payload.accountType,
+    currency: payload.currency,
+    creditLimitMinor: creditLimitToMinor(payload.creditLimit),
+    includeInOverview: payload.includeInOverview,
+    archived: false,
+    sourceKind: "manual",
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 function requireUnlocked(): void {
@@ -154,6 +193,58 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       requireUnlocked();
       data = { security: securitySummary() };
       break;
+    case "accounts_list": {
+      requireUnlocked();
+      const includeArchived = (payload as { includeArchived?: boolean }).includeArchived ?? false;
+      data = {
+        accounts: structuredClone(
+          includeArchived ? accounts : accounts.filter((account) => !account.archived),
+        ),
+      };
+      break;
+    }
+    case "account_create":
+      requireUnlocked();
+      {
+        const created = accountFromPayload(payload as AccountPayload);
+        accounts = [...accounts, created];
+        data = structuredClone(created);
+      }
+      break;
+    case "account_update":
+      requireUnlocked();
+      {
+        const update = payload as { id: string; account: AccountPayload };
+        const existing = accounts.find((account) => account.id === update.id);
+        if (!existing) throw new BridgeError("not_found", "Account not found.");
+        const updated: Account = {
+          ...existing,
+          ...accountFromPayload(update.account),
+          id: existing.id,
+          createdAt: existing.createdAt,
+          updatedAt: nowIso(),
+          archived: existing.archived,
+        };
+        accounts = accounts.map((account) => (account.id === updated.id ? updated : account));
+        data = structuredClone(updated);
+      }
+      break;
+    case "account_archive":
+      requireUnlocked();
+      {
+        const archive = payload as { id: string; archived: boolean };
+        const existing = accounts.find((account) => account.id === archive.id);
+        if (!existing) throw new BridgeError("not_found", "Account not found.");
+        const updated: Account = { ...existing, archived: archive.archived, updatedAt: nowIso() };
+        accounts = accounts.map((account) => (account.id === updated.id ? updated : account));
+        data = structuredClone(updated);
+      }
+      break;
+    case "app_quit":
+      mockState.unlocked = false;
+      recordEvent("lock", "info");
+      data = { quitting: true };
+      break;
     case "security_events_list": {
       requireUnlocked();
       const limit = (payload as { limit?: number }).limit ?? 20;
@@ -173,6 +264,11 @@ export function __setMockVaultState(next: Partial<typeof mockState>) {
   Object.assign(mockState, next);
 }
 
+/** Test hook: change mock settings between tests. */
+export function __setMockSettings(patch: Partial<Settings>): void {
+  settings = { ...settings, ...patch };
+}
+
 /** Test hook: return the mock to its default locked state between tests. */
 export function __resetMockBridge(): void {
   const next = initialState();
@@ -180,6 +276,7 @@ export function __resetMockBridge(): void {
   mockState.unlocked = false;
   mockState.generation = 1;
   mockState.events = [];
+  accounts = [];
   settings = { ...defaultSettings };
 }
 
