@@ -17,7 +17,8 @@ here, it is implemented; if it is not here, a theme cannot change it.
 ```
 theme.json ──► zod validation ──► CSS custom properties on <html>  ──► every component
              │                    └─ data-nav / data-card-art / data-density / data-motion
-             └─ options ─────────► component variants (AppShell, CardsView)
+             │                       / data-overview-composition / data-overview-trend
+             └─ options ─────────► component variants (AppShell, CardsView, OverviewView)
 ```
 
 There are two kinds of themable decisions:
@@ -72,7 +73,9 @@ Minimal shape:
   "name": "Ledger",
   "description": "One line for the picker.",
   "options": { "navigation": "sidebar", "cardArt": "faces",
-               "density": "comfortable", "motion": "full" },
+               "density": "comfortable", "motion": "full",
+               "overview": { "composition": "ring", "trend": "bars",
+                             "topCategories": 5, "trendMonths": 12 } },
   "type":    { "...": "see 3.2" },
   "shape":   { "...": "see 3.3" },
   "spacing": { "...": "see 3.4" },
@@ -82,7 +85,7 @@ Minimal shape:
 }
 ```
 
-### 3.1 `options` — the four variants
+### 3.1 `options` — the variants
 
 | Key | Values | What changes | Where |
 |---|---|---|---|
@@ -90,6 +93,10 @@ Minimal shape:
 | `cardArt` | `faces` · `tiles` | Cards page: physical card art with issuer colors, or the data-tile layout | `CardsView.tsx` |
 | `density` | `comfortable` · `compact` | Row height, panel padding, screen padding in tables and panels | `:root[data-density]` in `styles.css` |
 | `motion` | `full` · `calm` | `calm` removes all transitions; the OS reduced-motion setting always wins | `:root[data-motion]` in `styles.css` |
+| `overview.composition` | `ring` · `ranked-bars` · `hidden` | Proportional donut, horizontal ranked bars, or no composition chart | `OverviewView.tsx` |
+| `overview.trend` | `bars` · `hidden` | Monthly column trend, or no trend chart | `OverviewView.tsx` |
+| `overview.topCategories` | 3–6 | Category segments before the neutral "Other" segment | `OverviewView.tsx` |
+| `overview.trendMonths` | 6–12 | Trailing months in the trend window | `OverviewView.tsx` |
 
 ### 3.2 `type`
 
@@ -155,7 +162,7 @@ Every key is required in both modes.
 | `warning` | stale, reconnect, attention | ≥ 4.5:1 on the warning wash |
 | `danger` | failure, destructive | ≥ 4.5:1 on `surface` |
 | `focus` | focus ring | ≥ 3:1 on `bg` |
-| `chart` | 3–5 ordered series colors | used by charts in order |
+| `chart` | 3–6 ordered series colors | used by charts in order |
 | `shadow` | soft elevation color (alpha allowed) | — |
 | `shadowStrong` | card-face / overlay shadow color | — |
 
@@ -200,7 +207,13 @@ finds `american-express`.
     "navigation": "sidebar",          // design shape
     "cardArt": "tiles",               // no card faces
     "density": "comfortable",
-    "motion": "calm"                  // no transitions
+    "motion": "calm",                 // no transitions
+    "overview": {
+      "composition": "ring",          // or ranked-bars / hidden
+      "trend": "bars",                // or hidden
+      "topCategories": 6,
+      "trendMonths": 12
+    }
   },
   "type": {
     "display": "\"Iowan Old Style\", Palatino, ui-serif, Georgia, serif",
@@ -243,7 +256,8 @@ pnpm theme:schema
 | Card-face colors per issuer | **Yes** | `issuers` |
 | Wording, labels, aria-labels | No | JSX in `src/features/**` (keep accessible names: the e2e suite depends on them) |
 | Information architecture, which panels exist | No | `SettingsView.tsx`, `OverviewView.tsx`, … |
-| Charts, new visualizations | No — but style them with `--chart-*` | new component + CSS |
+| Chart composition/trend variants, top-N, window | **Yes** | `options.overview` |
+| A new chart type or visualization | No — style it with `--chart-*` | new component + CSS |
 | Data, calculations, security behavior | No | Rust services |
 
 **To add a new themable knob**, touch these in order and nothing else:

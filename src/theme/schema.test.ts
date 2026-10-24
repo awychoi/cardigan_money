@@ -95,6 +95,7 @@ describe("theme files", () => {
         expect(vars["--radius-panel"]).toBe(`${theme.shape.panelRadius}px`);
         expect(vars["--motion-fast"]).toBe(`${theme.motion.fast}ms`);
         expect(vars["--chart-1"]).toBe(theme.modes[mode].chart[0]);
+        expect(vars["--chart-6"]).toBe(theme.modes[mode].chart[5]);
       }
     }
   });

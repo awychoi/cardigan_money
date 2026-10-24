@@ -7,7 +7,13 @@
     "navigation": "topbar",
     "cardArt": "faces",
     "density": "compact",
-    "motion": "calm"
+    "motion": "calm",
+    "overview": {
+      "composition": "ranked-bars",
+      "trend": "bars",
+      "topCategories": 4,
+      "trendMonths": 6
+    }
   },
   "type": {
     "sans": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", sans-serif",
@@ -59,7 +65,8 @@
         "#7a8698",
         "#b6754f",
         "#8a5a12",
-        "#5f7d5a"
+        "#5f7d5a",
+        "#6f5a8f"
       ],
       "shadow": "rgb(20 25 31 / 7%)",
       "shadowStrong": "rgb(15 20 26 / 40%)"
@@ -88,7 +95,8 @@
         "#9aa6b5",
         "#d79b7d",
         "#dcb26e",
-        "#8fb08a"
+        "#8fb08a",
+        "#b8a0d6"
       ],
       "shadow": "rgb(0 0 0 / 35%)",
       "shadowStrong": "rgb(0 0 0 / 60%)"

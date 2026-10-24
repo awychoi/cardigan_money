@@ -58,13 +58,56 @@
             "calm"
           ],
           "description": "calm turns transitions off"
+        },
+        "overview": {
+          "type": "object",
+          "properties": {
+            "composition": {
+              "type": "string",
+              "enum": [
+                "ring",
+                "ranked-bars",
+                "hidden"
+              ],
+              "description": "ring = proportional donut; ranked-bars = horizontal bars; hidden = no composition"
+            },
+            "trend": {
+              "type": "string",
+              "enum": [
+                "bars",
+                "hidden"
+              ],
+              "description": "bars = monthly column trend; hidden = no trend"
+            },
+            "topCategories": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 6,
+              "description": "Category segments before the neutral Other segment (3–6)"
+            },
+            "trendMonths": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 12,
+              "description": "Trailing months in the trend window (6–12)"
+            }
+          },
+          "required": [
+            "composition",
+            "trend",
+            "topCategories",
+            "trendMonths"
+          ],
+          "additionalProperties": false,
+          "description": "Overview chart variants. Every option is implemented"
         }
       },
       "required": [
         "navigation",
         "cardArt",
         "density",
-        "motion"
+        "motion",
+        "overview"
       ],
       "additionalProperties": false,
       "description": "Component variants. Each one is implemented in the app"
@@ -325,14 +368,14 @@
             },
             "chart": {
               "minItems": 3,
-              "maxItems": 5,
+              "maxItems": 6,
               "type": "array",
               "items": {
                 "type": "string",
                 "pattern": "^#[0-9a-f]{6}$",
                 "description": "Hex color, #rrggbb"
               },
-              "description": "Ordered series colors for bars and charts"
+              "description": "Ordered series colors for bars and charts (3–6)"
             },
             "shadow": {
               "type": "string",
@@ -468,14 +511,14 @@
             },
             "chart": {
               "minItems": 3,
-              "maxItems": 5,
+              "maxItems": 6,
               "type": "array",
               "items": {
                 "type": "string",
                 "pattern": "^#[0-9a-f]{6}$",
                 "description": "Hex color, #rrggbb"
               },
-              "description": "Ordered series colors for bars and charts"
+              "description": "Ordered series colors for bars and charts (3–6)"
             },
             "shadow": {
               "type": "string",

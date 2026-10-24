@@ -46,6 +46,7 @@
   --chart-3: #5b6c9d;
   --chart-4: #8a5c12;
   --chart-5: #7a8f5b;
+  --chart-6: #7c4a6a;
 
   /* elevations */
   --shadow: rgb(22 29 38 / 8%);
@@ -129,6 +130,7 @@
     --chart-3: #9aa9d8;
     --chart-4: #e4bf7e;
     --chart-5: #a8c48a;
+    --chart-6: #c58fa8;
     --shadow: rgb(0 0 0 / 32%);
     --shadow-strong: rgb(0 0 0 / 65%);
     --issuer-default-from: #39424c;

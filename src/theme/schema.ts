@@ -57,7 +57,7 @@ const palette = z
     warning: hex.describe("Attention, stale, reconnect"),
     danger: hex.describe("Failure and destructive"),
     focus: hex.describe("Focus ring · ≥ 3:1 on bg"),
-    chart: z.array(hex).min(3).max(5).describe("Ordered series colors for bars and charts"),
+    chart: z.array(hex).min(3).max(6).describe("Ordered series colors for bars and charts (3–6)"),
     shadow: alphaColor.describe("Soft elevation color"),
     shadowStrong: alphaColor.describe("Card-face / overlay shadow color"),
   })
@@ -108,6 +108,29 @@ const motion = z
   })
   .describe('Motion; `options.motion: "calm"` disables it regardless');
 
+const chartOptions = z
+  .strictObject({
+    composition: z
+      .enum(["ring", "ranked-bars", "hidden"])
+      .describe(
+        "ring = proportional donut; ranked-bars = horizontal bars; hidden = no composition",
+      ),
+    trend: z.enum(["bars", "hidden"]).describe("bars = monthly column trend; hidden = no trend"),
+    topCategories: z
+      .number()
+      .int()
+      .min(3)
+      .max(6)
+      .describe("Category segments before the neutral Other segment (3–6)"),
+    trendMonths: z
+      .number()
+      .int()
+      .min(6)
+      .max(12)
+      .describe("Trailing months in the trend window (6–12)"),
+  })
+  .describe("Overview chart variants. Every option is implemented");
+
 const options = z
   .strictObject({
     navigation: z
@@ -120,6 +143,7 @@ const options = z
       .enum(["comfortable", "compact"])
       .describe("comfortable = airy rows; compact = denser tables and panels"),
     motion: z.enum(["full", "calm"]).describe("calm turns transitions off"),
+    overview: chartOptions,
   })
   .describe("Component variants. Each one is implemented in the app");
 

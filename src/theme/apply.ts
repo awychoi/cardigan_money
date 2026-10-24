@@ -11,6 +11,8 @@ import type { Theme, ThemeMode } from "./schema";
  *   data-card-art faces | tiles
  *   data-density comfortable | compact
  *   data-motion  full | calm
+ *   data-overview-composition ring | ranked-bars | hidden
+ *   data-overview-trend bars | hidden
  */
 export function applyTheme(theme: Theme, mode: ThemeMode): void {
   const root = document.documentElement;
@@ -26,6 +28,8 @@ export function applyTheme(theme: Theme, mode: ThemeMode): void {
   root.dataset.cardArt = theme.options.cardArt;
   root.dataset.density = theme.options.density;
   root.dataset.motion = theme.options.motion;
+  root.dataset.overviewComposition = theme.options.overview.composition;
+  root.dataset.overviewTrend = theme.options.overview.trend;
   root.style.colorScheme = mode;
 }
 
@@ -40,5 +44,7 @@ export function clearTheme(): void {
   delete root.dataset.cardArt;
   delete root.dataset.density;
   delete root.dataset.motion;
+  delete root.dataset.overviewComposition;
+  delete root.dataset.overviewTrend;
   root.style.removeProperty("color-scheme");
 }
