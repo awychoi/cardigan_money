@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 8 exit (2026-10-23, America/New_York).
+Last updated: Phase 10 hardening (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -319,6 +319,26 @@ Sync-specific assertions: three pages/three transactions, two accounts, two bala
 
 Known limits: only the mock provider is wired; an existing `plaid` connection fails closed until the Phase 9 adapter is configured. Scheduled runs are tested through the window matcher, not by waiting for wall-clock windows. The scheduler thread does not yet observe sleep/wake explicitly; on wake the window matcher still applies.
 
+## 3h. Phase 9 — Plaid adapter (conditional) — BLOCKED
+
+No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.
+
+## 3i. Phase 10 — hardening, performance, packaging, handoff (in progress)
+
+### Completed evidence
+- **Performance:** 50k encrypted transactions measured in release (`cargo test --release --test perf -- --ignored --nocapture`): warm search **13.1 ms**, month change **32.3 ms**, dashboard **40.5 ms**, cached dashboard after unlock **41.6 ms**, cold unlock **2.08 s**. Targets met/approximately met; details and debug comparison in `docs/performance.md`.
+- **Adversarial verification:** documented matrix in `docs/adversarial-verification.md`: plain-SQLite rejection, wrong passphrase, DB/header/backup tamper, wrong-vault restore, symlink/path rejection, malformed/oversized CSV, formula injection, extra/oversized IPC fields, cursor failure, lock mid-sync, pending double-count, network URL/body caps, locked restore, concurrent sync, renderer sinks/localStorage/dev mock.
+- **Dependency/build audit:** `cargo audit` shows **0 vulnerabilities**; 5 allowed Linux/unmaintained warnings (glib family/GTK, not used on macOS). `cargo deny check` all ok. `pnpm audit` → no known vulnerabilities. `pnpm install --frozen-lockfile` is the documented install. No repository secrets were added.
+- **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (34 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
+- **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **4073844017c4f21a22ee0317fdc879668ae19c9c7eadacd735373472f4037931** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready.
+- **Docs:** README updated; `docs/backup-recovery.md`, `docs/performance.md`, `docs/adversarial-verification.md`, `docs/native-smoke.md`, `docs/data-dictionary.md`, `docs/incident-runbook.md`, and the Plaid blocker section.
+- **Automated suites:** 141 Rust (plus ignored release perf test), 23 Vitest, 34 Playwright; `pnpm build` + artifact scan passed.
+
+### Still required before Phase 10 completion
+- Independent reviewer report and resolution/written acceptance of Critical/High findings.
+- Owner native smoke on the signed artifact: native passphrase sheet, Keychain ACL, screen capture/content protection, screen-lock/sleep auto-lock, close/quit, state restoration, file dialogs, VoiceOver. These are **not claimed verified**.
+- Final implementation-status update with the review outcome and any accepted residual risks.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -368,7 +388,7 @@ No performance target has been measured yet (no ledger/dashboard). Do not treat 
 
 ## 9. Next phase
 
-Phase 9 (conditional) requires owner Plaid credentials and a live/sandbox Item. No account or credentials are available in this environment, so the adapter, Keychain credential handoff, Hosted Link polling, and live verification are **not claimed complete**. Phase 10 hardening continues in parallel.
+Phase 10 is completing independent-review disposition and owner native smoke. Phase 9 (conditional) requires owner Plaid credentials and a live/sandbox Item. No account or credentials are available in this environment, so the adapter, Keychain credential handoff, Hosted Link polling, and live verification are **not claimed complete**. Phase 10 hardening continues in parallel.
 
 ## 10. Superseded next-phase note
 

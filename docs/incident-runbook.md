@@ -1,0 +1,12 @@
+# Incident / troubleshooting runbook
+
+1. **Suspected compromise or stolen Mac:** lock the app; rotate the vault passphrase (new DEK) from Settings; delete old backups encrypted under the old passphrase; revoke any Plaid Item/client secret externally when live linking exists; change passwords for any exported plaintext CSV copies. There is no remote wipe.
+2. **Lost passphrase:** no recovery. Do not attempt to modify the header or database. Preserve the vault directory and backups for an authorized recovery attempt; if both header copies are intact but the passphrase is unknown, the data is unrecoverable.
+3. **Corrupt database / failed unlock:** do not run third-party repair tools on the only copy. Copy the vault directory aside, then restore the newest verified backup (pre-restore validation runs first). If the app cannot reach Settings, use an existing vault install (empty-install restore is not supported).
+4. **Failed restore:** validation failures leave the live ledger untouched. If a post-swap failure is reported, quit, preserve the vault directory, and use the `pre-restore` backup. The old file may be at `ledger.cmdb.restore-old`.
+5. **Failed rotation:** use the new passphrase if the rekey completed; otherwise the old passphrase. The rotation journal plus pre-change backup exist. Retry only after preserving a copy.
+6. **Backup failure/disk full:** unlock still succeeds; fix free space/permissions, run Back up now. Settings shows the last backup status; events record backup_failed.
+7. **Sync error/reconnect:** inspect Connections & sync for the sanitized error. Do not delete the local ledger. Reconnect replaces neither accounts nor transactions; duplicate mapping is prevented by `account_sources`. If locked during a scheduled sync, the run is skipped/retried in the window.
+8. **Plaintext export leaked:** treat the CSV as compromised personal financial data. Delete it, rotate the ledger passphrase, and review cloud-sync/version history. The app cannot revoke it.
+9. **App crash on launch:** preserve app data; check `~/Library/Logs`/Console for the app's non-sensitive messages; rebuild from the recorded SHA-256 source. Do not disable vault checks or run with a modified binary.
+10. **Report a security issue:** keep the report private; include version/hash, reproduction, and whether secrets/data were exposed. Do not include passphrases or backups.

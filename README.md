@@ -2,7 +2,7 @@
 
 A local-first macOS app for one person's credit-card balances and calendar-month spending. Tauri 2, React, TypeScript, Rust, and a SQLCipher-encrypted ledger.
 
-> **Status: active build, not complete.** The secure shell and encrypted vault foundation are implemented. Account management, the dashboard, CSV import/export, backups, and sync are built in the phases tracked in [docs/implementation-status.md](docs/implementation-status.md). There is no live Plaid connection and no verified institution coverage. This is not distribution-ready.
+> **Status: Phase 10 local release candidate (offline/demo/CSV scope).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups/restore, portable exports, crypto-erase, sync engine/scheduler against a mock provider, and hardening are implemented. **Live Plaid linking is blocked:** no owner credentials or authorized Item were available, so there is no verified institution coverage. This is an ad-hoc-signed local build, not distribution-ready.
 
 ## What it is
 
@@ -53,6 +53,7 @@ cd src-tauri
 cargo test
 cargo audit
 cargo deny check
+cargo test --test perf -- --ignored --nocapture   # 50k dataset measurement
 ```
 
 This checkout was prepared in a sandbox that allows writes only inside the repository, so `scripts/dev-env.sh` points `CARGO_HOME`, `RUSTUP_HOME`, the pnpm store, and the Playwright browser cache at `.toolchain/` and `.cache/`. Source it if your environment has the same restriction:
@@ -78,7 +79,7 @@ The build is ad-hoc signed for local use only. It does not use a Developer ID, h
 
 ## Backups, passphrases, and demos
 
-These are implemented in later phases; see [docs/implementation-status.md](docs/implementation-status.md) for what actually works today. The intended rules:
+Implemented and covered by service-level tests; native dialogs remain owner smoke tests. See [docs/backup-recovery.md](docs/backup-recovery.md) and [docs/native-smoke.md](docs/native-smoke.md). The rules:
 
 - Automatic backups are self-contained encrypted containers; restore always asks for the passphrase.
 - Changing the passphrase rotates the data encryption key. Older backups require the old passphrase and are labeled; they are never silently rewritten or deleted.
@@ -97,6 +98,19 @@ These are implemented in later phases; see [docs/implementation-status.md](docs/
 - [Test plan](docs/test-plan.md)
 - [Decision log](docs/decisions.md)
 - [Implementation status](docs/implementation-status.md)
+- [Backup/recovery runbook](docs/backup-recovery.md)
+- [Performance measurements](docs/performance.md)
+- [Adversarial verification](docs/adversarial-verification.md)
+- [Native smoke checklist](docs/native-smoke.md)
+- [Data dictionary](docs/data-dictionary.md)
+- [Incident runbook](docs/incident-runbook.md)
+
+## Current limitations and unverified items
+
+- Live Plaid linking, Keychain ACLs, native file dialogs/sheets, screen-capture protection, screen-lock/sleep auto-lock, and VoiceOver behavior are **not verified** in this environment; see the native smoke checklist and the blocker in `docs/plaid-feasibility.md`.
+- Restore requires an existing unlocked vault; fresh-install restore is unsupported.
+- The scheduled sync is mock-provider tested; no live network call was made.
+- The release is ad-hoc signed, not notarized or App-Sandboxed.
 
 ## License
 

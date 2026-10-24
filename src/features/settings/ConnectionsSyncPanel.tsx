@@ -69,6 +69,11 @@ export function ConnectionsSyncPanel({
   return (
     <section className="panel panel-wide" aria-labelledby="connections-title">
       <h2 id="connections-title">Connections &amp; sync</h2>
+      <p className="inline-notice" role="note">
+        Live Plaid linking is unavailable in this build: no owner Plaid credentials or authorized
+        Item were available. The offline, CSV, and demo workflows remain fully usable. See
+        docs/plaid-feasibility.md for the concrete blocker and verification requirements.
+      </p>
       <p className="fine-print">
         Sync runs in Rust after unlock, advances each connection's cursor only after the page is
         committed, and keeps previously reported values when a stream is partially unavailable. The

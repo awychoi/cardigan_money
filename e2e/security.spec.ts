@@ -46,3 +46,18 @@ test.describe("renderer security surface", () => {
     expect(keys).toEqual([]);
   });
 });
+
+test("primary navigation is keyboard-activatable with visible focus", async ({ page }) => {
+  await openUnlocked(page);
+  const transactions = page.getByRole("button", { name: "Transactions", exact: true });
+  await transactions.focus();
+  await expect(transactions).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+  await page.keyboard.press("Tab");
+  const focused = await page.evaluate(() => {
+    const element = document.activeElement;
+    return element ? element.tagName + ":" + (element.getAttribute("aria-label") ?? element.textContent ?? "") : "none";
+  });
+  expect(focused).not.toBe("none");
+});
