@@ -41,6 +41,7 @@ test.describe("read-only dashboard (browser mock)", () => {
     await openUnlocked(page);
     await page.getByRole("button", { name: "Transactions", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+    await expect(page.locator(".ledger-meta")).toContainText("EUR");
     await page.getByLabel("Search transactions").fill("Blue Bottle");
     await expect(page.getByText(/eligible subtotal/i)).toBeVisible();
     await expect(page.getByText(/pending subtotal/i)).toBeVisible();

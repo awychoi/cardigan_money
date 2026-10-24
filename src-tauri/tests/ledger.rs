@@ -570,7 +570,10 @@ fn ledger_search_filters_sort_and_pagination_are_parameterized() {
     assert_eq!(page.page_size, 2);
     assert_eq!(page.rows.len(), 2);
     assert!(page.rows[0].amount_minor >= page.rows[1].amount_minor);
-    assert_eq!(page.eligible_subtotal_minor, 7_500);
+    assert_eq!(page.subtotals.len(), 1);
+    assert_eq!(page.subtotals[0].currency, "USD");
+    assert_eq!(page.subtotals[0].eligible_minor, 7_500);
+    assert_eq!(page.subtotals[0].eligible_count, 2);
 
     // Escaped LIKE: a literal % in the search matches nothing here.
     let percent = state
@@ -808,4 +811,124 @@ fn upcoming_window_and_non_usd_balances_are_separated() {
     );
     // USD accounts missing balances: none; EUR is counted separately, so complete is true.
     assert!(view.balances.complete);
+}
+
+#[test]
+fn ledger_subtotals_never_sum_different_currencies() {
+    let (_tmp, state) = setup();
+    let usd = account(&state, "USD Card", "USD");
+    let eur = account(&state, "EUR Card", "EUR");
+    tx(
+        &state,
+        &usd,
+        "2026-10-02",
+        1_000,
+        "purchase",
+        "USD Shop",
+        Some("Shopping"),
+        false,
+        false,
+        "USD",
+        None,
+        None,
+    );
+    tx(
+        &state,
+        &usd,
+        "2026-10-03",
+        300,
+        "purchase",
+        "Pending USD",
+        Some("Shopping"),
+        true,
+        false,
+        "USD",
+        Some("2026-10-03"),
+        None,
+    );
+    tx(
+        &state,
+        &eur,
+        "2026-10-04",
+        2_000,
+        "purchase",
+        "EUR Shop",
+        Some("Dining"),
+        false,
+        false,
+        "EUR",
+        None,
+        None,
+    );
+    tx(
+        &state,
+        &eur,
+        "2026-10-05",
+        400,
+        "purchase",
+        "Pending EUR",
+        Some("Dining"),
+        true,
+        false,
+        "EUR",
+        Some("2026-10-05"),
+        None,
+    );
+
+    let page = state
+        .with_db(|conn, _h, _s| {
+            query_ledger(
+                conn,
+                &LedgerQuery {
+                    start_date: "2026-10-01".into(),
+                    end_date_exclusive: "2026-11-01".into(),
+                    account_ids: vec![],
+                    category: None,
+                    status: None,
+                    tx_type: None,
+                    search: None,
+                    sort: None,
+                    page: None,
+                    page_size: None,
+                },
+            )
+        })
+        .unwrap();
+
+    assert_eq!(page.row_count, 4);
+    assert_eq!(page.subtotals.len(), 2);
+    assert_eq!(page.subtotals[0].currency, "USD");
+    assert_eq!(page.subtotals[0].eligible_minor, 1_000);
+    assert_eq!(page.subtotals[0].pending_minor, 300);
+    assert_eq!(page.subtotals[0].eligible_count, 1);
+    assert_eq!(page.subtotals[0].pending_count, 1);
+    assert_eq!(page.subtotals[1].currency, "EUR");
+    assert_eq!(page.subtotals[1].eligible_minor, 2_000);
+    assert_eq!(page.subtotals[1].pending_minor, 400);
+
+    // A foreign-currency filter must keep that currency's subtotal; a hardcoded
+    // USD predicate would silently report zero here.
+    let eur_only = state
+        .with_db(|conn, _h, _s| {
+            query_ledger(
+                conn,
+                &LedgerQuery {
+                    start_date: "2026-10-01".into(),
+                    end_date_exclusive: "2026-11-01".into(),
+                    account_ids: vec![eur.clone()],
+                    category: None,
+                    status: None,
+                    tx_type: None,
+                    search: None,
+                    sort: None,
+                    page: None,
+                    page_size: None,
+                },
+            )
+        })
+        .unwrap();
+    assert_eq!(eur_only.subtotals.len(), 1);
+    assert_eq!(eur_only.subtotals[0].currency, "EUR");
+    assert_eq!(eur_only.subtotals[0].eligible_minor, 2_000);
+    assert_eq!(eur_only.subtotals[0].eligible_count, 1);
 }

@@ -9,6 +9,7 @@ import type {
   AccountCard,
   AccountSpend,
   Breakdown,
+  CurrencySubtotal,
   Dashboard,
   LedgerPage,
   LedgerQuery,
@@ -711,12 +712,31 @@ export function mockLedger(query: LedgerQuery): LedgerPage {
     );
   }
   const rowCount = rows.length;
-  const eligibleSubtotalMinor = rows
-    .filter((tx) => !tx.pending && !effective(tx).excluded && isSpend(effective(tx).type))
-    .reduce((sum, tx) => sum + tx.amountMinor, 0);
-  const pendingSubtotalMinor = rows
-    .filter((tx) => tx.pending && !effective(tx).excluded && isSpend(effective(tx).type))
-    .reduce((sum, tx) => sum + tx.amountMinor, 0);
+  const subtotalByCurrency = new Map<string, CurrencySubtotal>();
+  for (const tx of rows) {
+    const effectiveTx = effective(tx);
+    if (effectiveTx.excluded || !isSpend(effectiveTx.type)) continue;
+    const entry = subtotalByCurrency.get(tx.currency) ?? {
+      currency: tx.currency,
+      eligibleMinor: 0,
+      pendingMinor: 0,
+      eligibleCount: 0,
+      pendingCount: 0,
+    };
+    if (tx.pending) {
+      entry.pendingMinor += tx.amountMinor;
+      entry.pendingCount += 1;
+    } else {
+      entry.eligibleMinor += tx.amountMinor;
+      entry.eligibleCount += 1;
+    }
+    subtotalByCurrency.set(tx.currency, entry);
+  }
+  const subtotals = [...subtotalByCurrency.values()].sort((a, b) => {
+    if (a.currency === "USD") return -1;
+    if (b.currency === "USD") return 1;
+    return a.currency.localeCompare(b.currency);
+  });
   const sorted = [...rows].sort((a, b) => {
     switch (query.sort) {
       case "date_asc":
@@ -736,8 +756,7 @@ export function mockLedger(query: LedgerQuery): LedgerPage {
     rowCount,
     page,
     pageSize,
-    eligibleSubtotalMinor,
-    pendingSubtotalMinor,
+    subtotals,
   };
 }
 

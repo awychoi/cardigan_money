@@ -342,14 +342,23 @@ export const zLedgerRow = z
   })
   .strict();
 
+export const zCurrencySubtotal = z
+  .object({
+    currency: z.string(),
+    eligibleMinor: z.number().int(),
+    pendingMinor: z.number().int(),
+    eligibleCount: z.number().int(),
+    pendingCount: z.number().int(),
+  })
+  .strict();
+
 export const zLedgerPage = z
   .object({
     rows: z.array(zLedgerRow),
     rowCount: z.number().int(),
     page: z.number().int(),
     pageSize: z.number().int(),
-    eligibleSubtotalMinor: z.number().int(),
-    pendingSubtotalMinor: z.number().int(),
+    subtotals: z.array(zCurrencySubtotal),
   })
   .strict();
 
@@ -380,6 +389,7 @@ export type AccountSpend = z.infer<typeof zAccountSpend>;
 export type Dashboard = z.infer<typeof zDashboard>;
 export type LedgerRow = z.infer<typeof zLedgerRow>;
 export type LedgerPage = z.infer<typeof zLedgerPage>;
+export type CurrencySubtotal = z.infer<typeof zCurrencySubtotal>;
 export type LedgerQuery = z.infer<typeof zLedgerQuery>;
 
 export const zTransactionDetail = z

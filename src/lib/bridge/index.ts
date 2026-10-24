@@ -85,6 +85,7 @@ export type {
   LedgerPage,
   LedgerQuery,
   LedgerRow,
+  CurrencySubtotal,
   MonthSummary,
   AccountCard,
   TransactionDetail,

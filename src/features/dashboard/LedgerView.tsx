@@ -5,7 +5,13 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { command, type Dashboard, type LedgerPage, type LedgerRow } from "../../lib/bridge";
+import {
+  command,
+  type CurrencySubtotal,
+  type Dashboard,
+  type LedgerPage,
+  type LedgerRow,
+} from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { formatDateOnly, formatMoney, formatMonthRange, monthLabel } from "../../lib/formatting";
 import { Button } from "../../components/Button";
@@ -15,6 +21,17 @@ type Mode = "transactions" | "suppliers";
 type Status = "all" | "pending" | "posted";
 
 const columnHelper = createColumnHelper<LedgerRow>();
+
+function subtotalLabel(
+  subtotals: CurrencySubtotal[],
+  amountKey: "eligibleMinor" | "pendingMinor",
+  countKey: "eligibleCount" | "pendingCount",
+): string {
+  const values = subtotals
+    .filter((item) => item[countKey] > 0)
+    .map((item) => `${formatMoney(item[amountKey], item.currency)} ${item.currency}`);
+  return values.length > 0 ? values.join(" · ") : "—";
+}
 
 export function LedgerView({
   dashboard,
@@ -404,12 +421,19 @@ export function LedgerView({
           <div className="ledger-meta" role="status">
             <span>{result?.rowCount ?? 0} rows</span>
             <span>
+              {result?.subtotals.reduce((sum, item) => sum + item.eligibleCount, 0) ?? 0} eligible
+            </span>
+            <span>
               Eligible subtotal:{" "}
-              <strong className="amount">{formatMoney(result?.eligibleSubtotalMinor ?? 0)}</strong>
+              <strong className="amount">
+                {subtotalLabel(result?.subtotals ?? [], "eligibleMinor", "eligibleCount")}
+              </strong>
             </span>
             <span>
               Pending subtotal:{" "}
-              <strong className="amount">{formatMoney(result?.pendingSubtotalMinor ?? 0)}</strong>
+              <strong className="amount">
+                {subtotalLabel(result?.subtotals ?? [], "pendingMinor", "pendingCount")}
+              </strong>
             </span>
             {account || category || status !== "all" || txType || search ? (
               <span className="status-pill status-info">Filtered</span>

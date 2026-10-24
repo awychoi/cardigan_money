@@ -172,13 +172,24 @@ pub struct LedgerRow {
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct CurrencySubtotal {
+    pub currency: String,
+    pub eligible_minor: i64,
+    pub pending_minor: i64,
+    pub eligible_count: i64,
+    pub pending_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct LedgerPage {
     pub rows: Vec<LedgerRow>,
     pub row_count: i64,
     pub page: u32,
     pub page_size: u32,
-    pub eligible_subtotal_minor: i64,
-    pub pending_subtotal_minor: i64,
+    /// One entry per currency present in the filtered spend rows. Never sums
+    /// different currencies into one figure.
+    pub subtotals: Vec<CurrencySubtotal>,
 }
 
 struct Filters {
@@ -366,21 +377,46 @@ pub fn query_ledger(conn: &Connection, query: &LedgerQuery) -> AppResult<LedgerP
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-    let count_sql = format!("SELECT count(*), \
-        COALESCE(SUM(CASE WHEN t.pending = 0 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN t.amount_minor ELSE 0 END), 0), \
-        COALESCE(SUM(CASE WHEN t.pending = 1 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN t.amount_minor ELSE 0 END), 0){}", filters.where_sql);
-    let (row_count, eligible_subtotal_minor, pending_subtotal_minor): (i64, i64, i64) = conn
-        .query_row(&count_sql, params_from_iter(filters.params), |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-        })?;
+    let subtotal_sql = format!(
+        "SELECT t.currency, \
+            COALESCE(SUM(CASE WHEN t.pending = 0 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN t.amount_minor ELSE 0 END), 0), \
+            COALESCE(SUM(CASE WHEN t.pending = 1 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN t.amount_minor ELSE 0 END), 0), \
+            COALESCE(SUM(CASE WHEN t.pending = 0 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN 1 ELSE 0 END), 0), \
+            COALESCE(SUM(CASE WHEN t.pending = 1 AND {EFFECTIVE_EXCLUDED} = 0 AND {EFFECTIVE_TYPE} IN {SPEND_TYPES} THEN 1 ELSE 0 END), 0), \
+            COUNT(*){} \
+         GROUP BY t.currency \
+         ORDER BY CASE WHEN t.currency = 'USD' THEN 0 ELSE 1 END, t.currency",
+        filters.where_sql
+    );
+    let mut stmt = conn.prepare(&subtotal_sql)?;
+    let mut row_count = 0i64;
+    let subtotals = stmt
+        .query_map(params_from_iter(filters.params), |row| {
+            Ok((
+                CurrencySubtotal {
+                    currency: row.get(0)?,
+                    eligible_minor: row.get(1)?,
+                    pending_minor: row.get(2)?,
+                    eligible_count: row.get(3)?,
+                    pending_count: row.get(4)?,
+                },
+                row.get::<_, i64>(5)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(|(subtotal, count)| {
+            row_count += count;
+            subtotal
+        })
+        .collect();
 
     Ok(LedgerPage {
         rows,
         row_count,
         page,
         page_size,
-        eligible_subtotal_minor,
-        pending_subtotal_minor,
+        subtotals,
     })
 }
 
