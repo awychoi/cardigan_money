@@ -293,8 +293,24 @@ fn valid_filename(name: &str) -> bool {
     parts.len() >= 6
 }
 
+fn open_read_nofollow(path: &Path) -> AppResult<(std::fs::File, std::fs::Metadata)> {
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)
+        .map_err(|_| AppError::PermissionDenied("backup file open"))?;
+    let meta = file.metadata().map_err(|_| AppError::Io)?;
+    if !meta.is_file() {
+        return Err(AppError::PermissionDenied("backup file type"));
+    }
+    if meta.uid() != unsafe { libc::geteuid() } {
+        return Err(AppError::PermissionDenied("backup owner"));
+    }
+    Ok((file, meta))
+}
+
 fn hash_file(path: &Path) -> AppResult<(u64, [u8; 32])> {
-    let mut file = std::fs::File::open(path).map_err(|_| AppError::Io)?;
+    let (mut file, _) = open_read_nofollow(path)?;
     let mut hasher = Sha256::new();
     let mut total = 0u64;
     let mut buffer = [0u8; 64 * 1024];
@@ -312,23 +328,15 @@ fn hash_file(path: &Path) -> AppResult<(u64, [u8; 32])> {
 }
 
 fn read_header(path: &Path) -> AppResult<BackupHeader> {
-    let meta = std::fs::symlink_metadata(path).map_err(|_| AppError::Io)?;
-    if meta.file_type().is_symlink() || !meta.is_file() {
-        return Err(AppError::PermissionDenied("backup file type"));
-    }
-    if meta.uid() != unsafe { libc::geteuid() } {
-        return Err(AppError::PermissionDenied("backup owner"));
-    }
+    let (mut file, meta) = open_read_nofollow(path)?;
     if meta.len() < CONTAINER_HEADER_LEN as u64
         || meta.len() > CONTAINER_HEADER_LEN as u64 + MAX_BACKUP_BYTES
     {
         return Err(AppError::HeaderInvalid("backup file size"));
     }
-    if meta.permissions().mode() & 0o077 != 0 {
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
-            .map_err(|_| AppError::Io)?;
+    if meta.mode() & 0o077 != 0 {
+        return Err(AppError::PermissionDenied("backup permissions are not owner-only"));
     }
-    let mut file = std::fs::File::open(path).map_err(|_| AppError::Io)?;
     let mut bytes = vec![0u8; CONTAINER_HEADER_LEN];
     file.read_exact(&mut bytes).map_err(|_| AppError::HeaderInvalid("backup header"))?;
     let header = BackupHeader::decode(&bytes)?;
@@ -340,7 +348,7 @@ fn read_header(path: &Path) -> AppResult<BackupHeader> {
 }
 
 fn verify_db_bytes(path: &Path, header: &BackupHeader) -> AppResult<()> {
-    let mut file = std::fs::File::open(path).map_err(|_| AppError::Io)?;
+    let (mut file, _) = open_read_nofollow(path)?;
     file.seek(SeekFrom::Start(CONTAINER_HEADER_LEN as u64))
         .map_err(|_| AppError::Io)?;
     let mut hasher = Sha256::new();
@@ -614,7 +622,7 @@ pub fn maybe_daily_backup(state: &AppState) {
 }
 
 fn stage_database(source: &Path, destination: &Path, header: &BackupHeader) -> AppResult<()> {
-    let mut input = std::fs::File::open(source).map_err(|_| AppError::Io)?;
+    let (mut input, _) = open_read_nofollow(source)?;
     input
         .seek(SeekFrom::Start(CONTAINER_HEADER_LEN as u64))
         .map_err(|_| AppError::Io)?;
@@ -732,7 +740,15 @@ pub fn install_restore_confirmed(
         let _ = std::fs::remove_file(&plan.staged_path);
         return Err(AppError::Locked);
     }
+    if guard.mode() != crate::state::SessionMode::Real {
+        let _ = std::fs::remove_file(&plan.staged_path);
+        return Err(AppError::Blocked("restore is unavailable in demo mode"));
+    }
     let current_header = guard.header.clone().ok_or(AppError::Locked)?;
+    if current_header.vault_id != plan.header.vault_header.vault_id {
+        let _ = std::fs::remove_file(&plan.staged_path);
+        return Err(AppError::Blocked("restore target vault changed"));
+    }
 
     let dek = match guard.dek.take() {
         Some(dek) => dek,
@@ -1022,6 +1038,7 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
     state: &AppState,
     app: &AppHandle<R>,
 ) -> AppResult<VaultState> {
+    state.require_real("erase data in demo mode")?;
     state.lock(app, "crypto_erase");
     remove_tree(&state.app_data.join("vault"));
     remove_tree(&state.app_data.join("backups"));

@@ -356,6 +356,7 @@ pub fn execute<R: tauri::Runtime>(
             GatewayResponse::ok(vault_service::status(state))
         }
         "vault_change_passphrase" => {
+            state.require_real("change the passphrase in demo mode")?;
             let _: EmptyPayload = request.decode_payload()?;
             state.rate_limit("vault_change_passphrase", 2, 60)?;
             let Some(mut current_values) =
@@ -380,20 +381,36 @@ pub fn execute<R: tauri::Runtime>(
         }
         "settings_update" => {
             let patch: SettingsPatch = request.decode_payload()?;
-            let updated = state.with_db(|conn, _header, current| {
-                let next = apply_patch(current, patch)?;
-                save_settings(conn, &next)?;
-                crate::storage::events::record_event(
-                    conn,
-                    "settings_changed",
-                    "success",
-                    None,
-                )?;
-                Ok(next)
-            })?;
+            let (updated, session_vault_id, session_generation) =
+                state.with_db(|conn, header, current| {
+                    let next = apply_patch(current, patch)?;
+                    save_settings(conn, &next)?;
+                    crate::storage::events::record_event(
+                        conn,
+                        "settings_changed",
+                        "success",
+                        None,
+                    )?;
+                    let header = header.cloned().ok_or(AppError::Locked)?;
+                    Ok((next, header.vault_id, header.generation))
+                })?;
             {
+                // Do not repopulate a session that locked, switched to demo, or
+                // opened another vault while the write was in flight.
                 let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
-                guard.settings = Some(updated.clone());
+                let same_session = guard.is_unlocked()
+                    && guard.mode() == crate::state::SessionMode::Real
+                    && guard
+                        .header
+                        .as_ref()
+                        .map(|header| {
+                            header.vault_id == session_vault_id
+                                && header.generation == session_generation
+                        })
+                        .unwrap_or(false);
+                if same_session {
+                    guard.settings = Some(updated.clone());
+                }
             }
             GatewayResponse::ok(SettingsView { settings: updated })
         }
@@ -679,6 +696,7 @@ pub fn execute<R: tauri::Runtime>(
             GatewayResponse::ok(item)
         }
         "crypto_erase" => {
+            state.require_real("erase data in demo mode")?;
             state.rate_limit("crypto_erase", 2, 60)?;
             let _: EmptyPayload = request.decode_payload()?;
             let view = backups::crypto_erase(state, app)?;
@@ -903,6 +921,17 @@ mod tests {
             include_in_overview: true,
         };
         assert!(bad_currency.into_input().is_ok());
+    }
+
+    #[test]
+    fn demo_mode_blocks_destructive_real_vault_commands() {
+        let app = app();
+        let state = state();
+        execute(&app, &state, req("demo_open", json!({}))).unwrap();
+        for command in ["crypto_erase", "vault_change_passphrase"] {
+            let err = execute(&app, &state, req(command, json!({}))).unwrap_err();
+            assert_eq!(err.code(), "blocked", "{command}");
+        }
     }
 
     #[test]

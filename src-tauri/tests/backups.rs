@@ -115,6 +115,16 @@ fn backup_is_self_contained_private_and_tamper_evident() {
     std::fs::set_permissions(&truncated, std::fs::Permissions::from_mode(0o600)).unwrap();
     assert!(prepare_restore(&state, &truncated, &SecretString::new(PASS.into())).is_err());
     std::fs::remove_file(&truncated).unwrap();
+
+    // Owner-only permissions are required; the reader must not chmod a file the
+    // owner selected. A symlink to a valid backup is rejected (O_NOFOLLOW).
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+    assert!(prepare_restore(&state, &path, &SecretString::new(PASS.into())).is_err());
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let link = dir.join("cm-backup-manual-deadbeef-gen1-20260101T000002Z-0000.cmbak");
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    assert!(prepare_restore(&state, &link, &SecretString::new(PASS.into())).is_err());
+    std::fs::remove_file(link).unwrap();
 }
 
 #[test]
@@ -250,4 +260,16 @@ fn crypto_erase_removes_ledger_header_backups_and_demo_data() {
     // A stale key cannot open a removed database.
     let _ = LockedKey::generate().unwrap();
     let _ = open_ledger(&tmp.path().join("vault/ledger.cmdb"), &LockedKey::generate().unwrap(), false);
+}
+
+#[test]
+fn restore_rechecks_mode_after_a_native_prompt_gap() {
+    let (_tmp, state, app, _account) = setup();
+    let backup = create_backup(&state, &app, BackupKind::Manual).unwrap();
+    let path = backups::backups_dir(&state).join(&backup.backup.id);
+    let plan = prepare_restore(&state, &path, &SecretString::new(PASS.into())).unwrap();
+    state.session.lock().unwrap().mode = cardigan_money_lib::state::SessionMode::Demo;
+    let result = install_restore_confirmed(&state, plan);
+    assert!(matches!(result, Err(cardigan_money_lib::error::AppError::Blocked(_))));
+    assert!(!backups::backups_dir(&state).join("restore-staged-").exists());
 }
