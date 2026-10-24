@@ -93,7 +93,7 @@ The build is ad-hoc signed for local use only. It does not use a Developer ID, h
 
 ## Backups, passphrases, and demos
 
-Implemented and covered by service-level tests; native dialogs remain owner smoke tests. See [docs/backup-recovery.md](docs/backup-recovery.md) and [docs/native-smoke.md](docs/native-smoke.md). The rules:
+Implemented and covered by service-level tests; native dialogs remain owner smoke tests. See [backup/recovery](docs/operations/backup-recovery.md) and [native smoke](docs/operations/native-smoke.md). The rules:
 
 - Automatic backups are self-contained encrypted containers; restore always asks for the passphrase.
 - Changing the passphrase rotates the data encryption key. Older backups require the old passphrase and are labeled; they are never silently rewritten or deleted.
@@ -102,28 +102,17 @@ Implemented and covered by service-level tests; native dialogs remain owner smok
 
 ## Documentation
 
-- [Implementation plan](implementation-plan.md)
-- [Build specification](personal-cards-build-spec.md)
-- [Security review](security-review.md)
-- [Security policy and incident runbook](SECURITY.md)
-- [Threat model](docs/threat-model.md)
-- [Security architecture](docs/security-architecture.md)
-- [Plaid feasibility](docs/plaid-feasibility.md)
-- [Plaid setup guide](docs/plaid-guide.md)
-- [Sandbox verification record](docs/plaid-verification-2026-10-24.md)
-- [Test plan](docs/test-plan.md)
-- [Decision log](docs/decisions.md)
-- [Implementation status](docs/implementation-status.md)
-- [Backup/recovery runbook](docs/backup-recovery.md)
-- [Performance measurements](docs/performance.md)
-- [Adversarial verification](docs/adversarial-verification.md)
-- [Native smoke checklist](docs/native-smoke.md)
-- [Data dictionary](docs/data-dictionary.md)
-- [Incident runbook](docs/incident-runbook.md)
+Start at [docs/README.md](docs/README.md) — the map of plans, security, operations, and reference docs.
+
+- [Current plan: UI overhaul](docs/plans/ui-overhaul-2026-10.md)
+- [Implementation status](docs/reference/implementation-status.md) — what is built and what is still unverified
+- [Security policy](SECURITY.md) · [architecture](docs/security/architecture.md) · [threat model](docs/security/threat-model.md)
+- [Theming](docs/design/theming.md) · [UI direction](docs/design/proposal.md)
+- [Decision log](docs/reference/decisions.md)
 
 ## Current limitations and unverified items
 
-- Live Plaid linking, Keychain ACLs, native file dialogs/sheets, screen-capture protection, screen-lock/sleep auto-lock, and VoiceOver behavior are **not verified** in this environment; see the native smoke checklist and the blocker in `docs/plaid-feasibility.md`.
+- Live Plaid linking, Keychain ACLs, native file dialogs/sheets, screen-capture protection, screen-lock/sleep auto-lock, and VoiceOver behavior are **not verified** in this environment; see [native smoke](docs/operations/native-smoke.md) and the blocker in [Plaid feasibility](docs/integrations/plaid-feasibility.md).
 - Restore requires an existing unlocked vault; fresh-install restore is unsupported.
 - The scheduled sync is mock-provider tested; no live network call was made.
 - The release is ad-hoc signed, not notarized or App-Sandboxed.

@@ -1,6 +1,6 @@
 # Security architecture: cardigan_money
 
-Status: Phase 0 design, implemented incrementally. This document records the actual formats used by the code, not aspirational ones. Where a control is not yet verified, [implementation-status.md](implementation-status.md) says so.
+Status: Phase 0 design, implemented incrementally. This document records the actual formats used by the code, not aspirational ones. Where a control is not yet verified, [implementation-status.md](../reference/implementation-status.md) says so.
 
 ## 1. Key hierarchy
 
@@ -85,7 +85,7 @@ Sequence: pre-change encrypted backup → write journal → `PRAGMA rekey` the l
 
 ## 3. SQLCipher activation and fail-closed rules
 
-Pinned provider: `rusqlite 0.37` with `bundled-sqlcipher-vendored-openssl` (libsqlite3-sys 0.35). The resolved SQLCipher version is recorded in [implementation-status.md](implementation-status.md) from the test output.
+Pinned provider: `rusqlite 0.37` with `bundled-sqlcipher-vendored-openssl` (libsqlite3-sys 0.35). The resolved SQLCipher version is recorded in [implementation-status.md](../reference/implementation-status.md) from the test output.
 
 Order on every connection (`security/cipher.rs::open_ledger`):
 

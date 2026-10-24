@@ -17,4 +17,4 @@ Run on the owner's Mac with a release build. Record pass/fail and the build SHA-
 - [ ] Accessibility: VoiceOver labels for native sheets and primary controls; full keyboard traversal; visible focus; contrast.
 - [ ] Artifact: `codesign --verify --deep --strict`, hash, Gatekeeper behavior on this Mac.
 
-Record results in `docs/implementation-status.md` / the handoff record. Do not mark an item passed without performing it.
+Record results in `docs/reference/implementation-status.md` / the handoff record. Do not mark an item passed without performing it.

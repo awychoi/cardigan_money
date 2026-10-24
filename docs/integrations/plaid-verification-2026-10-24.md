@@ -34,4 +34,4 @@ Two Sandbox Items were linked. The owner quit the app, reopened it, unlocked the
 
 ## Reproduce
 
-Use `docs/plaid-guide.md` with the `2ef8b68...` build, sync, **Show verification report**, then quit/reopen and repeat. Compare account/transaction counts and `cursorPresent`.
+Use `docs/integrations/plaid-guide.md` with the `2ef8b68...` build, sync, **Show verification report**, then quit/reopen and repeat. Compare account/transaction counts and `cursorPresent`.

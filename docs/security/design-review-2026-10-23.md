@@ -1,8 +1,14 @@
 # Security review: cardigan_money
 
+> **Historical (2026-10-23).** Pre-implementation design review. Its findings were adopted into the
+> [decision log](../reference/decisions.md) and [security architecture](architecture.md); the app has since
+> been built and independently reviewed ([independent review](independent-review-2026-10-23.md)).
+> Kept for security provenance.
+
+
 Review date: 2026-10-23
 Reviewer role: cyber-security engineer (architecture and threat review)
-Scope: [personal-cards-build-spec.md](personal-cards-build-spec.md) and [implementation-plan.md](implementation-plan.md). No application code exists yet, so this is a pre-implementation design review.
+Scope: [personal-cards-build-spec.md](../README.md#retired-documents) and [implementation-plan.md](../plans/archive/2026-10-initial-build-plan.md). No application code exists yet, so this is a pre-implementation design review.
 Status: findings recorded; both documents amended. The specification remains the source of truth; this review records why the amendments exist and what "done" means for security.
 
 Note on tense: the findings quote the **pre-amendment** documents. Where a finding says "the plan says" or "the spec says," read it as the version reviewed. The amendments are summarized in §7 of this review and are normative in the current specification and plan.
@@ -421,8 +427,8 @@ No phase may be reported complete while a relevant item is open. Phase 10 cannot
 
 ### 8.1 Foundation and build
 
-- [ ] Threat model and trust boundaries recorded in `docs/threat-model.md`.
-- [ ] Crypto design (KDF params, header format, AAD, rotation journal) recorded in `docs/security-architecture.md` with test vectors.
+- [ ] Threat model and trust boundaries recorded in `docs/security/threat-model.md`.
+- [ ] Crypto design (KDF params, header format, AAD, rotation journal) recorded in `docs/security/architecture.md` with test vectors.
 - [ ] SQLCipher fail-closed spike passes: `cipher_version` non-empty, `cipher_status=1`, plain SQLite cannot open the DB, wrong key rejected without modifying the file.
 - [ ] A test-only plain-SQLite build is rejected by the app.
 - [ ] Tauri CSP has no HTTPS sources; capability files contain only the `main` window and no dangerous plugins.
@@ -473,7 +479,7 @@ No phase may be reported complete while a relevant item is open. Phase 10 cannot
 
 ## 9. Verification that must accompany the release
 
-At minimum, the following evidence must be recorded in `docs/implementation-status.md` and the security test report:
+At minimum, the following evidence must be recorded in `docs/reference/implementation-status.md` and the security test report:
 
 1. Exact SQLCipher/provider/version, rusqlite feature flags, and the fail-closed test output.
 2. Argon2id parameters and measured unlock time on the M1 Max; confirmation that header parameter tampering is bounded.
@@ -518,5 +524,5 @@ Security review result: **changes required; amendments applied to the specificat
 
 Reviewed documents after amendment:
 
-- [personal-cards-build-spec.md](personal-cards-build-spec.md)
-- [implementation-plan.md](implementation-plan.md)
+- [personal-cards-build-spec.md](../README.md#retired-documents)
+- [implementation-plan.md](../plans/archive/2026-10-initial-build-plan.md)

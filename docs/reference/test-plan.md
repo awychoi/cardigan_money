@@ -1,6 +1,6 @@
 # Test plan: cardigan_money
 
-This plan maps the specification's required tests (§16) to commands and phases. A test that has not been run is not evidence. `docs/implementation-status.md` records actual runs and results.
+This plan maps the specification's required tests (§16) to commands and phases. A test that has not been run is not evidence. `docs/reference/implementation-status.md` records actual runs and results.
 
 ## 1. Layers and commands
 
@@ -104,7 +104,7 @@ This plan maps the specification's required tests (§16) to commands and phases.
 
 ## 4. Native macOS smoke checklist (manual, owner's M1 Max)
 
-These cannot be proven by Playwright or CI. Each item records pass/fail and date in `docs/implementation-status.md`.
+These cannot be proven by Playwright or CI. Each item records pass/fail and date in `docs/reference/implementation-status.md`.
 
 1. App launches from the built `.app` and shows the exact title `cardigan_money`.
 2. First launch offers vault creation; the native secure sheet appears (no HTML password field).

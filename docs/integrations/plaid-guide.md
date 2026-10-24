@@ -47,4 +47,4 @@ Local disconnect deletes the access token from Keychain and marks the connection
 - [ ] Sync after restart uses the persisted cursor.
 - [ ] Wrong/expired link token, cancelled link, and disconnected Item show sanitized errors.
 
-Use **Show verification report** in the Plaid section to copy sanitized counts/statuses for the verification record. It contains no tokens, credential references, account numbers, descriptions, or amounts. Record the institution, account/transaction counts, and step statuses in `docs/implementation-status.md`. Do not claim real-bank coverage from a Sandbox test.
+Use **Show verification report** in the Plaid section to copy sanitized counts/statuses for the verification record. It contains no tokens, credential references, account numbers, descriptions, or amounts. Record the institution, account/transaction counts, and step statuses in `docs/reference/implementation-status.md`. Do not claim real-bank coverage from a Sandbox test.

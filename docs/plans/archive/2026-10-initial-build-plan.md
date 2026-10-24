@@ -1,6 +1,11 @@
 # Implementation plan: cardigan_money
 
-Plan status: ready to execute. Derived from [personal-cards-build-spec.md](personal-cards-build-spec.md), revised 2026-10-23, and the security review in [security-review.md](security-review.md). The specification is the source of truth; this plan is the build sequence and verification checklist. Security is a phase gate, not a final cleanup.
+> **Archived (2026-10).** This is the initial build plan, kept for provenance. It is superseded by
+> [the UI overhaul plan](../ui-overhaul-2026-10.md) and does not describe the current app.
+> The specification it references was retired; see [retired documents](../../README.md#retired-documents).
+
+
+Plan status: ready to execute. Derived from [personal-cards-build-spec.md](../../README.md#retired-documents), revised 2026-10-23, and the security review in [security-review.md](../../security/design-review-2026-10-23.md). The specification was the source of truth at the time; this plan is the historical build sequence and verification checklist. Security is a phase gate, not a final cleanup.
 
 Effort is expressed as sequence and phase gates, not calendar dates. Plaid approval, Trial eligibility, and the owner's availability are external variables.
 
@@ -9,9 +14,9 @@ Effort is expressed as sequence and phase gates, not calendar dates. Plaid appro
 - Build in vertical slices. Every phase leaves the app runnable and tested at its current scope.
 - Do not start a phase until the previous phase's exit gate is met, except for explicitly parallel work called out below.
 - Do not mark a phase complete while a relevant Critical/High security finding is open without a written owner acceptance.
-- Update `docs/implementation-status.md` at the end of every phase with: completed work, tests actually run, measured results, security findings and their status, blockers, and live institutions actually verified.
+- Update `docs/reference/implementation-status.md` at the end of every phase with: completed work, tests actually run, measured results, security findings and their status, blockers, and live institutions actually verified.
 - Keep the app usable with demo data and CSV even if Plaid is blocked. A live-provider dependency must never stop the offline application from shipping.
-- Ask the owner only when a consequential decision is missing. Record the answer in the spec's decision log or in `docs/implementation-status.md`; do not silently change scope.
+- Ask the owner only when a consequential decision is missing. Record the answer in the spec's decision log or in `docs/reference/implementation-status.md`; do not silently change scope.
 - Never claim a live connection, build, test, security property, or performance target that was not actually verified. Never call the app "watertight" or "unhackable"; report residual risk.
 
 ### Phase progress tracker
@@ -107,8 +112,8 @@ Native automation is not assumed. Browser tests through the mock bridge never co
 2. Record the toolchain: macOS version, Apple Silicon target, Xcode command-line tools, Rust stable, Node LTS, pnpm, and Tauri CLI. Pin versions and commit lockfiles when the scaffold exists.
 3. Scaffold a minimal Tauri 2 + React + TypeScript + Vite app. Confirm `pnpm tauri dev` launches a native window on the M1 Max.
 4. Threat model and crypto design before coding the vault:
-   - Write `docs/threat-model.md` (assets, adversaries, trust boundaries, assumptions, out-of-scope) using spec §13.1.
-   - Write `docs/security-architecture.md`: Argon2id parameters/bounds, KEK/DEK wrapping, `vault.header` format and AAD, SQLCipher raw-key opening, generation/rotation journal, backup container, test vectors.
+   - Write `docs/security/threat-model.md` (assets, adversaries, trust boundaries, assumptions, out-of-scope) using spec §13.1.
+   - Write `docs/security/architecture.md`: Argon2id parameters/bounds, KEK/DEK wrapping, `vault.header` format and AAD, SQLCipher raw-key opening, generation/rotation journal, backup container, test vectors.
    - Verify SQLCipher raw-key opening **and raw-key rekey** support (`PRAGMA rekey` vs `sqlite3_rekey`); record the exact API and a test vector. If raw-key rekey is unsupported, stop and redesign rather than falling back to a passphrase key.
    - Decide and record the library versions (`argon2`, `chacha20poly1305`, `zeroize`, `secrecy`, `getrandom`, `subtle`).
 5. SQLCipher fail-closed spike:
@@ -121,14 +126,14 @@ Native automation is not assumed. Browser tests through the mock bridge never co
    - Explicit CSP with no HTTPS sources; one `main` capability; no fs/shell/http/opener/sql/store/process/updater/deep-link/dialog permissions exposed to the renderer.
    - `freezePrototype: true`, `withGlobalTauri: false`, asset protocol disabled, devtools off in release.
    - Navigation/new-window handlers restricted to the app origin; content protection hook; single-instance plugin/lock.
-7. Write `docs/plaid-feasibility.md` from current official documentation:
+7. Write `docs/integrations/plaid-feasibility.md` from current official documentation:
    - Trial eligibility, Item limits, product access, and pricing caveats.
    - Transactions, balances, and Liabilities availability.
    - The actual desktop linking flow: HTTPS redirect rules, no custom URI schemes, localhost only in Sandbox, deprecated webview SDK. Evaluate Hosted Link + `/link/token/get` polling and a hosted HTTPS redirect page; document what is hosted and what data crosses it.
    - Redirect/OAuth/state requirements, reconnect behavior, and the short-lived token handoff to Rust.
    - Explicit verified vs unverified statements and concrete blockers. Do not write a flow that depends on `cardigan_money://` or a Production loopback callback.
 8. Send the owner a short, concrete request for real CSV exports when available, plus the Plaid Trial signup checklist. Do not create the Plaid account.
-9. Create the remaining documentation skeletons: `docs/implementation-status.md`, `docs/decisions.md`, `docs/test-plan.md`, and `SECURITY.md`; the threat model and security architecture are produced in step 4.
+9. Create the remaining documentation skeletons: `docs/reference/implementation-status.md`, `docs/reference/decisions.md`, `docs/reference/test-plan.md`, and `SECURITY.md`; the threat model and security architecture are produced in step 4.
 10. Establish build/supply-chain hygiene: lockfiles, `.gitignore` for DB/backups/`.env`, `cargo audit`/`cargo deny`/`pnpm audit`, no unapproved postinstall scripts, and a stable local signing identity decision (ad-hoc vs self-signed).
 
 ### Deliverables
@@ -549,7 +554,7 @@ Either live transactions and balances are verified for at least one authorized a
 
 ### Build steps
 
-1. Independent security review: a reviewer other than the implementer walks the threat model, the spec §13 checklist, and [security-review.md](security-review.md). Fix or explicitly accept every Critical/High finding in writing.
+1. Independent security review: a reviewer other than the implementer walks the threat model, the spec §13 checklist, and [security-review.md](../../security/design-review-2026-10-23.md). Fix or explicitly accept every Critical/High finding in writing.
 2. Adversarial verification: tamper the DB/header/backup, fuzz CSV/JSON/IPC, attempt path traversal/symlink, try a plain-SQLite build, test wrong passphrase/replay/OAuth misuse, assert CSP has no external requests, and scan logs/DOM/URLs for sentinel secrets.
 3. Dependency/build audit: `cargo audit`, `cargo deny`, `pnpm audit`, lockfile/frozen install, postinstall allowlist, and no secret in the repository or environment files.
 4. Accessibility review: full keyboard navigation for primary workflows, visible focus, descriptive labels, readable contrast, non-color-only status indicators, and native secure-input accessibility with VoiceOver.
@@ -558,7 +563,7 @@ Either live transactions and balances are verified for at least one authorized a
 7. Build an Apple Silicon artifact, ad-hoc sign it, verify the signature, record its SHA-256, and verify it opens and runs. Do not call it distribution-ready.
 8. Write the README: prerequisites, exact development/test/build commands, how to open the app, passphrase-loss/lost-header warning, lock lifecycle, backup/restore procedure, security limitations, and residual risks.
 9. Write `SECURITY.md`, the provider guide (Trial setup, verified vs unverified products, linking flow/data flow, Liabilities caveats, limits/pricing, reconnect behavior), the data dictionary, calendar-month rules, backup/recovery runbook, and incident/troubleshooting guide.
-10. Complete `docs/implementation-status.md`: completed work, tests actually run, measured performance, security findings and status, blockers, live institutions actually verified, and artifact hash.
+10. Complete `docs/reference/implementation-status.md`: completed work, tests actually run, measured performance, security findings and status, blockers, live institutions actually verified, and artifact hash.
 11. Run the full acceptance pass against the spec's definition of done, including the security definition of done.
 
 ### Deliverables
@@ -659,7 +664,7 @@ These are tracked but do not block the offline path:
 - Confirm the lock lifecycle (screen lock/sleep/manual/quit plus 15-minute idle default) is acceptable. Disabling idle auto-lock requires a recorded risk acceptance.
 - Decide on ad-hoc signing vs a stable local self-signed identity for Keychain behavior.
 - Confirm live verification personally before any "live connected" claim.
-- Read the residual risks in [security-review.md](security-review.md) and the spec §13.14 before calling the app complete.
+- Read the residual risks in [security-review.md](../../security/design-review-2026-10-23.md) and the spec §13.14 before calling the app complete.
 - Supply branding only if desired; otherwise a neutral placeholder icon is used.
 
 ## 18. Definition of done for the plan

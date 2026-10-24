@@ -72,4 +72,4 @@ Rotate the vault passphrase (new DEK) and delete old backups encrypted under the
 
 ## 6. Verification evidence
 
-The container format, tamper detection, wrong-vault rejection, retention, portable export, pre-change backup, and crypto-erase behavior are covered by `src-tauri/tests/backups.rs`. Native file pickers and the native confirmation/sheet presentation are not automated; see the native smoke checklist in `docs/test-plan.md`. `cargo test --test backups` is the reproducible check.
+The container format, tamper detection, wrong-vault rejection, retention, portable export, pre-change backup, and crypto-erase behavior are covered by `src-tauri/tests/backups.rs`. Native file pickers and the native confirmation/sheet presentation are not automated; see the native smoke checklist in `docs/reference/test-plan.md`. `cargo test --test backups` is the reproducible check.

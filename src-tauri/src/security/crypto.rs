@@ -1,6 +1,6 @@
 //! Cryptographic primitives for the vault envelope.
 //!
-//! Design (see docs/security-architecture.md):
+//! Design (see docs/security/architecture.md):
 //!   passphrase --Argon2id(salt, params)--> KEK (32 bytes, ephemeral)
 //!   KEK --XChaCha20-Poly1305(AAD = public header)--> wrapped random DEK
 //!   DEK --SQLCipher raw key--> live encrypted ledger

@@ -25,13 +25,13 @@ This is the honesty document: it records what was built, what actually ran, and 
 - Git repository initialized; `.gitignore` excludes toolchain, Node modules, Rust targets, databases, backups, exports, `.env`, logs, and build output.
 - Toolchain pinned and recorded: Rust 1.99.1 stable (`rust-toolchain.toml`), Node 22.23.3, pnpm 12.11.2 (`packageManager`), Tauri CLI 2.12.4, Tauri 2.12.5. Lockfiles committed (`pnpm-lock.yaml`, `src-tauri/Cargo.lock`).
 - Tauri 2 + React 19 + TypeScript 5.9 + Vite 7 shell; a native window launches on the M1 Max under `pnpm tauri dev`.
-- `docs/threat-model.md`: assets, adversaries, trust boundaries, controls, out-of-scope.
-- `docs/security-architecture.md`: envelope key hierarchy, 152-byte authenticated header layout, KDF bounds, rotation journal, backup container, SQLCipher fail-closed order, lock lifecycle, Keychain, network, IPC.
-- `docs/plaid-feasibility.md`: current-doc research; Hosted Link + `/link/token/get` polling is the only viable no-server flow; live linking blocked on owner enrollment. No Plaid account or credentials were created.
+- `docs/security/threat-model.md`: assets, adversaries, trust boundaries, controls, out-of-scope.
+- `docs/security/architecture.md`: envelope key hierarchy, 152-byte authenticated header layout, KDF bounds, rotation journal, backup container, SQLCipher fail-closed order, lock lifecycle, Keychain, network, IPC.
+- `docs/integrations/plaid-feasibility.md`: current-doc research; Hosted Link + `/link/token/get` polling is the only viable no-server flow; live linking blocked on owner enrollment. No Plaid account or credentials were created.
 - SQLCipher fail-closed spike implemented and tested with real encrypted databases.
 - Test-only plain-SQLite probe builds a separate binary linking plain SQLite and rejects the app's exact verification code.
 - Tauri baseline: one `main` window built in Rust; one capability (`core:event:default`); CSP with no HTTPS source; `freezePrototype` on; `withGlobalTauri` off; asset protocol off; devtools off; drag-and-drop disabled; navigation allowlist; new windows denied; single-instance plugin; content protection applied; state restoration disabled; core dumps disabled.
-- Documentation skeletons: this file, `docs/decisions.md`, `docs/test-plan.md`, `SECURITY.md`, provisional README.
+- Documentation skeletons: this file, `docs/reference/decisions.md`, `docs/reference/test-plan.md`, `SECURITY.md`, provisional README.
 - Dependency audits run (see §5); `cargo-deny` policy added; signing decision recorded as ad-hoc.
 
 ### Actual test runs
@@ -256,7 +256,7 @@ Known limits to carry forward: native file dialogs are exercised by the owner sm
 ## 3f. Phase 7 — encrypted backups, restore, rotation, recovery
 
 ### Completed
-- Self-contained backup container v1 (256-byte header + SQLCipher DB): embeds the vault header, DB length/SHA-256, kind, timestamps, and a DEK-derived AEAD seal over the manifest. Full format in `docs/security-architecture.md` §7.
+- Self-contained backup container v1 (256-byte header + SQLCipher DB): embeds the vault header, DB length/SHA-256, kind, timestamps, and a DEK-derived AEAD seal over the manifest. Full format in `docs/security/architecture.md` §7.
 - Backup creation via consistent SQLite backup-API snapshot, checkpointed, verified (header decode, seal, hash), owner-only 0600, atomic write, strict filename, no plaintext temp.
 - Kinds: daily, manual, pre-migration, pre-restore, pre-change, portable. Automatic daily backup after unlock when >24 h old; pre-migration before pending migrations; pre-restore immediately before replacement; pre-change during passphrase rotation. Backup failures never prevent unlock and are recorded.
 - Retention: 7 daily, 10 manual, 5 each pre-migration/pre-restore/pre-change; strict pattern only; never the last backup.
@@ -265,7 +265,7 @@ Known limits to carry forward: native file dialogs are exercised by the owner sm
 - Crypto-erase: typed confirmation + native confirmation; locks the session, best-effort overwrites and deletes vault/header/journal/backups/demo/staged files, fsyncs, and returns the no-vault state. External copies are explicitly out of scope.
 - Security events for backup creation/verification/failure, restore success, export, and lock-before-erase.
 - UI: Backups & recovery panel (back up now, list, delete, restore warning, portable export, crypto-erase danger zone, last-backup status), hidden in demo.
-- Recovery guide: `docs/backup-recovery.md`.
+- Recovery guide: `docs/operations/backup-recovery.md`.
 
 ### Actual test runs
 | Suite | Result |
@@ -322,7 +322,7 @@ Known limits: only the mock provider is wired; an existing `plaid` connection fa
 ## 3h. Phase 9 — Plaid adapter (conditional) — SANDBOX VERIFIED
 
 ### Live Sandbox evidence (2026-10-24)
-Owner-supplied reports from build `2ef8b68...` (see `docs/plaid-verification-2026-10-24.md`):
+Owner-supplied reports from build `2ef8b68...` (see `docs/integrations/plaid-verification-2026-10-24.md`):
 
 | Connection | Status | Accounts | Provider transactions | Cursor | Liabilities |
 | --- | --- | ---: | ---: | --- | --- |
@@ -347,20 +347,20 @@ This is **Sandbox-only**. Production is disabled. No live bank/real financial da
 - Keychain attribute/ACL inspection in Keychain Access (functional round trip verified).
 - Reconnect/update-mode live repair (implemented and mocked; connection stayed healthy).
 - Browser/network-level inspection of Hosted Link handling.
-See `docs/plaid-verification-2026-10-24.md`.
+See `docs/integrations/plaid-verification-2026-10-24.md`.
 
 
-No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.
+No owner Plaid Trial account, client ID/secret, or authorized Item exists in this environment. The verified desktop Hosted Link + `/link/token/get` flow is documented in `docs/integrations/plaid-feasibility.md` but **not implemented as a live adapter**, and no live institution/product coverage is claimed. The app shows the blocker in Settings, fails any existing `plaid` connection closed with “live Plaid adapter is not configured”, and keeps CSV/manual/demo/sync/mock workflows usable. No link URL, token, or secret is exposed to the renderer. Unblock criteria: owner enrollment/terms, product access record, non-repository credentials, Sandbox verification with an authorized account, then end-to-end transactions/balances (and optional Liabilities) verification.
 
 ## 3i. Phase 10 — hardening, performance, packaging, handoff (in progress)
 
 ### Completed evidence
-- **Performance:** 50k encrypted transactions measured in release (`cargo test --release --test perf -- --ignored --nocapture`): warm search **13.1 ms**, month change **32.3 ms**, dashboard **40.5 ms**, cached dashboard after unlock **41.6 ms**, cold unlock **2.08 s**. Targets met/approximately met; details and debug comparison in `docs/performance.md`.
-- **Adversarial verification:** documented matrix in `docs/adversarial-verification.md`: plain-SQLite rejection, wrong passphrase, DB/header/backup tamper, wrong-vault restore, symlink/path rejection, malformed/oversized CSV, formula injection, extra/oversized IPC fields, cursor failure, lock mid-sync, pending double-count, network URL/body caps, locked restore, concurrent sync, renderer sinks/localStorage/dev mock.
+- **Performance:** 50k encrypted transactions measured in release (`cargo test --release --test perf -- --ignored --nocapture`): warm search **13.1 ms**, month change **32.3 ms**, dashboard **40.5 ms**, cached dashboard after unlock **41.6 ms**, cold unlock **2.08 s**. Targets met/approximately met; details and debug comparison in `docs/operations/performance.md`.
+- **Adversarial verification:** documented matrix in `docs/operations/adversarial-verification.md`: plain-SQLite rejection, wrong passphrase, DB/header/backup tamper, wrong-vault restore, symlink/path rejection, malformed/oversized CSV, formula injection, extra/oversized IPC fields, cursor failure, lock mid-sync, pending double-count, network URL/body caps, locked restore, concurrent sync, renderer sinks/localStorage/dev mock.
 - **Dependency/build audit:** `cargo audit` shows **0 vulnerabilities**; 5 allowed Linux/unmaintained warnings (glib family/GTK, not used on macOS). `cargo deny check` all ok. `pnpm audit` → no known vulnerabilities. `pnpm install --frozen-lockfile` is the documented install. No repository secrets were added.
 - **Accessibility:** labels, focusable controls, keyboard-activatable primary navigation test added (34 Playwright). VoiceOver/native sheet accessibility remains an owner smoke item.
 - **Artifact:** release bundle built with `pnpm tauri build --bundles app`; ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08** (`Contents/MacOS/cardigan-money`). Artifact scan passed. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready.
-- **Docs:** README updated; `docs/backup-recovery.md`, `docs/performance.md`, `docs/adversarial-verification.md`, `docs/native-smoke.md`, `docs/data-dictionary.md`, `docs/incident-runbook.md`, and the Plaid blocker section.
+- **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
 - **Automated suites:** 141 Rust (plus ignored release perf test), 23 Vitest, 34 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
@@ -409,9 +409,9 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 
 ## 6. Blockers and external dependencies
 
-- **Plaid:** no owner account or credentials. Live linking is unavailable and unverified. Hosted Link flow requires a real Sandbox test with Hosted Link enabled and a redirect URI decision; see `docs/plaid-feasibility.md`.
+- **Plaid:** no owner account or credentials. Live linking is unavailable and unverified. Hosted Link flow requires a real Sandbox test with Hosted Link enabled and a redirect URI decision; see `docs/integrations/plaid-feasibility.md`.
 - **Real CSV samples:** none supplied. Only a generic mapper will be built; no issuer presets will be invented.
-- **Native smoke tests:** the DSH build sandbox blocks writes to `~/Library/Application Support`, `~/Library/WebKit`, and the login Keychain. Native development runs use a debug-only app-data override. Standard-path launch, Keychain ACL, screen-capture protection, and screen-lock notifications must be verified by the owner on the built `.app` outside this sandbox (checklist in `docs/test-plan.md`).
+- **Native smoke tests:** the DSH build sandbox blocks writes to `~/Library/Application Support`, `~/Library/WebKit`, and the login Keychain. Native development runs use a debug-only app-data override. Standard-path launch, Keychain ACL, screen-capture protection, and screen-lock notifications must be verified by the owner on the built `.app` outside this sandbox (checklist in `docs/reference/test-plan.md`).
 - **Signing:** ad-hoc only; no stable local signing identity has been created (owner may choose one later). Note that Keychain ACL prompts may change across rebuilds.
 - **Screen capture verification:** cannot be observed from this environment without Screen Recording permission; not claimed.
 

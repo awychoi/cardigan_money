@@ -33,7 +33,7 @@ cardigan_money is a local, single-user, encrypted macOS app. It is not a hosted 
 - Crypto-erasure is logical, not physical. SSD wear-leveling and copies outside the app remain.
 - There is no auto-update, notarization, hardened runtime, App Sandbox, hardware-backed key, Touch ID unlock, or MFA.
 
-The full list is in [security-review.md](security-review.md) §10 and [personal-cards-build-spec.md](personal-cards-build-spec.md) §13.14. The architecture is in [docs/security-architecture.md](docs/security-architecture.md).
+The full list is in the [pre-implementation design review](docs/security/design-review-2026-10-23.md) §10; the security decisions it produced are recorded in the [decision log](docs/reference/decisions.md). The architecture is in [security architecture](docs/security/architecture.md).
 
 ## 3. Reporting a security issue
 
@@ -92,7 +92,7 @@ There is no recovery. A self-contained backup restores access only if its passph
 
 ## 6. Verification status
 
-Security claims are verified only where tests or manual evidence exist. See [docs/implementation-status.md](docs/implementation-status.md) for the current evidence matrix and [docs/test-plan.md](docs/test-plan.md) for the native smoke checklist. Browser tests do not prove native Tauri or macOS behavior.
+Security claims are verified only where tests or manual evidence exist. See [implementation status](docs/reference/implementation-status.md) for the current evidence matrix and the [test plan](docs/reference/test-plan.md) for the native smoke checklist. Browser tests do not prove native Tauri or macOS behavior.
 
 ## 7. Residual risks (summary)
 

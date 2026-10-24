@@ -1,6 +1,6 @@
 # Threat model: cardigan_money
 
-Status: Phase 0. Derived from [personal-cards-build-spec.md](../personal-cards-build-spec.md) §13.1 and the pre-implementation review in [security-review.md](../security-review.md). This document describes the intended design and the control that is supposed to enforce it. Implementation status is tracked separately in [implementation-status.md](implementation-status.md); do not read this model as a claim that every control has already been tested.
+Status: Phase 0. Derived from [personal-cards-build-spec.md](../README.md#retired-documents) §13.1 and the pre-implementation review in [security-review.md](design-review-2026-10-23.md). This document describes the intended design and the control that is supposed to enforce it. Implementation status is tracked separately in [implementation-status.md](../reference/implementation-status.md); do not read this model as a claim that every control has already been tested.
 
 ## 1. What the app is
 
@@ -87,7 +87,7 @@ UNTRUSTED                         VALIDATED BOUNDARY                  TRUSTED (m
 
 The design does **not** claim protection against a compromised kernel, a root attacker, physical DRAM probing, a coerced owner, a compromised Plaid/bank, screen cameras or a compromised window server, or a malicious macOS/WebKit zero-day. It does claim to protect data at rest, backups, exports, the renderer boundary, provider credentials, and accidental disclosure through logs, screenshots, state restoration, and crash artifacts.
 
-See [../security-review.md](../security-review.md) §10 and [../SECURITY.md](../SECURITY.md) §7 for the full residual-risk list.
+See [../security-review.md](design-review-2026-10-23.md) §10 and [../SECURITY.md](../../SECURITY.md) §7 for the full residual-risk list.
 
 ## 8. Review triggers
 
