@@ -24,7 +24,7 @@ Effort is expressed as sequence and phase gates, not calendar dates. Plaid appro
 | 3 | Domain rules, input bounds, calendar-month accounting | **Complete** |
 | 4 | Onboarding, accounts, settings, theme, security settings | **Complete** (owner native close/passphrase smoke pending) |
 | 5 | Demo data and read-only dashboard | **Complete** |
-| 6 | Edits, manual metadata, CSV import/export security | Not started |
+| 6 | Edits, manual metadata, CSV import/export security | **Complete** |
 | 7 | Encrypted backup, restore, rotation, recovery | Not started |
 | 8 | Sync engine, scheduler, mock provider | Not started |
 | 9 | Plaid adapter and verified linking (conditional) | Not started |

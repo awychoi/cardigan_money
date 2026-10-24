@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: Phase 5 exit (2026-10-23, America/New_York).
+Last updated: Phase 6 exit (2026-10-23, America/New_York).
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -13,7 +13,7 @@ This is the honesty document: it records what was built, what actually ran, and 
 | 3 | Domain rules, input bounds, calendar-month accounting | **Complete** |
 | 4 | Onboarding, accounts, settings, theme, security settings | **Complete** (native close/passphrase smoke pending owner) |
 | 5 | Demo data and read-only dashboard | **Complete** |
-| 6 | Edits, manual metadata, CSV import/export security | Not started |
+| 6 | Edits, manual metadata, CSV import/export security | **Complete** |
 | 7 | Encrypted backup, restore, rotation, recovery | Not started |
 | 8 | Sync engine, scheduler, mock provider | Not started |
 | 9 | Plaid adapter and verified linking (conditional) | Not started |
@@ -222,6 +222,37 @@ Notable assertions: October fixture gross 11 500 / refunds −2 500 / fees 700 /
 - Month changes do not alter current balances/obligations: **tested**.
 - Read-only workflows navigable by keyboard: **card tiles/rows/controls are focusable**; a full assistive audit remains Phase 10.
 
+## 3e. Phase 6 — edits, manual metadata, CSV import/export
+
+### Completed
+- Migration 3 adds separate rule-derived display columns (`rule_merchant`, `rule_category`, `rule_id`) and import fingerprints, so user rules never rewrite provider/CSV source fields.
+- Editable transaction overrides: merchant alias, category, type correction, exclusion, notes; clear-edits; source fields preserved; source type/date/provenance shown. Overrides survive reload and take precedence over merchant rules. Ledger/summary reflect them.
+- Merchant rules: CRUD with closed match types, priority, enabled, canonical merchant, optional category; reapplication recomputes derived display fields for all transactions; user override still wins; deleting a rule reverts rule-derived labels. Lead (virtual) empty states for no rules.
+- Manual payment metadata: dated statement balance, minimum due, next due date, valid-through; parsed and validated in Rust; independent of provider snapshots; expiry handled; clear supported; overview/Cards show manual source.
+- CSV import: Rust-owned job, native file picker, bounded UTF-8 streaming parse (20 MiB, 100,000 rows, 40 columns, 4,096 field chars, 30 s cap), optional BOM, explicit date format, signed or debit/credit mapping, optional category/source ID columns, formula-safe display, per-row rejection, duplicate classification (source ID, fingerprint), review-not-delete for ambiguous overlap, identical-file no-op, transactional batch commit, import history, rollback of unique contributions only, and fingerprint/hash verification to detect a changed file.
+- CSV export: kernel-owned filtered query, plaintext warning, native save dialog, owner-only (0600) atomic file, formula-injection escaping for text fields after leading whitespace, numeric amount cells without float rounding, no auto-open, no account numbers in the filename, and an `export` security event.
+- UI: transaction editor, import wizard with mapping/preview/month totals/review confirmation, batch history/rollback, merchant-rule manager, manual-payment editor, export warning; demo mode hides/disables all of these.
+- Demo guards: transaction edits, rules, manual metadata, imports, exports, and rollback are blocked in demo mode.
+
+### Actual test runs
+| Suite | Result |
+| --- | --- |
+| `cargo test` | 74 lib + 3 accounts + 5 demo + 2 domain_fixtures + 8 ledger + 6 imports + 4 properties + 7 vault_cipher + 11 vault_flow = **120 passed**, 0 failed |
+| `pnpm test` | 23 passed |
+| `pnpm test:e2e` | 28 passed (edits/rules/manual/import/export/demo read-only) |
+| `pnpm build` + artifact scan | Passed |
+
+Specific import/export assertions: BOM + quoted comma + parentheses import; identical file no-op; overlapping row review not inserted; accepted review inserts; rollback leaves the other batch untouched; malformed/oversized/symlink files rejected; formula-shaped text escaped (`'=SUM…`) while amounts stay numeric; 0600 mode; symlink export destination rejected without writing through it.
+
+### Phase 6 exit gate check
+- Edits persist across restart and sync: **persist across lock/unlock and reload; sync interaction is Phase 8**.
+- Manual metadata independent/dated/stale/expired: **tested**.
+- CSV edge cases, formula injection, 0600, no auto-open, review/rollback: **tested** at the service level.
+- Renderer never receives a file path: **by construction**; import/export results carry counts and opaque IDs only.
+- Demo isolation: **tested/blocked**.
+
+Known limits to carry forward: native file dialogs are exercised by the owner smoke, not Playwright; provider-row overlap detection uses imported fingerprints only (provider rows are reviewed at sync time in Phase 8); rule reapplication is a full-table pass and will be measured at 50k rows in Phase 10.
+
 ## 4. Toolchain and environment
 
 | Component | Version / note |
@@ -270,6 +301,10 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 No performance target has been measured yet (no ledger/dashboard). Do not treat any target as met. The 50,000-transaction encrypted benchmark is Phase 10 work.
 
 ## 9. Next phase
+
+Phase 7 will implement the self-contained authenticated backup container, automatic retention, native restore with read-only validation, portable encrypted exports with a separate password, passphrase rotation using the journal, crypto-erase, and recovery documentation/tests.
+
+## 10. Superseded next-phase note
 
 Phase 6 will add transaction overrides, merchant rules, manual payment metadata, and the Rust-owned CSV import/export workflow with batch tracking, duplicate review, rollback, formula-injection defenses, and 0600 exports.
 

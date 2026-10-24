@@ -1,4 +1,5 @@
 pub mod accounts;
+pub mod edits;
 pub mod events;
 pub mod ledger;
 pub mod overview;

@@ -3,8 +3,22 @@ import {
   archiveMockAccount,
   createMockAccount,
   mockAccounts,
+  mockChooseImportFile,
+  mockCommitImport,
+  mockCreateMerchantRule,
   mockDashboard,
+  mockDeleteMerchantRule,
+  mockExportCount,
+  mockImportBatches,
   mockLedger,
+  mockManualPayment,
+  mockMerchantRules,
+  mockRollbackImport,
+  mockSetManualPayment,
+  mockSetOverride,
+  mockTransactionDetail,
+  mockUpdateMerchantRule,
+  mockValidateImport,
   resetMockData,
   updateMockAccount,
 } from "./data";
@@ -231,6 +245,116 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
     case "ledger_query": {
       requireUnlocked();
       data = mockLedger(payload as Parameters<typeof mockLedger>[0]);
+      break;
+    }
+    case "transaction_detail":
+      requireUnlocked();
+      data = mockTransactionDetail((payload as { id: string }).id);
+      break;
+    case "transaction_override_set": {
+      requireUnlocked();
+      const request = payload as {
+        id: string;
+        override: {
+          merchantAlias: string | null;
+          category: string | null;
+          typeCorrection: "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other" | null;
+          excluded: boolean | null;
+          notes: string | null;
+        };
+      };
+      data = mockSetOverride(request.id, request.override);
+      break;
+    }
+    case "transaction_override_clear":
+      requireUnlocked();
+      data = mockSetOverride((payload as { id: string }).id, {
+        merchantAlias: null,
+        category: null,
+        typeCorrection: null,
+        excluded: null,
+        notes: null,
+      });
+      break;
+    case "merchant_rules_list":
+      requireUnlocked();
+      data = { rules: mockMerchantRules() };
+      break;
+    case "merchant_rule_create":
+      requireUnlocked();
+      data = mockCreateMerchantRule(
+        payload as Parameters<typeof mockCreateMerchantRule>[0],
+      );
+      break;
+    case "merchant_rule_update": {
+      requireUnlocked();
+      const request = payload as {
+        id: string;
+        rule: Parameters<typeof mockCreateMerchantRule>[0];
+      };
+      data = mockUpdateMerchantRule(request.id, request.rule);
+      break;
+    }
+    case "merchant_rule_delete":
+      requireUnlocked();
+      mockDeleteMerchantRule((payload as { id: string }).id);
+      data = { deleted: true };
+      break;
+    case "manual_payment_get":
+      requireUnlocked();
+      data = {
+        payment: mockManualPayment((payload as { accountId: string }).accountId),
+      };
+      break;
+    case "manual_payment_set":
+      requireUnlocked();
+      data = {
+        payment: mockSetManualPayment(
+          (payload as { accountId: string }).accountId,
+          (payload as { payment: Parameters<typeof mockSetManualPayment>[1] }).payment,
+        ),
+      };
+      break;
+    case "manual_payment_clear":
+      requireUnlocked();
+      data = {
+        payment: mockSetManualPayment((payload as { accountId: string }).accountId, {
+          statementBalance: null,
+          minimumDue: null,
+          nextDueDate: null,
+          validThroughDate: null,
+        }),
+      };
+      break;
+    case "import_choose_file":
+      requireUnlocked();
+      data = mockChooseImportFile((payload as { accountId: string }).accountId);
+      break;
+    case "import_validate":
+      requireUnlocked();
+      data = mockValidateImport((payload as { jobId: string }).jobId);
+      break;
+    case "import_commit": {
+      requireUnlocked();
+      const request = payload as { jobId: string; acceptReview: boolean };
+      data = mockCommitImport(request.jobId, request.acceptReview);
+      break;
+    }
+    case "import_cancel":
+      data = { cancelled: true };
+      break;
+    case "import_batches_list":
+      requireUnlocked();
+      data = { batches: mockImportBatches() };
+      break;
+    case "import_rollback":
+      requireUnlocked();
+      data = mockRollbackImport((payload as { batchId: string }).batchId);
+      break;
+    case "export_ledger_csv": {
+      requireUnlocked();
+      const request = payload as { query: Parameters<typeof mockExportCount>[0] };
+      data = { rows: mockExportCount(request.query), written: true };
       break;
     }
     case "security_events_list": {

@@ -14,6 +14,7 @@ import {
 import { friendlyError } from "../../lib/bridge/errors";
 import { formatDateOnly, formatMoney, formatMonthRange, monthLabel } from "../../lib/formatting";
 import { Button } from "../../components/Button";
+import { TransactionEditor } from "./TransactionEditor";
 
 type Mode = "transactions" | "suppliers";
 type Status = "all" | "pending" | "posted";
@@ -26,12 +27,16 @@ export function LedgerView({
   presetSearch,
   presetNonce,
   onClearPreset,
+  onChanged,
+  readOnly,
 }: {
   dashboard: Dashboard;
   presetAccountId: string | null;
   presetSearch: string | null;
   presetNonce: number;
   onClearPreset: () => void;
+  onChanged: () => void;
+  readOnly: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("transactions");
   const [searchInput, setSearchInput] = useState("");
@@ -47,6 +52,9 @@ export function LedgerView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<LedgerRow | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [exportConfirm, setExportConfirm] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -104,7 +112,7 @@ export function LedgerView({
     return () => {
       cancelled = true;
     };
-  }, [dashboard.startDate, dashboard.endDateExclusive, account, category, status, txType, search, sort, page, pageSize]);
+  }, [dashboard.startDate, dashboard.endDateExclusive, account, category, status, txType, search, sort, page, pageSize, reloadToken]);
 
   const columns = useMemo(
     () => [
@@ -170,6 +178,40 @@ export function LedgerView({
 
   const totalPages = result ? Math.max(1, Math.ceil(result.rowCount / result.pageSize)) : 1;
 
+  function refreshAfterEdit() {
+    setReloadToken((value) => value + 1);
+    onChanged();
+  }
+
+  async function exportCsv() {
+    setError(null);
+    setExportMessage(null);
+    try {
+      const response = await command("export_ledger_csv", {
+        query: {
+          startDate: dashboard.startDate,
+          endDateExclusive: dashboard.endDateExclusive,
+          accountIds: account ? [account] : undefined,
+          category: category || null,
+          status,
+          txType: txType
+            ? (txType as "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other")
+            : undefined,
+          search: search || null,
+          sort: sort as "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "merchant_asc",
+          page: 0,
+          pageSize,
+        },
+      });
+      setExportConfirm(false);
+      setExportMessage(
+        response.rows === 1 ? "Exported 1 row as plaintext CSV." : `Exported ${response.rows} rows as plaintext CSV.`,
+      );
+    } catch (caught) {
+      setError(friendlyError(caught));
+    }
+  }
+
   return (
     <section className="dashboard" aria-labelledby="transactions-title">
       <header className="page-heading">
@@ -179,7 +221,13 @@ export function LedgerView({
             {monthLabel(dashboard.month)} · {formatMonthRange(dashboard.startDate, dashboard.endDateExclusive)}
           </p>
         </div>
-        <div className="segmented" role="group" aria-label="Ledger view">
+        <div className="heading-actions">
+          {!readOnly ? (
+            <Button variant="ghost" className="btn-small" onClick={() => setExportConfirm(true)}>
+              Export CSV…
+            </Button>
+          ) : null}
+          <div className="segmented" role="group" aria-label="Ledger view">
           <button
             type="button"
             aria-pressed={mode === "transactions"}
@@ -194,10 +242,36 @@ export function LedgerView({
             className={mode === "suppliers" ? "segment segment-active" : "segment"}
             onClick={() => setMode("suppliers")}
           >
-            By supplier
-          </button>
+              By supplier
+            </button>
+          </div>
         </div>
       </header>
+
+      {exportMessage ? (
+        <p className="inline-notice" role="status">
+          {exportMessage}
+        </p>
+      ) : null}
+
+      {exportConfirm ? (
+        <div className="export-warning" role="alert">
+          <strong>Plaintext export.</strong>
+          <p>
+            This writes a plaintext CSV to a location you choose. SQLCipher does not protect it, and
+            cloud-synced folders are outside this app's control. Formula-injection protection is
+            applied to text fields. The file is written owner-only (0600) and is not auto-opened.
+          </p>
+          <div className="button-row">
+            <Button variant="primary" onClick={() => void exportCsv()}>
+              Choose destination…
+            </Button>
+            <Button variant="ghost" onClick={() => setExportConfirm(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {mode === "transactions" ? (
         <>
@@ -375,69 +449,12 @@ export function LedgerView({
             </div>
 
             {selected ? (
-              <aside className="detail-panel" aria-labelledby="detail-title">
-                <div className="detail-head">
-                  <h2 id="detail-title">{selected.merchant}</h2>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    aria-label="Close transaction details"
-                    onClick={() => setSelected(null)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <dl className="facts">
-                  <div>
-                    <dt>Amount</dt>
-                    <dd>{formatMoney(selected.amountMinor, selected.currency)}</dd>
-                  </div>
-                  <div>
-                    <dt>Reporting date</dt>
-                    <dd>{formatDateOnly(selected.reportingDate)}</dd>
-                  </div>
-                  <div>
-                    <dt>Date source</dt>
-                    <dd>{selected.reportingDateSource}</dd>
-                  </div>
-                  <div>
-                    <dt>Purchase / authorization</dt>
-                    <dd>{selected.authorizedDate ? formatDateOnly(selected.authorizedDate) : "Unknown"}</dd>
-                  </div>
-                  <div>
-                    <dt>Posted</dt>
-                    <dd>{selected.postedDate ? formatDateOnly(selected.postedDate) : "Pending"}</dd>
-                  </div>
-                  <div>
-                    <dt>Card</dt>
-                    <dd>
-                      {selected.accountName}
-                      {selected.accountLastFour ? ` · ${selected.accountLastFour}` : ""}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Type</dt>
-                    <dd>{selected.txType}</dd>
-                  </div>
-                  <div>
-                    <dt>Category</dt>
-                    <dd>{selected.category ?? "Uncategorized"}</dd>
-                  </div>
-                  <div>
-                    <dt>Source</dt>
-                    <dd>{selected.sourceKind}</dd>
-                  </div>
-                  <div>
-                    <dt>Notes</dt>
-                    <dd>{selected.notes ?? "None"}</dd>
-                  </div>
-                </dl>
-                <p className="fine-print">Raw description:</p>
-                <p className="raw-description">{selected.rawDescription}</p>
-                <p className="fine-print">
-                  Read-only in this build stage. Editing arrives with overrides and merchant rules.
-                </p>
-              </aside>
+              <TransactionEditor
+                row={selected}
+                readOnly={readOnly}
+                onSaved={refreshAfterEdit}
+                onClose={() => setSelected(null)}
+              />
             ) : null}
           </div>
 

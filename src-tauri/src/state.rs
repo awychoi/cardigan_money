@@ -13,6 +13,7 @@ use crate::security::files::ensure_private_dir;
 use crate::security::ratelimit::RateLimiter;
 use crate::security::vault::{VaultHeader, VaultPaths};
 use crate::storage::events::record_event;
+use crate::services::imports::ImportJobs;
 use crate::storage::settings::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,6 +71,7 @@ pub struct AppState {
     pub session: Mutex<VaultSession>,
     pub unlock_failures: AtomicU32,
     pub rate: Mutex<RateLimiter>,
+    pub imports: ImportJobs,
     pub quitting: AtomicBool,
     pub close_prompt_open: AtomicBool,
 }
@@ -84,6 +86,7 @@ impl AppState {
             session: Mutex::new(VaultSession::locked()),
             unlock_failures: AtomicU32::new(0),
             rate: Mutex::new(RateLimiter::default()),
+            imports: Mutex::new(std::collections::HashMap::new()),
             quitting: AtomicBool::new(false),
             close_prompt_open: AtomicBool::new(false),
         })

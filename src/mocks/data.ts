@@ -78,6 +78,11 @@ let transactions: MockTx[] = [];
 export function resetMockData(): void {
   accounts = structuredClone(ACCOUNT_SEED);
   transactions = seedTransactions();
+  overrides.clear();
+  merchantRules.length = 0;
+  manualPayments.clear();
+  importBatches.length = 0;
+  importJob = null;
 }
 
 export function mockAccounts(): Account[] {
@@ -276,7 +281,8 @@ function isSpend(type: string): boolean {
 }
 
 function eligible(tx: MockTx): boolean {
-  return !tx.pending && !tx.excluded && isSpend(tx.txType);
+  const eff = effective(tx);
+  return !tx.pending && !eff.excluded && isSpend(eff.type);
 }
 
 function breakdown(rows: MockTx[], keyOf: (tx: MockTx) => string): Breakdown[] {
@@ -298,20 +304,20 @@ function summaryFor(month: string): MonthSummary {
   const usd = transactions.filter((tx) => tx.currency === "USD" && inMonth(tx.date, month));
   const spend = usd.filter(eligible);
   const grossPurchasesMinor = spend
-    .filter((tx) => tx.txType === "purchase")
+    .filter((tx) => effective(tx).type === "purchase")
     .reduce((sum, tx) => sum + tx.amountMinor, 0);
   const refundsMinor = spend
-    .filter((tx) => tx.txType === "refund")
+    .filter((tx) => effective(tx).type === "refund")
     .reduce((sum, tx) => sum + tx.amountMinor, 0);
   const feesInterestMinor = spend
-    .filter((tx) => tx.txType === "fee" || tx.txType === "interest")
+    .filter((tx) => ["fee", "interest"].includes(effective(tx).type))
     .reduce((sum, tx) => sum + tx.amountMinor, 0);
   const netSpendingMinor = spend.reduce((sum, tx) => sum + tx.amountMinor, 0);
   const pendingSubtotalMinor = usd
-    .filter((tx) => tx.pending && !tx.excluded && isSpend(tx.txType))
+    .filter((tx) => tx.pending && !effective(tx).excluded && isSpend(effective(tx).type))
     .reduce((sum, tx) => sum + tx.amountMinor, 0);
-  const suppliers = breakdown(spend, (tx) => tx.merchant);
-  const categories = breakdown(spend, (tx) => tx.category ?? "Uncategorized");
+  const suppliers = breakdown(spend, (tx) => effective(tx).merchant);
+  const categories = breakdown(spend, (tx) => effective(tx).category ?? "Uncategorized");
   const supplierNet = suppliers.reduce((sum, item) => sum + item.netMinor, 0);
   const categoryNet = categories.reduce((sum, item) => sum + item.netMinor, 0);
   return {
@@ -522,18 +528,20 @@ export function mockDashboard(mode: "real" | "demo", month?: string | null): Das
 
 function toRow(tx: MockTx): LedgerRow {
   const account = accounts.find((item) => item.id === tx.accountId);
+  const eff = effective(tx);
+  const override = overrides.get(tx.id);
   return {
     id: tx.id,
     reportingDate: tx.date,
-    merchant: tx.merchant,
-    merchantEdited: false,
+    merchant: eff.merchant,
+    merchantEdited: Boolean(override?.merchantAlias),
     rawDescription: `${tx.merchant} raw description`,
     accountId: tx.accountId,
     accountName: account?.displayName ?? "Unknown",
     accountLastFour: account?.lastFour ?? null,
-    category: tx.category,
-    categoryEdited: false,
-    txType: tx.txType,
+    category: eff.category,
+    categoryEdited: Boolean(override?.category),
+    txType: eff.type,
     pending: tx.pending,
     amountMinor: tx.amountMinor,
     currency: tx.currency,
@@ -541,8 +549,8 @@ function toRow(tx: MockTx): LedgerRow {
     authorizedDate: tx.authorizedDate,
     postedDate: tx.postedDate,
     reportingDateSource: tx.authorizedDate ? "authorized" : "posted",
-    excluded: tx.excluded,
-    notes: null,
+    excluded: eff.excluded,
+    notes: eff.notes,
   };
 }
 
@@ -554,25 +562,25 @@ export function mockLedger(query: LedgerQuery): LedgerPage {
     rows = rows.filter((tx) => query.accountIds?.includes(tx.accountId));
   }
   if (query.category) {
-    rows = rows.filter((tx) => (tx.category ?? "Uncategorized") === query.category);
+    rows = rows.filter((tx) => (effective(tx).category ?? "Uncategorized") === query.category);
   }
   if (query.status === "pending") rows = rows.filter((tx) => tx.pending);
   if (query.status === "posted") rows = rows.filter((tx) => !tx.pending);
-  if (query.txType) rows = rows.filter((tx) => tx.txType === query.txType);
+  if (query.txType) rows = rows.filter((tx) => effective(tx).type === query.txType);
   if (query.search) {
     const needle = query.search.toLowerCase();
     rows = rows.filter(
       (tx) =>
-        tx.merchant.toLowerCase().includes(needle) ||
+        effective(tx).merchant.toLowerCase().includes(needle) ||
         `${tx.merchant} raw description`.toLowerCase().includes(needle),
     );
   }
   const rowCount = rows.length;
   const eligibleSubtotalMinor = rows
-    .filter((tx) => !tx.pending && !tx.excluded && isSpend(tx.txType))
+    .filter((tx) => !tx.pending && !effective(tx).excluded && isSpend(effective(tx).type))
     .reduce((sum, tx) => sum + tx.amountMinor, 0);
   const pendingSubtotalMinor = rows
-    .filter((tx) => tx.pending && !tx.excluded && isSpend(tx.txType))
+    .filter((tx) => tx.pending && !effective(tx).excluded && isSpend(effective(tx).type))
     .reduce((sum, tx) => sum + tx.amountMinor, 0);
   const sorted = [...rows].sort((a, b) => {
     switch (query.sort) {
@@ -596,6 +604,291 @@ export function mockLedger(query: LedgerQuery): LedgerPage {
     eligibleSubtotalMinor,
     pendingSubtotalMinor,
   };
+}
+
+// ---------- Phase 6 mock editors/imports (browser tests only) ----------
+
+interface MockOverride {
+  merchantAlias: string | null;
+  category: string | null;
+  typeCorrection: "purchase" | "refund" | "fee" | "interest" | "payment" | "transfer" | "other" | null;
+  excluded: boolean | null;
+  notes: string | null;
+}
+
+const overrides = new Map<string, MockOverride>();
+const merchantRules: import("../lib/bridge/contract").MerchantRule[] = [];
+const manualPayments = new Map<
+  string,
+  {
+    statementBalanceMinor: number | null;
+    minimumDueMinor: number | null;
+    nextDueDate: string | null;
+    validThroughDate: string | null;
+    updatedAt: string;
+  }
+>();
+const importBatches: import("../lib/bridge/contract").ImportBatch[] = [];
+let importJob: { jobId: string; accountId: string; consumed: boolean } | null = null;
+
+function toMinor(value: string | null): number | null {
+  if (!value || value.trim() === "") return null;
+  const normalized = value.replace(/[$,]/g, "").trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    throw new BridgeError("invalid_input", "Invalid amount.");
+  }
+  return Math.round(Number(normalized) * 100);
+}
+
+function effective(tx: MockTx) {
+  const override = overrides.get(tx.id);
+  return {
+    merchant: override?.merchantAlias ?? tx.merchant,
+    category: override?.category ?? tx.category,
+    type: override?.typeCorrection ?? tx.txType,
+    excluded: override?.excluded ?? tx.excluded,
+    notes: override?.notes ?? null,
+  };
+}
+
+export function mockTransactionDetail(id: string) {
+  const tx = transactions.find((item) => item.id === id);
+  if (!tx) throw new BridgeError("not_found", "Transaction not found.");
+  const override = overrides.get(id);
+  const account = accounts.find((item) => item.id === tx.accountId);
+  return {
+    id: tx.id,
+    accountId: tx.accountId,
+    accountName: account?.displayName ?? "Unknown",
+    accountLastFour: account?.lastFour ?? null,
+    reportingDate: tx.date,
+    authorizedDate: tx.authorizedDate,
+    postedDate: tx.postedDate,
+    reportingDateSource: tx.authorizedDate ? "authorized" : "posted",
+    amountMinor: tx.amountMinor,
+    currency: tx.currency,
+    rawDescription: `${tx.merchant} raw description`,
+    merchant: override?.merchantAlias ?? tx.merchant,
+    merchantAlias: override?.merchantAlias ?? null,
+    category: override?.category ?? tx.category,
+    sourceCategory: tx.category,
+    txType: override?.typeCorrection ?? tx.txType,
+    typeCorrection: override?.typeCorrection ?? null,
+    pending: tx.pending,
+    excluded: override?.excluded ?? tx.excluded,
+    excludedOverride: override?.excluded ?? null,
+    notes: override?.notes ?? null,
+    sourceKind: "demo",
+    providerTransactionId: null,
+    pendingLinkId: null,
+    editedAt: override ? "2026-10-23T12:00:00Z" : null,
+  };
+}
+
+export function mockSetOverride(
+  id: string,
+  input: {
+    merchantAlias: string | null;
+    category: string | null;
+    typeCorrection: MockOverride["typeCorrection"];
+    excluded: boolean | null;
+    notes: string | null;
+  },
+) {
+  if (!transactions.some((tx) => tx.id === id)) {
+    throw new BridgeError("not_found", "Transaction not found.");
+  }
+  const empty =
+    input.merchantAlias === null &&
+    input.category === null &&
+    input.typeCorrection === null &&
+    input.excluded === null &&
+    input.notes === null;
+  if (empty) overrides.delete(id);
+  else overrides.set(id, input);
+  return mockTransactionDetail(id);
+}
+
+export function mockMerchantRules() {
+  return structuredClone(merchantRules);
+}
+
+export function mockCreateMerchantRule(input: {
+  matchType: "exact" | "contains" | "starts_with";
+  matchText: string;
+  canonicalMerchant: string;
+  category: string | null;
+  priority: number;
+  enabled: boolean;
+}) {
+  const rule: import("../lib/bridge/contract").MerchantRule = {
+    id: crypto.randomUUID(),
+    matchType: input.matchType,
+    matchText: input.matchText.toLowerCase(),
+    canonicalMerchant: input.canonicalMerchant,
+    category: input.category,
+    priority: input.priority,
+    enabled: input.enabled,
+    createdAt: "2026-10-23T12:00:00Z",
+    updatedAt: "2026-10-23T12:00:00Z",
+  };
+  merchantRules.push(rule);
+  return structuredClone(rule);
+}
+
+export function mockUpdateMerchantRule(
+  id: string,
+  input: Parameters<typeof mockCreateMerchantRule>[0],
+) {
+  const index = merchantRules.findIndex((rule) => rule.id === id);
+  if (index < 0) throw new BridgeError("not_found", "Rule not found.");
+  const updated = {
+    ...merchantRules[index],
+    matchType: input.matchType,
+    matchText: input.matchText.toLowerCase(),
+    canonicalMerchant: input.canonicalMerchant,
+    category: input.category,
+    priority: input.priority,
+    enabled: input.enabled,
+    updatedAt: "2026-10-23T12:00:00Z",
+  };
+  merchantRules[index] = updated;
+  return structuredClone(updated);
+}
+
+export function mockDeleteMerchantRule(id: string) {
+  const index = merchantRules.findIndex((rule) => rule.id === id);
+  if (index < 0) throw new BridgeError("not_found", "Rule not found.");
+  merchantRules.splice(index, 1);
+}
+
+export function mockManualPayment(accountId: string) {
+  const value = manualPayments.get(accountId);
+  if (!value) return null;
+  return {
+    accountId,
+    statementBalanceMinor: value.statementBalanceMinor,
+    minimumDueMinor: value.minimumDueMinor,
+    nextDueDate: value.nextDueDate,
+    validThroughDate: value.validThroughDate,
+    createdAt: "2026-10-23T12:00:00Z",
+    updatedAt: value.updatedAt,
+  };
+}
+
+export function mockSetManualPayment(
+  accountId: string,
+  input: {
+    statementBalance: string | null;
+    minimumDue: string | null;
+    nextDueDate: string | null;
+    validThroughDate: string | null;
+  },
+) {
+  const statementBalanceMinor = toMinor(input.statementBalance);
+  const minimumDueMinor = toMinor(input.minimumDue);
+  if (statementBalanceMinor === null && minimumDueMinor === null && !input.nextDueDate) {
+    manualPayments.delete(accountId);
+    return null;
+  }
+  manualPayments.set(accountId, {
+    statementBalanceMinor,
+    minimumDueMinor,
+    nextDueDate: input.nextDueDate,
+    validThroughDate: input.validThroughDate,
+    updatedAt: "2026-10-23T12:00:00Z",
+  });
+  return mockManualPayment(accountId);
+}
+
+export function mockChooseImportFile(accountId: string) {
+  if (!accounts.some((account) => account.id === accountId)) {
+    throw new BridgeError("not_found", "Account not found.");
+  }
+  importJob = { jobId: "mock-import-job", accountId, consumed: false };
+  return {
+    jobId: importJob.jobId,
+    headers: ["Date", "Description", "Amount", "Category", "Source ID"],
+    sizeBytes: 2048,
+    rowCount: 3,
+  };
+}
+
+export function mockValidateImport(jobId: string) {
+  if (!importJob || importJob.jobId !== jobId) throw new BridgeError("not_found", "Import job.");
+  return {
+    jobId,
+    rowCount: 3,
+    insertCount: 2,
+    duplicateCount: 0,
+    reviewCount: 1,
+    rejectedCount: 0,
+    sampleRows: [
+      { rowNumber: 1, date: "2026-10-02", merchant: "Imported Coffee", amountMinor: 1234, category: "Dining", status: "insert", reason: null },
+      { rowNumber: 2, date: "2026-10-03", merchant: "Imported Books", amountMinor: 4500, category: "Shopping", status: "insert", reason: null },
+      { rowNumber: 3, date: "2026-10-04", merchant: "Imported Coffee", amountMinor: 1234, category: "Dining", status: "review", reason: "possible duplicate; review before importing" },
+    ],
+    months: [
+      { month: "2026-10", purchasesMinor: 5734, refundsMinor: 0, netMinor: 5734, count: 2 },
+    ],
+    reviewMonths: [
+      { month: "2026-10", purchasesMinor: 1234, refundsMinor: 0, netMinor: 1234, count: 1 },
+    ],
+    noOp: false,
+    existingBatchId: null,
+  };
+}
+
+export function mockCommitImport(jobId: string, acceptReview: boolean) {
+  if (!importJob || importJob.jobId !== jobId) throw new BridgeError("not_found", "Import job.");
+  const batch: import("../lib/bridge/contract").ImportBatch = {
+    id: crypto.randomUUID(),
+    accountId: importJob.accountId,
+    accountName: accounts.find((a) => a.id === importJob?.accountId)?.displayName ?? "Account",
+    fileSha256: "0".repeat(64),
+    rowCount: 3,
+    insertedCount: acceptReview ? 3 : 2,
+    duplicateCount: 0,
+    reviewCount: acceptReview ? 0 : 1,
+    rejectedCount: 0,
+    status: "imported",
+    createdAt: "2026-10-23T12:00:00Z",
+    importedAt: "2026-10-23T12:00:00Z",
+    rolledBackAt: null,
+  };
+  importBatches.unshift(batch);
+  transactions = [
+    ...transactions,
+    makeTx(`mock-import-${batch.id}-1`, importJob.accountId, "2026-10-02", 1234, "purchase", "Imported Coffee", "Dining"),
+    makeTx(`mock-import-${batch.id}-2`, importJob.accountId, "2026-10-03", 4500, "purchase", "Imported Books", "Shopping"),
+  ];
+  importJob = null;
+  return {
+    batchId: batch.id,
+    inserted: batch.insertedCount,
+    duplicates: 0,
+    review: batch.reviewCount,
+    rejected: 0,
+    months: [{ month: "2026-10", purchasesMinor: 5734, refundsMinor: 0, netMinor: 5734, count: 2 }],
+    noOp: false,
+  };
+}
+
+export function mockImportBatches() {
+  return structuredClone(importBatches);
+}
+
+export function mockRollbackImport(batchId: string) {
+  const batch = importBatches.find((item) => item.id === batchId);
+  if (!batch) throw new BridgeError("not_found", "Batch not found.");
+  batch.status = "rolled_back";
+  batch.rolledBackAt = "2026-10-23T12:00:00Z";
+  transactions = transactions.filter((tx) => !tx.id.startsWith(`mock-import-${batchId}`));
+  return structuredClone(batch);
+}
+
+export function mockExportCount(query: LedgerQuery): number {
+  return mockLedger(query).rowCount;
 }
 
 resetMockData();

@@ -91,7 +91,7 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByRole("button", { name: "Finish setup" }).click();
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await page.getByRole("button", { name: "Settings" }).click();
-    await expect(page.getByText("Wizard Card", { exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Wizard Card", exact: true })).toBeVisible();
     await expect(page.getByText("Chase").first()).toBeVisible();
   });
 
@@ -103,18 +103,18 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByLabel("Display name").fill("Local Test Card");
     await page.getByLabel(/Last four/).fill("4321");
     await page.getByRole("button", { name: "Add account" }).click();
-    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
     const row = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
     await row.getByRole("button", { name: "Archive" }).click();
     await row.getByRole("button", { name: "Archive", exact: true }).click();
-    await expect(page.getByText("Local Test Card", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toHaveCount(0);
     await page.getByLabel("Show archived accounts").check();
-    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
     const archivedRow = page
       .getByRole("row")
       .filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
     await archivedRow.getByRole("button", { name: "Restore" }).click();
-    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
   });
 
   test("persists the window close behavior setting", async ({ page }) => {

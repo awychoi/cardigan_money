@@ -44,7 +44,7 @@ test.describe("read-only dashboard (browser mock)", () => {
     await page.getByRole("row").filter({ hasText: "Blue Bottle Coffee" }).first().click();
     await expect(page.getByRole("heading", { name: "Blue Bottle Coffee" })).toBeVisible();
     await expect(page.getByText(/Raw description/)).toBeVisible();
-    await expect(page.getByText(/Read-only/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Edit transaction/ })).toBeVisible();
     await page.getByRole("button", { name: "Close transaction details" }).click();
     await expect(page.getByRole("heading", { name: "Blue Bottle Coffee" })).toHaveCount(0);
   });

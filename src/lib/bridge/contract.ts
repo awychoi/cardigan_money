@@ -380,6 +380,202 @@ export type LedgerRow = z.infer<typeof zLedgerRow>;
 export type LedgerPage = z.infer<typeof zLedgerPage>;
 export type LedgerQuery = z.infer<typeof zLedgerQuery>;
 
+
+export const zTransactionDetail = z
+  .object({
+    id: z.string(),
+    accountId: z.string(),
+    accountName: z.string(),
+    accountLastFour: z.string().nullable(),
+    reportingDate: z.string(),
+    authorizedDate: z.string().nullable(),
+    postedDate: z.string().nullable(),
+    reportingDateSource: z.string(),
+    amountMinor: z.number().int(),
+    currency: z.string(),
+    rawDescription: z.string(),
+    merchant: z.string(),
+    merchantAlias: z.string().nullable(),
+    category: z.string().nullable(),
+    sourceCategory: z.string().nullable(),
+    txType: z.string(),
+    typeCorrection: z.string().nullable(),
+    pending: z.boolean(),
+    excluded: z.boolean(),
+    excludedOverride: z.boolean().nullable(),
+    notes: z.string().nullable(),
+    sourceKind: z.string(),
+    providerTransactionId: z.string().nullable(),
+    pendingLinkId: z.string().nullable(),
+    editedAt: z.string().nullable(),
+  })
+  .strict();
+
+export const zOverrideInput = z
+  .object({
+    merchantAlias: z.string().max(120).nullable(),
+    category: z.string().max(80).nullable(),
+    typeCorrection: z
+      .enum(["purchase", "refund", "fee", "interest", "payment", "transfer", "other"])
+      .nullable(),
+    excluded: z.boolean().nullable(),
+    notes: z.string().max(2000).nullable(),
+  })
+  .strict();
+
+export const zMerchantRuleInput = z
+  .object({
+    matchType: z.enum(["exact", "contains", "starts_with"]),
+    matchText: z.string().trim().min(1).max(120),
+    canonicalMerchant: z.string().trim().min(1).max(120),
+    category: z.string().max(80).nullable(),
+    priority: z.number().int().min(0).max(10000),
+    enabled: z.boolean(),
+  })
+  .strict();
+
+export const zMerchantRule = z
+  .object({
+    id: z.string(),
+    matchType: z.string(),
+    matchText: z.string(),
+    canonicalMerchant: z.string(),
+    category: z.string().nullable(),
+    priority: z.number().int(),
+    enabled: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+export const zManualPaymentInput = z
+  .object({
+    statementBalance: z.string().max(40).nullable(),
+    minimumDue: z.string().max(40).nullable(),
+    nextDueDate: z.string().max(10).nullable(),
+    validThroughDate: z.string().max(10).nullable(),
+  })
+  .strict();
+
+export const zManualPayment = z
+  .object({
+    accountId: z.string(),
+    statementBalanceMinor: z.number().int().nullable(),
+    minimumDueMinor: z.number().int().nullable(),
+    nextDueDate: z.string().nullable(),
+    validThroughDate: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+export const zCsvMapping = z
+  .object({
+    dateColumn: z.number().int().min(0).max(39),
+    descriptionColumn: z.number().int().min(0).max(39),
+    amountColumn: z.number().int().min(0).max(39).nullable(),
+    debitColumn: z.number().int().min(0).max(39).nullable(),
+    creditColumn: z.number().int().min(0).max(39).nullable(),
+    categoryColumn: z.number().int().min(0).max(39).nullable(),
+    sourceIdColumn: z.number().int().min(0).max(39).nullable(),
+    dateFormat: z.enum(["iso", "us", "eu"]),
+    signConvention: z.enum(["signed_amount", "debit_credit"]),
+    creditType: z.enum(["refund", "payment", "other"]),
+  })
+  .strict();
+
+export const zPreviewRow = z
+  .object({
+    rowNumber: z.number().int(),
+    date: z.string(),
+    merchant: z.string(),
+    amountMinor: z.number().int(),
+    category: z.string().nullable(),
+    status: z.string(),
+    reason: z.string().nullable(),
+  })
+  .strict();
+
+export const zMonthPreview = z
+  .object({
+    month: z.string(),
+    purchasesMinor: z.number().int(),
+    refundsMinor: z.number().int(),
+    netMinor: z.number().int(),
+    count: z.number().int(),
+  })
+  .strict();
+
+export const zImportFileView = z
+  .object({
+    jobId: z.string(),
+    headers: z.array(z.string()).max(40),
+    sizeBytes: z.number().int(),
+    rowCount: z.number().int(),
+  })
+  .strict();
+
+export const zValidationPreview = z
+  .object({
+    jobId: z.string(),
+    rowCount: z.number().int(),
+    insertCount: z.number().int(),
+    duplicateCount: z.number().int(),
+    reviewCount: z.number().int(),
+    rejectedCount: z.number().int(),
+    sampleRows: z.array(zPreviewRow),
+    months: z.array(zMonthPreview),
+    reviewMonths: z.array(zMonthPreview),
+    noOp: z.boolean(),
+    existingBatchId: z.string().nullable(),
+  })
+  .strict();
+
+export const zImportResult = z
+  .object({
+    batchId: z.string(),
+    inserted: z.number().int(),
+    duplicates: z.number().int(),
+    review: z.number().int(),
+    rejected: z.number().int(),
+    months: z.array(zMonthPreview),
+    noOp: z.boolean(),
+  })
+  .strict();
+
+export const zImportBatch = z
+  .object({
+    id: z.string(),
+    accountId: z.string(),
+    accountName: z.string(),
+    fileSha256: z.string(),
+    rowCount: z.number().int(),
+    insertedCount: z.number().int(),
+    duplicateCount: z.number().int(),
+    reviewCount: z.number().int(),
+    rejectedCount: z.number().int(),
+    status: z.string(),
+    createdAt: z.string(),
+    importedAt: z.string().nullable(),
+    rolledBackAt: z.string().nullable(),
+  })
+  .strict();
+
+export const zExportResult = z.object({ rows: z.number().int(), written: z.boolean() }).strict();
+
+export type TransactionDetail = z.infer<typeof zTransactionDetail>;
+export type OverrideInput = z.infer<typeof zOverrideInput>;
+export type MerchantRule = z.infer<typeof zMerchantRule>;
+export type MerchantRuleInput = z.infer<typeof zMerchantRuleInput>;
+export type ManualPayment = z.infer<typeof zManualPayment>;
+export type ManualPaymentInput = z.infer<typeof zManualPaymentInput>;
+export type CsvMapping = z.infer<typeof zCsvMapping>;
+export type ImportFileView = z.infer<typeof zImportFileView>;
+export type ValidationPreview = z.infer<typeof zValidationPreview>;
+export type ImportResult = z.infer<typeof zImportResult>;
+export type ImportBatch = z.infer<typeof zImportBatch>;
+export type ExportResult = z.infer<typeof zExportResult>;
+
 export type Settings = z.infer<typeof zSettings>;
 export type SettingsPatch = z.infer<typeof zSettingsPatch>;
 export type SecuritySummary = z.infer<typeof zSecuritySummary>;
@@ -413,6 +609,47 @@ export interface CommandDefs {
   demo_reset: { request: Record<string, never>; response: VaultState };
   dashboard_get: { request: { month?: string | null }; response: Dashboard };
   ledger_query: { request: LedgerQuery; response: LedgerPage };
+  transaction_detail: { request: { id: string }; response: TransactionDetail };
+  transaction_override_set: {
+    request: { id: string; override: OverrideInput };
+    response: TransactionDetail;
+  };
+  transaction_override_clear: { request: { id: string }; response: TransactionDetail };
+  merchant_rules_list: { request: Record<string, never>; response: { rules: MerchantRule[] } };
+  merchant_rule_create: { request: MerchantRuleInput; response: MerchantRule };
+  merchant_rule_update: {
+    request: { id: string; rule: MerchantRuleInput };
+    response: MerchantRule;
+  };
+  merchant_rule_delete: { request: { id: string }; response: { deleted: boolean } };
+  manual_payment_get: {
+    request: { accountId: string };
+    response: { payment: ManualPayment | null };
+  };
+  manual_payment_set: {
+    request: { accountId: string; payment: ManualPaymentInput };
+    response: { payment: ManualPayment | null };
+  };
+  manual_payment_clear: {
+    request: { accountId: string };
+    response: { payment: ManualPayment | null };
+  };
+  import_choose_file: { request: { accountId: string }; response: ImportFileView };
+  import_validate: {
+    request: { jobId: string; mapping: CsvMapping };
+    response: ValidationPreview;
+  };
+  import_commit: {
+    request: { jobId: string; mapping: CsvMapping; acceptReview: boolean };
+    response: ImportResult;
+  };
+  import_cancel: { request: { jobId: string }; response: { cancelled: boolean } };
+  import_batches_list: {
+    request: { limit?: number };
+    response: { batches: ImportBatch[] };
+  };
+  import_rollback: { request: { batchId: string }; response: ImportBatch };
+  export_ledger_csv: { request: { query: LedgerQuery }; response: ExportResult };
 }
 
 export type CommandName = keyof CommandDefs;
@@ -441,6 +678,37 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   demo_reset: zEmpty,
   dashboard_get: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).nullable().optional() }).strict(),
   ledger_query: zLedgerQuery,
+  transaction_detail: z.object({ id: z.string().min(1).max(64) }).strict(),
+  transaction_override_set: z
+    .object({ id: z.string().min(1).max(64), override: zOverrideInput })
+    .strict(),
+  transaction_override_clear: z.object({ id: z.string().min(1).max(64) }).strict(),
+  merchant_rules_list: zEmpty,
+  merchant_rule_create: zMerchantRuleInput,
+  merchant_rule_update: z
+    .object({ id: z.string().min(1).max(64), rule: zMerchantRuleInput })
+    .strict(),
+  merchant_rule_delete: z.object({ id: z.string().min(1).max(64) }).strict(),
+  manual_payment_get: z.object({ accountId: z.string().min(1).max(64) }).strict(),
+  manual_payment_set: z
+    .object({ accountId: z.string().min(1).max(64), payment: zManualPaymentInput })
+    .strict(),
+  manual_payment_clear: z.object({ accountId: z.string().min(1).max(64) }).strict(),
+  import_choose_file: z.object({ accountId: z.string().min(1).max(64) }).strict(),
+  import_validate: z
+    .object({ jobId: z.string().min(1).max(64), mapping: zCsvMapping })
+    .strict(),
+  import_commit: z
+    .object({
+      jobId: z.string().min(1).max(64),
+      mapping: zCsvMapping,
+      acceptReview: z.boolean(),
+    })
+    .strict(),
+  import_cancel: z.object({ jobId: z.string().min(1).max(64) }).strict(),
+  import_batches_list: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
+  import_rollback: z.object({ batchId: z.string().min(1).max(64) }).strict(),
+  export_ledger_csv: z.object({ query: zLedgerQuery }).strict(),
 };
 
 export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["response"]> } = {
@@ -465,6 +733,23 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   demo_reset: zVaultState,
   dashboard_get: zDashboard,
   ledger_query: zLedgerPage,
+  transaction_detail: zTransactionDetail,
+  transaction_override_set: zTransactionDetail,
+  transaction_override_clear: zTransactionDetail,
+  merchant_rules_list: z.object({ rules: z.array(zMerchantRule) }).strict(),
+  merchant_rule_create: zMerchantRule,
+  merchant_rule_update: zMerchantRule,
+  merchant_rule_delete: z.object({ deleted: z.boolean() }).strict(),
+  manual_payment_get: z.object({ payment: zManualPayment.nullable() }).strict(),
+  manual_payment_set: z.object({ payment: zManualPayment.nullable() }).strict(),
+  manual_payment_clear: z.object({ payment: zManualPayment.nullable() }).strict(),
+  import_choose_file: zImportFileView,
+  import_validate: zValidationPreview,
+  import_commit: zImportResult,
+  import_cancel: z.object({ cancelled: z.boolean() }).strict(),
+  import_batches_list: z.object({ batches: z.array(zImportBatch) }).strict(),
+  import_rollback: zImportBatch,
+  export_ledger_csv: zExportResult,
 };
 
 export const zGatewayEnvelope = z

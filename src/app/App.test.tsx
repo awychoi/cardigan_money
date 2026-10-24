@@ -88,15 +88,15 @@ describe("app shell", () => {
     await user.click(await screen.findByRole("button", { name: "Unlock vault" }));
     await screen.findByText("Add your first account.");
     await user.type(screen.getByLabelText("Issuer"), "Chase");
-    await user.type(screen.getByLabelText("Display name"), "Sapphire Reserve");
+    await user.type(screen.getByLabelText("Display name"), "Wizard Card");
     await user.type(screen.getByLabelText(/Last four/), "1234");
     await user.click(screen.getByRole("button", { name: "Add account" }));
-    expect(await screen.findByText(/Added Sapphire Reserve/)).toBeInTheDocument();
+    expect(await screen.findByText(/Added Wizard Card/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
     await user.click(screen.getByRole("button", { name: "Finish setup" }));
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Settings" }));
-    expect(await screen.findByText("Sapphire Reserve")).toBeInTheDocument();
+    expect((await screen.findAllByText("Wizard Card", { exact: true })).length).toBeGreaterThan(0);
   });
 
   it("shows real cipher, KDF, and security events in settings", async () => {

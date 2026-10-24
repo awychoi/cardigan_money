@@ -238,7 +238,7 @@ fn lock_closes_connections_zeroizes_session_and_records_the_event() {
 fn initial_schema_version_is_recorded_and_migrations_are_checksummed() {
     let (_tmp, state, _app) = setup();
     let view = create(&state, pass(PASS)).unwrap();
-    assert_eq!(view.security.as_ref().unwrap().schema_version, 2);
+    assert_eq!(view.security.as_ref().unwrap().schema_version, 3);
     state
         .with_db(|conn, _header, _settings| {
             let (version, name, checksum): (u32, String, String) = conn
@@ -248,7 +248,7 @@ fn initial_schema_version_is_recorded_and_migrations_are_checksummed() {
                     |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                 )
                 .map_err(|_| AppError::Database)?;
-            assert_eq!(version, 2);
+            assert_eq!(version, 3);
             assert!(!name.is_empty());
             assert_eq!(checksum.len(), 64);
             Ok(())

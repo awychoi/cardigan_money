@@ -237,6 +237,8 @@ export function AppShell({
               presetSearch={preset.search}
               presetNonce={preset.nonce}
               onClearPreset={() => setPreset({ accountId: null, search: null, nonce: 0 })}
+              onChanged={() => setRefresh((value) => value + 1)}
+              readOnly={demo}
             />
           ) : (
             <SettingsView
@@ -245,6 +247,7 @@ export function AppShell({
               onSettingsChanged={onSettingsChanged}
               onLock={onLock}
               onAccountsChanged={() => setRefresh((value) => value + 1)}
+              onDataChanged={() => setRefresh((value) => value + 1)}
               demo={demo}
               onOpenDemo={onOpenDemo}
               onResetDemo={onResetDemo}

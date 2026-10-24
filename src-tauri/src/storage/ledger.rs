@@ -19,9 +19,10 @@ pub const MAX_ACCOUNT_FILTERS: usize = 20;
 
 pub const EFFECTIVE_TYPE: &str = "COALESCE(o.type_correction, t.tx_type)";
 pub const EFFECTIVE_EXCLUDED: &str = "COALESCE(o.excluded, t.excluded)";
-pub const EFFECTIVE_MERCHANT: &str = "COALESCE(o.merchant_alias, t.merchant_display)";
+pub const EFFECTIVE_MERCHANT: &str =
+    "COALESCE(o.merchant_alias, NULLIF(t.rule_merchant, ''), t.merchant_display)";
 pub const EFFECTIVE_CATEGORY: &str =
-    "COALESCE(NULLIF(o.category, ''), NULLIF(t.category, ''), 'Uncategorized')";
+    "COALESCE(NULLIF(o.category, ''), NULLIF(t.rule_category, ''), NULLIF(t.category, ''), 'Uncategorized')";
 const SPEND_TYPES: &str = "('purchase','refund','fee','interest')";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -255,6 +256,61 @@ fn build_filters(query: &LedgerQuery) -> AppResult<Filters> {
         params.push(pattern.into());
     }
     Ok(Filters { where_sql: sql, params })
+}
+
+/// All matching rows (bounded) for CSV export. Filters are identical to the
+/// paginated ledger query; sort identifiers remain closed enums.
+pub fn query_ledger_export(
+    conn: &Connection,
+    query: &LedgerQuery,
+    limit: u32,
+) -> AppResult<Vec<LedgerRow>> {
+    let filters = build_filters(query)?;
+    let sort = match &query.sort {
+        Some(value) => LedgerSort::parse(value)?,
+        None => LedgerSort::DateDesc,
+    };
+    let sql = format!(
+        "SELECT t.id, t.reporting_date, {EFFECTIVE_MERCHANT}, \
+            o.merchant_alias IS NOT NULL, t.raw_description, t.account_id, \
+            a.display_name, a.last_four, \
+            NULLIF({EFFECTIVE_CATEGORY}, 'Uncategorized'), o.category IS NOT NULL OR t.category IS NOT NULL, \
+            {EFFECTIVE_TYPE}, t.pending, t.amount_minor, t.currency, t.source_kind, \
+            t.authorized_date, t.posted_date, t.reporting_date_source, \
+            {EFFECTIVE_EXCLUDED}, o.notes{} ORDER BY {} LIMIT ?",
+        filters.where_sql,
+        sort.order_by()
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let mut params = filters.params;
+    params.push(i64::from(limit).into());
+    let rows = stmt
+        .query_map(params_from_iter(params), |row| {
+            Ok(LedgerRow {
+                id: row.get(0)?,
+                reporting_date: row.get(1)?,
+                merchant: row.get(2)?,
+                merchant_edited: row.get(3)?,
+                raw_description: row.get(4)?,
+                account_id: row.get(5)?,
+                account_name: row.get(6)?,
+                account_last_four: row.get(7)?,
+                category: row.get(8)?,
+                category_edited: row.get(9)?,
+                tx_type: row.get(10)?,
+                pending: row.get::<_, i64>(11)? != 0,
+                amount_minor: row.get(12)?,
+                currency: row.get(13)?,
+                source_kind: row.get(14)?,
+                authorized_date: row.get(15)?,
+                posted_date: row.get(16)?,
+                reporting_date_source: row.get(17)?,
+                excluded: row.get::<_, i64>(18)? != 0,
+                notes: row.get(19)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
 }
 
 pub fn query_ledger(conn: &Connection, query: &LedgerQuery) -> AppResult<LedgerPage> {

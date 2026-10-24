@@ -142,8 +142,6 @@ pub fn seed(conn: &Connection) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::ledger::month_summary;
-    use crate::domain::dates::Month;
 
     fn seeded() -> Connection {
         // An in-memory plain SQLite connection is not used here: this unit test

@@ -8,7 +8,14 @@ use crate::services::{security as security_service, vault as vault_service};
 use crate::services::vault::SecuritySummary;
 use crate::state::AppState;
 use crate::storage::events::SecurityEvent;
+use crate::storage::edits::{
+    self, ManualPayment, ManualPaymentInput, MerchantRule, MerchantRuleInput, OverrideInput,
+    TransactionDetail,
+};
 use crate::storage::ledger::{query_ledger, LedgerPage, LedgerQuery};
+use crate::providers::csv::CsvMapping;
+use crate::services::exports::ExportResult;
+use crate::services::imports::{self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview};
 use crate::services::dashboard::{self, Dashboard};
 use crate::storage::accounts::{self, Account, AccountInput, AccountType};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
@@ -23,6 +30,111 @@ struct EmptyPayload {}
 struct EventsPayload {
     #[serde(default)]
     limit: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TransactionIdPayload {
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct OverrideSetPayload {
+    id: String,
+    #[serde(rename = "override")]
+    override_input: OverrideInput,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RuleUpdatePayload {
+    id: String,
+    rule: MerchantRuleInput,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ManualPaymentPayload {
+    account_id: String,
+    payment: ManualPaymentInput,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AccountIdPayload {
+    account_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ImportValidatePayload {
+    job_id: String,
+    mapping: CsvMapping,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ImportCommitPayload {
+    job_id: String,
+    mapping: CsvMapping,
+    #[serde(default)]
+    accept_review: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct JobIdPayload {
+    job_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BatchIdPayload {
+    batch_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BatchListPayload {
+    #[serde(default)]
+    limit: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ExportPayload {
+    query: LedgerQuery,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RulesView {
+    rules: Vec<MerchantRule>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BatchesView {
+    batches: Vec<ImportBatchView>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PaymentView {
+    payment: Option<ManualPayment>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeletedView {
+    deleted: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CancelledView {
+    cancelled: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -321,6 +433,156 @@ pub fn execute<R: tauri::Runtime>(
             state.lock(app, "quit");
             app.exit(0);
             GatewayResponse::ok(serde_json::json!({ "quitting": true }))
+        }
+        "transaction_detail" => {
+            let payload: TransactionIdPayload = request.decode_payload()?;
+            let detail: TransactionDetail = state.with_db(|conn, _h, _s| {
+                edits::get_detail(conn, &payload.id)
+            })?;
+            GatewayResponse::ok(detail)
+        }
+        "transaction_override_set" => {
+            state.require_real("edit transactions in demo mode")?;
+            let payload: OverrideSetPayload = request.decode_payload()?;
+            let detail = state.with_db(|conn, _h, _s| {
+                edits::set_override(conn, &payload.id, payload.override_input)
+            })?;
+            GatewayResponse::ok(detail)
+        }
+        "transaction_override_clear" => {
+            state.require_real("edit transactions in demo mode")?;
+            let payload: TransactionIdPayload = request.decode_payload()?;
+            let detail = state.with_db(|conn, _h, _s| {
+                edits::clear_override(conn, &payload.id)
+            })?;
+            GatewayResponse::ok(detail)
+        }
+        "merchant_rules_list" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            let rules = state.with_db(|conn, _h, _s| edits::list_rules(conn))?;
+            GatewayResponse::ok(RulesView { rules })
+        }
+        "merchant_rule_create" => {
+            state.require_real("edit merchant rules in demo mode")?;
+            let rule: MerchantRuleInput = request.decode_payload()?;
+            let created = state.with_db(|conn, _h, _s| edits::create_rule(conn, &rule))?;
+            GatewayResponse::ok(created)
+        }
+        "merchant_rule_update" => {
+            state.require_real("edit merchant rules in demo mode")?;
+            let payload: RuleUpdatePayload = request.decode_payload()?;
+            let updated = state.with_db(|conn, _h, _s| {
+                edits::update_rule(conn, &payload.id, &payload.rule)
+            })?;
+            GatewayResponse::ok(updated)
+        }
+        "merchant_rule_delete" => {
+            state.require_real("edit merchant rules in demo mode")?;
+            let payload: TransactionIdPayload = request.decode_payload()?;
+            state.with_db(|conn, _h, _s| edits::delete_rule(conn, &payload.id))?;
+            GatewayResponse::ok(DeletedView { deleted: true })
+        }
+        "manual_payment_get" => {
+            let payload: AccountIdPayload = request.decode_payload()?;
+            let payment = state.with_db(|conn, _h, _s| {
+                edits::get_manual_payment(conn, &payload.account_id)
+            })?;
+            GatewayResponse::ok(PaymentView { payment })
+        }
+        "manual_payment_set" => {
+            state.require_real("edit manual payment metadata in demo mode")?;
+            let payload: ManualPaymentPayload = request.decode_payload()?;
+            let payment = state.with_db(|conn, _h, _s| {
+                edits::set_manual_payment(conn, &payload.account_id, &payload.payment)
+            })?;
+            GatewayResponse::ok(PaymentView { payment })
+        }
+        "manual_payment_clear" => {
+            state.require_real("edit manual payment metadata in demo mode")?;
+            let payload: AccountIdPayload = request.decode_payload()?;
+            let payment = state.with_db(|conn, _h, _s| {
+                edits::set_manual_payment(
+                    conn,
+                    &payload.account_id,
+                    &ManualPaymentInput {
+                        statement_balance: None,
+                        minimum_due: None,
+                        next_due_date: None,
+                        valid_through_date: None,
+                    },
+                )
+            })?;
+            GatewayResponse::ok(PaymentView { payment })
+        }
+        "import_choose_file" => {
+            state.require_real("import CSV in demo mode")?;
+            state.rate_limit("import_choose_file", 5, 60)?;
+            let payload: AccountIdPayload = request.decode_payload()?;
+            let file: ImportFileView = imports::choose_file(app, state, &payload.account_id)?;
+            GatewayResponse::ok(file)
+        }
+        "import_validate" => {
+            state.require_real("import CSV in demo mode")?;
+            let payload: ImportValidatePayload = request.decode_payload()?;
+            let preview: ValidationPreview =
+                imports::validate(state, &payload.job_id, &payload.mapping)?;
+            GatewayResponse::ok(preview)
+        }
+        "import_commit" => {
+            state.require_real("import CSV in demo mode")?;
+            state.rate_limit("import_commit", 5, 60)?;
+            let payload: ImportCommitPayload = request.decode_payload()?;
+            let result: ImportResult = imports::commit(
+                state,
+                &payload.job_id,
+                &payload.mapping,
+                payload.accept_review,
+            )?;
+            GatewayResponse::ok(result)
+        }
+        "import_cancel" => {
+            let payload: JobIdPayload = request.decode_payload()?;
+            imports::cancel(state, &payload.job_id)?;
+            GatewayResponse::ok(CancelledView { cancelled: true })
+        }
+        "import_batches_list" => {
+            let payload: BatchListPayload = request.decode_payload()?;
+            let limit = payload.limit.unwrap_or(20);
+            if limit == 0 || limit > 50 {
+                return Err(AppError::InvalidInput("batch limit"));
+            }
+            let batches = state.with_db(|conn, _h, _s| imports::list_batches(conn, limit))?;
+            GatewayResponse::ok(BatchesView { batches })
+        }
+        "import_rollback" => {
+            state.require_real("roll back an import in demo mode")?;
+            let payload: BatchIdPayload = request.decode_payload()?;
+            let batch = imports::rollback(state, &payload.batch_id)?;
+            GatewayResponse::ok(batch)
+        }
+        "export_ledger_csv" => {
+            state.require_real("export CSV in demo mode")?;
+            state.rate_limit("export_ledger_csv", 5, 60)?;
+            let payload: ExportPayload = request.decode_payload()?;
+            let Some(destination) = crate::services::exports::choose_destination(app)? else {
+                return Err(AppError::Cancelled);
+            };
+            let result: ExportResult = state.with_db(|conn, _h, _s| {
+                crate::services::exports::export_filtered(conn, &payload.query, &destination)
+            })?;
+            if let Err(error) = state.with_db(|conn, _h, _s| {
+                crate::storage::events::record_event(
+                    conn,
+                    "export",
+                    "success",
+                    Some(serde_json::json!({ "rows": result.rows })),
+                )
+            }) {
+                // The file was already written; report the audit failure rather
+                // than pretending the export did not happen.
+                return Err(error);
+            }
+            GatewayResponse::ok(result)
         }
         "security_events_list" => {
             let payload: EventsPayload = request.decode_payload()?;

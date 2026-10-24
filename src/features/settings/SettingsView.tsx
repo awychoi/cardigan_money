@@ -10,12 +10,16 @@ import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { ThemeToggle } from "../../components/ThemeToggle";
 import { AccountManager } from "../accounts/AccountManager";
+import { MerchantRulesPanel } from "./MerchantRulesPanel";
+import { ManualPaymentPanel } from "./ManualPaymentPanel";
+import { ImportExportPanel } from "./ImportExportPanel";
 
 export function SettingsView({
   vault,
   onSettingsChanged,
   onLock,
   onAccountsChanged,
+  onDataChanged,
   demo,
   onOpenDemo,
   onResetDemo,
@@ -24,6 +28,7 @@ export function SettingsView({
   onSettingsChanged: (settings: Settings) => void;
   onLock: () => Promise<void>;
   onAccountsChanged: () => void;
+  onDataChanged: () => void;
   demo: boolean;
   onOpenDemo: () => Promise<void>;
   onResetDemo: () => Promise<void>;
@@ -179,6 +184,14 @@ export function SettingsView({
         </section>
 
         <AccountManager onChanged={onAccountsChanged} readOnly={demo} />
+
+        {!demo ? (
+          <>
+            <ManualPaymentPanel onChanged={onDataChanged} />
+            <MerchantRulesPanel onChanged={onDataChanged} />
+            <ImportExportPanel onChanged={onDataChanged} />
+          </>
+        ) : null}
 
         <section className="panel" aria-labelledby="close-title">
           <h2 id="close-title">Window close behavior</h2>

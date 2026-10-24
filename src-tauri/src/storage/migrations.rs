@@ -27,6 +27,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "domain_accounts_transactions",
         sql: include_str!("../../migrations/0002_domain.sql"),
     },
+    Migration {
+        version: 3,
+        name: "edits_rules_imports",
+        sql: include_str!("../../migrations/0003_edits_rules_imports.sql"),
+    },
 ];
 
 pub fn supported_schema_version() -> u32 {
@@ -125,9 +130,10 @@ mod tests {
 
     #[test]
     fn supported_version_matches_latest_migration() {
-        assert_eq!(supported_schema_version(), 2);
+        assert_eq!(supported_schema_version(), 3);
         assert_eq!(MIGRATIONS[0].version, 1);
         assert_eq!(MIGRATIONS[1].version, 2);
-        assert!(!checksum(MIGRATIONS[1].sql).is_empty());
+        assert_eq!(MIGRATIONS[2].version, 3);
+        assert!(!checksum(MIGRATIONS[2].sql).is_empty());
     }
 }
