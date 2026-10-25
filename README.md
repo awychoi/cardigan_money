@@ -1,6 +1,6 @@
-![cardigan_money — the Knit Graph banner with the Forest button mark](docs/design/brand/preview/h2-knit-graph.png)
-
 # cardigan_money
+
+![cardigan_money — the Knit Graph banner with the Forest button mark](docs/design/brand/preview/h2-knit-graph.png)
 
 A local-first, encrypted personal finance app for macOS. It tracks one person's credit-card
 balances and calendar-month spending, and keeps everything on the Mac — no account, no cloud,
