@@ -64,19 +64,6 @@ pnpm test:e2e        # Playwright; run `pnpm exec playwright install chromium` f
 cd src-tauri && cargo test
 ```
 
-## Secret scanning
-
-Every push is scanned for credentials by gitleaks in CI
-([secret-scan.yml](.github/workflows/secret-scan.yml)). To run the same scan before each commit:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-The hook runs `gitleaks` from `PATH` (or `.cache/gitleaks/gitleaks`) and blocks the commit if the
-scanner is missing or finds a secret. Install it with `brew install gitleaks`;
-`git commit --no-verify` bypasses it for one commit.
-
 ## Security notes
 
 - **There is no passphrase recovery.** Lose the passphrase and every backup passphrase, and the
