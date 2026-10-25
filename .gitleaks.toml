@@ -1,0 +1,45 @@
+# Secret scanning for cardigan_money.
+#
+# Local:
+#   gitleaks git --config .gitleaks.toml --redact --verbose .
+#   gitleaks dir --config .gitleaks.toml --redact --verbose <path>
+#
+# CI: .github/workflows/secret-scan.yml (full history on every push/PR).
+#
+# Extends the built-in default rule set (222 rules, including the Plaid
+# access-token, client-id, and secret-key patterns). Allowlists below exist
+# only for values that are documented as synthetic; do not add an allowlist
+# for anything that could hide a real credential.
+
+title = "cardigan_money secret scan"
+
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# Allowlists
+# ---------------------------------------------------------------------------
+
+[[allowlists]]
+description = "This file documents synthetic sentinel patterns."
+paths = ['''\.gitleaks\.toml$''']
+
+[[allowlists]]
+description = "Synthetic sentinels committed by tests to exercise credential scoping and redaction (src-tauri/tests/plaid.rs, restore_overhaul.rs)."
+regexTarget = "match"
+regexes = [
+  '''old-access-token-value-123''',
+  '''orphan-access-token-value-123''',
+  '''same-vault-access-token-123''',
+  '''sandbox-secret-value''',
+  '''sandbox_client_id''',
+]
+
+[[allowlists]]
+description = "Public-by-design demo key and synthetic identifiers. The demo key is SHA-256 of a documented string and protects synthetic demo data only (src-tauri/src/demo/mod.rs)."
+regexTarget = "match"
+regexes = [
+  '''a2ceb32f7ebfe63ff306dcb0eb26326ca99c31998730f72c1446aafb2697164d''',
+  '''deadbeefcafebabe0011223344556677''',
+  '''mock-bridge-sentinel-4c1f''',
+]

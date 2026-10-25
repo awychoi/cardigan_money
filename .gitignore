@@ -14,13 +14,29 @@ build/
 src-tauri/gen/
 
 # Local databases, backups, exports, fixtures
+# The app's own artifacts: SQLCipher vault + WAL, header, backups, exports.
+# Keep this list in sync with the paths in src-tauri/src (vault.rs, demo/mod.rs,
+# services/backups.rs, services/exports.rs); it is the last line of defense
+# against committing a vault, backup, or plaintext ledger export.
+*.cmdb
+*.cmdb-wal
+*.cmdb-shm
+*.cmdb-journal
+*.cmdb.restore-old
+*.cmbak
+vault.header
+vault.header.bak
+.backup-snapshot-*.cmdb
+.portable-snapshot-*.cmdb
+restore-staged-*.cmdb
+pre-migration-v*.cmdb
+cardigan-money-ledger-*.csv
+.cm-export-*.tmp
 *.sqlite
 *.sqlite3
 *.db
 *.db-wal
 *.db-shm
-*.cmbackup
-*.cmexport
 data/
 backups/
 exports/

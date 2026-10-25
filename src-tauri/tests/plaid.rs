@@ -23,7 +23,7 @@ fn credentials_round_trip_in_memory_and_tokens_are_scoped() {
     store_access_token(
         &store,
         "credential-ref-1",
-        SecretString::new("access-sandbox-token-value-123456".into()),
+        SecretString::new("test-only-not-a-plaid-token-123456".into()),
     )
     .unwrap();
     assert_eq!(
@@ -31,7 +31,7 @@ fn credentials_round_trip_in_memory_and_tokens_are_scoped() {
             .unwrap()
             .unwrap()
             .expose(),
-        "access-sandbox-token-value-123456"
+        "test-only-not-a-plaid-token-123456"
     );
     assert!(load_access_token(&store, "credential-ref-2")
         .unwrap()

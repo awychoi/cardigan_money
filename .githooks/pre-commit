@@ -1,0 +1,33 @@
+#!/bin/sh
+# Secret scan before every commit.
+#
+# Enable once per clone:
+#   git config core.hooksPath .githooks
+#
+# Uses gitleaks (https://github.com/gitleaks/gitleaks) with the repository
+# config in .gitleaks.toml. Install it with: brew install gitleaks
+# Bypass for one commit with: git commit --no-verify
+
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+run_scan() {
+  "$1" git --pre-commit --redact --staged --verbose --config .gitleaks.toml .
+}
+
+if command -v gitleaks >/dev/null 2>&1; then
+  run_scan gitleaks
+  exit $?
+fi
+
+if [ -x "$root/.cache/gitleaks/gitleaks" ]; then
+  run_scan "$root/.cache/gitleaks/gitleaks"
+  exit $?
+fi
+
+echo "pre-commit: gitleaks is not installed, so this commit was NOT scanned." >&2
+echo "  Install it with: brew install gitleaks" >&2
+echo "  Or bypass once with: git commit --no-verify" >&2
+exit 1
