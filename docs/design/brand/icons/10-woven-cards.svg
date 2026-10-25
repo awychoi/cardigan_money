@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Woven cards app icon concept">
+  <defs>
+    <linearGradient id="wc-bg" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#26313a"/>
+      <stop offset="0.55" stop-color="#171e24"/>
+      <stop offset="1" stop-color="#0c1115"/>
+    </linearGradient>
+    <radialGradient id="wc-glow" cx="0.35" cy="0.25" r="0.7">
+      <stop offset="0" stop-color="#7fc2b0" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#7fc2b0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wc-cream" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="1" stop-color="#e9dfca"/>
+    </linearGradient>
+    <linearGradient id="wc-mint" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#a9e0d0"/>
+      <stop offset="0.6" stop-color="#7fc2b0"/>
+      <stop offset="1" stop-color="#4f9687"/>
+    </linearGradient>
+    <linearGradient id="wc-rust" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#c98360"/>
+      <stop offset="1" stop-color="#8c4a31"/>
+    </linearGradient>
+    <filter id="wc-shadow" x="-30%" y="-30%" width="170%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="wc-buttonshadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <clipPath id="wc-tile">
+      <rect x="100" y="100" width="824" height="824" rx="184"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#wc-tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#wc-bg)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#wc-glow)"/>
+    <g fill="none" stroke="#f7f3e8" stroke-width="64" stroke-linecap="round" opacity="0.025">
+      <path d="M 80 790 C 260 610 420 900 600 720 C 730 590 840 630 960 520"/>
+    </g>
+    <g stroke="#f7f3e8" stroke-width="14" stroke-linecap="round" opacity="0.03">
+      <path d="M 150 900 V 1024 M 240 900 V 1024 M 330 900 V 1024 M 420 900 V 1024 M 510 900 V 1024 M 600 900 V 1024 M 690 900 V 1024 M 780 900 V 1024 M 870 900 V 1024"/>
+    </g>
+  </g>
+
+  <g transform="rotate(-16 500 520)" filter="url(#wc-shadow)">
+    <rect x="178" y="362" width="556" height="316" rx="38" fill="url(#wc-cream)"/>
+    <rect x="178" y="504" width="556" height="46" fill="#b26a4c"/>
+    <path d="M 194 527 H 718" stroke="#f7f3e8" stroke-width="2" stroke-dasharray="2 12" opacity="0.7"/>
+    <text x="214" y="434" font-family="'New York', 'Iowan Old Style', Georgia, serif" font-size="29" font-weight="600" letter-spacing="-1.2" fill="#1f4c42">cm<tspan fill="#b26a4c">.</tspan></text>
+    <rect x="214" y="452" width="58" height="42" rx="8" fill="#c9a567" opacity="0.9"/>
+    <g fill="none" stroke="#2c6659" stroke-width="5" stroke-linecap="round" opacity="0.65">
+      <path d="M 666 422 a 20 20 0 0 1 0 26"/>
+      <path d="M 681 410 a 38 38 0 0 1 0 50"/>
+      <path d="M 696 398 a 56 56 0 0 1 0 74"/>
+    </g>
+    <path d="M 214 590 H 400" stroke="#d8ccb6" stroke-width="9" stroke-linecap="round" opacity="0.7"/>
+    <path d="M 424 590 H 534" stroke="#d8ccb6" stroke-width="9" stroke-linecap="round" opacity="0.5"/>
+  </g>
+
+  <g transform="rotate(16 520 510)" filter="url(#wc-shadow)">
+    <rect x="292" y="352" width="556" height="316" rx="38" fill="url(#wc-mint)"/>
+    <rect x="292" y="506" width="556" height="46" fill="#1f4c42"/>
+    <g fill="none" stroke="#f7f3e8" stroke-linecap="round">
+      <path d="M 306 536 C 350 514 394 558 438 536 C 482 514 526 558 570 536 C 614 514 658 558 702 536 C 730 522 750 526 770 534" stroke-width="7" opacity="0.8"/>
+      <path d="M 306 550 C 350 528 394 572 438 550 C 482 528 526 572 570 550 C 614 528 658 572 702 550 C 730 536 750 540 770 548" stroke-width="2.5" stroke-dasharray="1 11" opacity="0.6"/>
+    </g>
+    <text x="330" y="432" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1.4" fill="#164d42">•••• 4101</text>
+    <rect x="330" y="452" width="64" height="46" rx="9" fill="#1f4c42" opacity="0.75"/>
+    <path d="M 330 466 H 394 M 330 480 H 394 M 348 452 V 498 M 373 452 V 498" stroke="#8fd5c2" stroke-width="1.5" opacity="0.4"/>
+    <path d="M 590 610 H 760" stroke="#164d42" stroke-width="9" stroke-linecap="round" opacity="0.3"/>
+  </g>
+
+  <g filter="url(#wc-buttonshadow)">
+    <circle cx="512" cy="512" r="72" fill="url(#wc-rust)"/>
+    <circle cx="512" cy="512" r="67" fill="none" stroke="#6f3623" stroke-width="2" opacity="0.55"/>
+    <g fill="#f7f3e8">
+      <circle cx="484" cy="484" r="11"/>
+      <circle cx="540" cy="484" r="11"/>
+      <circle cx="484" cy="540" r="11"/>
+      <circle cx="540" cy="540" r="11"/>
+    </g>
+    <g stroke="#f2e7d5" stroke-width="7" stroke-linecap="round">
+      <path d="M 484 484 C 496 500 528 524 540 540"/>
+      <path d="M 484 540 C 496 524 528 500 540 484"/>
+    </g>
+  </g>
+  <path d="M 552 550 C 578 584 574 610 602 626" fill="none" stroke="#f2e7d5" stroke-width="6" stroke-linecap="round" opacity="0.75"/>
+  <circle cx="610" cy="630" r="8" fill="#f2e7d5" opacity="0.8"/>
+
+  <rect x="101" y="101" width="822" height="822" rx="183" fill="none" stroke="#070b0e" stroke-width="2" opacity="0.6"/>
+  <rect x="112" y="112" width="800" height="800" rx="174" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.07"/>
+</svg>

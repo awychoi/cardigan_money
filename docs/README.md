@@ -46,6 +46,7 @@ groups below.
 - [design/theming.md](design/theming.md) — theme schema, authoring guide, limits
 - [design/proposal.md](design/proposal.md) — the UI direction and what shipped from it
 - [design/mockup.html](design/mockup.html) — clickable mockup (Overview, Cards, Settings, language sheet)
+- [design/brand/](design/brand/) — Forest C + Knit Graph brand system, installed
 
 **Operations**
 

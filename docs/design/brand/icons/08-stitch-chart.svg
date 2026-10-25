@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Stitch chart app icon concept">
+  <defs>
+    <linearGradient id="sc-bg" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#253039"/>
+      <stop offset="0.55" stop-color="#161d23"/>
+      <stop offset="1" stop-color="#0c1115"/>
+    </linearGradient>
+    <radialGradient id="sc-glow" cx="0.65" cy="0.15" r="0.7">
+      <stop offset="0" stop-color="#7fc2b0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#7fc2b0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sc-bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a9e0d0"/>
+      <stop offset="0.55" stop-color="#7fc2b0"/>
+      <stop offset="1" stop-color="#4f9687"/>
+    </linearGradient>
+    <pattern id="sc-hatch" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#d79b7d" stroke-width="3.2" opacity="0.6"/>
+    </pattern>
+    <filter id="sc-shadow" x="-30%" y="-30%" width="170%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="sc-tile">
+      <rect x="100" y="100" width="824" height="824" rx="184"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#sc-tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sc-bg)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#sc-glow)"/>
+    <g stroke="#f7f3e8" stroke-width="1.5" opacity="0.045">
+      <path d="M 160 780 H 900 M 160 680 H 900 M 160 580 H 900 M 160 480 H 900 M 160 380 H 900 M 160 280 H 900"/>
+    </g>
+    <g stroke="#f7f3e8" stroke-width="14" stroke-linecap="round" opacity="0.03">
+      <path d="M 150 900 V 1024 M 240 900 V 1024 M 330 900 V 1024 M 420 900 V 1024 M 510 900 V 1024 M 600 900 V 1024 M 690 900 V 1024 M 780 900 V 1024 M 870 900 V 1024"/>
+    </g>
+  </g>
+
+  <g filter="url(#sc-shadow)">
+    <rect x="210" y="550" width="110" height="230" rx="20" fill="url(#sc-bar)"/>
+    <rect x="370" y="440" width="110" height="340" rx="20" fill="url(#sc-bar)"/>
+    <rect x="530" y="490" width="110" height="290" rx="20" fill="url(#sc-bar)"/>
+    <rect x="690" y="320" width="110" height="460" rx="20" fill="#17211f" stroke="#d79b7d" stroke-width="3"/>
+    <rect x="690" y="320" width="110" height="460" rx="20" fill="url(#sc-hatch)"/>
+  </g>
+
+  <g stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.16">
+    <path d="M 242 570 V 762 M 288 570 V 762 M 402 460 V 762 M 448 460 V 762 M 562 510 V 762 M 608 510 V 762"/>
+  </g>
+
+  <path d="M 240 560 C 310 550 360 460 420 448 C 480 436 520 505 575 496 C 630 487 690 350 748 326" fill="none" stroke="#f7f3e8" stroke-width="7" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="748" cy="322" r="15" fill="#b26a4c"/>
+
+  <line x1="180" y1="785" x2="860" y2="785" stroke="#f7f3e8" stroke-width="3" opacity="0.18" stroke-dasharray="2 12"/>
+
+  <rect x="101" y="101" width="822" height="822" rx="183" fill="none" stroke="#070b0e" stroke-width="2" opacity="0.6"/>
+  <rect x="112" y="112" width="800" height="800" rx="174" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.07"/>
+</svg>

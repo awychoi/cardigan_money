@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Button coin app icon concept">
+  <defs>
+    <radialGradient id="bc-bg" cx="0.28" cy="0.18" r="0.95">
+      <stop offset="0" stop-color="#232c33"/>
+      <stop offset="0.55" stop-color="#171d23"/>
+      <stop offset="1" stop-color="#0e1216"/>
+    </radialGradient>
+    <radialGradient id="bc-coin" cx="0.34" cy="0.24" r="0.88">
+      <stop offset="0" stop-color="#c07b57"/>
+      <stop offset="0.5" stop-color="#a85f42"/>
+      <stop offset="1" stop-color="#82422d"/>
+    </radialGradient>
+    <linearGradient id="bc-thread" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbf1df"/>
+      <stop offset="1" stop-color="#e9d8bc"/>
+    </linearGradient>
+    <filter id="bc-drop" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="20" stdDeviation="26" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="bc-threadshadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#5a2c1a" flood-opacity="0.35"/>
+    </filter>
+    <clipPath id="bc-tile">
+      <rect x="100" y="100" width="824" height="824" rx="184"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#bc-tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bc-bg)"/>
+    <g stroke="#ffffff" stroke-width="2" opacity="0.035">
+      <path d="M 180 160 C 300 260 300 360 180 460 M 300 140 C 420 250 420 370 300 480 M 760 900 C 640 800 640 700 760 600"/>
+    </g>
+    <circle cx="512" cy="500" r="360" fill="#b26a4c" opacity="0.05"/>
+  </g>
+
+  <g filter="url(#bc-drop)">
+    <circle cx="512" cy="500" r="300" fill="url(#bc-coin)"/>
+    <circle cx="512" cy="500" r="296" fill="none" stroke="#5d2f20" stroke-width="10" opacity="0.55"/>
+    <g stroke="#7e4029" stroke-width="9" opacity="0.5" stroke-linecap="round">
+      <line x1="798.0" y1="500.0" x2="824.0" y2="500.0"/>
+      <line x1="796.2" y1="532.0" x2="822.0" y2="534.9"/>
+      <line x1="790.8" y1="563.6" x2="816.2" y2="569.4"/>
+      <line x1="782.0" y1="594.5" x2="806.5" y2="603.0"/>
+      <line x1="769.7" y1="624.1" x2="793.1" y2="635.4"/>
+      <line x1="754.2" y1="652.2" x2="776.2" y2="666.0"/>
+      <line x1="735.6" y1="678.3" x2="755.9" y2="694.5"/>
+      <line x1="714.2" y1="702.2" x2="732.6" y2="720.6"/>
+      <line x1="690.3" y1="723.6" x2="706.5" y2="743.9"/>
+      <line x1="664.2" y1="742.2" x2="678.0" y2="764.2"/>
+      <line x1="636.1" y1="757.7" x2="647.4" y2="781.1"/>
+      <line x1="606.5" y1="770.0" x2="615.0" y2="794.5"/>
+      <line x1="575.6" y1="778.8" x2="581.4" y2="804.2"/>
+      <line x1="544.0" y1="784.2" x2="546.9" y2="810.0"/>
+      <line x1="512.0" y1="786.0" x2="512.0" y2="812.0"/>
+      <line x1="480.0" y1="784.2" x2="477.1" y2="810.0"/>
+      <line x1="448.4" y1="778.8" x2="442.6" y2="804.2"/>
+      <line x1="417.5" y1="770.0" x2="409.0" y2="794.5"/>
+      <line x1="387.9" y1="757.7" x2="376.6" y2="781.1"/>
+      <line x1="359.8" y1="742.2" x2="346.0" y2="764.2"/>
+      <line x1="333.7" y1="723.6" x2="317.5" y2="743.9"/>
+      <line x1="309.8" y1="702.2" x2="291.4" y2="720.6"/>
+      <line x1="288.4" y1="678.3" x2="268.1" y2="694.5"/>
+      <line x1="269.8" y1="652.2" x2="247.8" y2="666.0"/>
+      <line x1="254.3" y1="624.1" x2="230.9" y2="635.4"/>
+      <line x1="242.0" y1="594.5" x2="217.5" y2="603.0"/>
+      <line x1="233.2" y1="563.6" x2="207.8" y2="569.4"/>
+      <line x1="227.8" y1="532.0" x2="202.0" y2="534.9"/>
+      <line x1="226.0" y1="500.0" x2="200.0" y2="500.0"/>
+      <line x1="227.8" y1="468.0" x2="202.0" y2="465.1"/>
+      <line x1="233.2" y1="436.4" x2="207.8" y2="430.6"/>
+      <line x1="242.0" y1="405.5" x2="217.5" y2="397.0"/>
+      <line x1="254.3" y1="375.9" x2="230.9" y2="364.6"/>
+      <line x1="269.8" y1="347.8" x2="247.8" y2="334.0"/>
+      <line x1="288.4" y1="321.7" x2="268.1" y2="305.5"/>
+      <line x1="309.8" y1="297.8" x2="291.4" y2="279.4"/>
+      <line x1="333.7" y1="276.4" x2="317.5" y2="256.1"/>
+      <line x1="359.8" y1="257.8" x2="346.0" y2="235.8"/>
+      <line x1="387.9" y1="242.3" x2="376.6" y2="218.9"/>
+      <line x1="417.5" y1="230.0" x2="409.0" y2="205.5"/>
+      <line x1="448.4" y1="221.2" x2="442.6" y2="195.8"/>
+      <line x1="480.0" y1="215.8" x2="477.1" y2="190.0"/>
+      <line x1="512.0" y1="214.0" x2="512.0" y2="188.0"/>
+      <line x1="544.0" y1="215.8" x2="546.9" y2="190.0"/>
+      <line x1="575.6" y1="221.2" x2="581.4" y2="195.8"/>
+      <line x1="606.5" y1="230.0" x2="615.0" y2="205.5"/>
+      <line x1="636.1" y1="242.3" x2="647.4" y2="218.9"/>
+      <line x1="664.2" y1="257.8" x2="678.0" y2="235.8"/>
+      <line x1="690.3" y1="276.4" x2="706.5" y2="256.1"/>
+      <line x1="714.2" y1="297.8" x2="732.6" y2="279.4"/>
+      <line x1="735.6" y1="321.7" x2="755.9" y2="305.5"/>
+      <line x1="754.2" y1="347.8" x2="776.2" y2="334.0"/>
+      <line x1="769.7" y1="375.9" x2="793.1" y2="364.6"/>
+      <line x1="782.0" y1="405.5" x2="806.5" y2="397.0"/>
+      <line x1="790.8" y1="436.4" x2="816.2" y2="430.6"/>
+      <line x1="796.2" y1="468.0" x2="822.0" y2="465.1"/>
+    </g>
+    <circle cx="512" cy="500" r="252" fill="none" stroke="#f9e6d4" stroke-width="4" opacity="0.2"/>
+    <circle cx="512" cy="500" r="248" fill="#7f3f28" opacity="0.1"/>
+    <ellipse cx="430" cy="360" rx="180" ry="100" fill="#ffe2cd" opacity="0.08"/>
+  </g>
+
+  <g fill="none" stroke="url(#bc-thread)" stroke-width="27" stroke-linecap="round" filter="url(#bc-threadshadow)">
+    <path d="M 430 418 C 474 452 550 548 594 582"/>
+    <path d="M 430 582 C 474 548 550 452 594 418"/>
+  </g>
+
+  <g>
+    <circle cx="430" cy="418" r="38" fill="#0f1419"/>
+    <circle cx="594" cy="418" r="38" fill="#0f1419"/>
+    <circle cx="430" cy="582" r="38" fill="#0f1419"/>
+    <circle cx="594" cy="582" r="38" fill="#0f1419"/>
+    <g fill="none" stroke="#d89a78" stroke-width="4" opacity="0.28">
+      <path d="M 402 433 A 34 34 0 0 0 458 433"/>
+      <path d="M 566 433 A 34 34 0 0 0 622 433"/>
+      <path d="M 402 597 A 34 34 0 0 0 458 597"/>
+      <path d="M 566 597 A 34 34 0 0 0 622 597"/>
+    </g>
+  </g>
+
+
+  <rect x="101" y="101" width="822" height="822" rx="183" fill="none" stroke="#000000" stroke-width="2" opacity="0.45"/>
+  <rect x="112" y="112" width="800" height="800" rx="174" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.08"/>
+</svg>

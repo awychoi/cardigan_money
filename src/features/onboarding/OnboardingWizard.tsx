@@ -2,6 +2,7 @@ import { useState } from "react";
 import { command, type AccountPayload, type Settings } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { AccountForm } from "../accounts/AccountForm";
+import { BrandMark } from "../../components/BrandMark";
 import { Button } from "../../components/Button";
 
 type Step = "account" | "provider" | "finish";
@@ -52,9 +53,7 @@ export function OnboardingWizard({
       <div className="wizard-card">
         <header className="wizard-header">
           <div className="vault-brand">
-            <span className="brand-mark" aria-hidden="true">
-              cm
-            </span>
+            <BrandMark />
             <span className="brand-name">cardigan_money</span>
           </div>
           <button

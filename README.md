@@ -1,3 +1,5 @@
+![cardigan_money — the Knit Graph banner with the Forest button mark](docs/design/brand/preview/h2-knit-graph.png)
+
 # cardigan_money
 
 A local-first, encrypted personal finance app for macOS. It tracks one person's credit-card

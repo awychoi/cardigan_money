@@ -13,6 +13,7 @@ import { OverviewSkeleton } from "../features/dashboard/OverviewSkeleton";
 import { CardsView } from "../features/dashboard/CardsView";
 import { LedgerView } from "../features/dashboard/LedgerView";
 import { SettingsView } from "../features/settings/SettingsView";
+import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/Button";
 import { formatMonthRange, monthLabel } from "../lib/formatting";
 import type { Theme } from "../theme/schema";
@@ -176,9 +177,7 @@ export function AppShell({
 
   const brand = (
     <div className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        cm
-      </span>
+      <BrandMark />
       <span className="brand-name">cardigan_money</span>
       {demo ? <span className="status-pill status-warn">Demo</span> : null}
     </div>

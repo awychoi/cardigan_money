@@ -2,6 +2,7 @@ import { useState } from "react";
 import { command, type RestoreResult, type VaultState } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
+import { BrandMark } from "../../components/BrandMark";
 import { RestoreBackupFlow } from "../settings/RestoreBackupFlow";
 
 type Busy = "create" | "unlock" | "backup" | null;
@@ -99,9 +100,7 @@ export function VaultGate({
     <main className="vault-gate" aria-labelledby="vault-title">
       <div className="vault-card">
         <div className="vault-brand">
-          <span className="brand-mark" aria-hidden="true">
-            cm
-          </span>
+          <BrandMark />
           <span className="brand-name">cardigan_money</span>
         </div>
 

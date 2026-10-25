@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { BrandMark } from "../components/BrandMark";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AppShell } from "./AppShell";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -175,9 +176,7 @@ export function App() {
   if (boot.kind === "loading") {
     return (
       <main className="boot-screen" aria-labelledby="app-title">
-        <div className="boot-mark" aria-hidden="true">
-          cm
-        </div>
+        <BrandMark className="boot-mark" />
         <h1 id="app-title">cardigan_money</h1>
         <p className="muted">Local-first, encrypted personal card ledger.</p>
         <p className="status" role="status">
@@ -193,9 +192,7 @@ export function App() {
   if (boot.kind === "error") {
     return (
       <main className="boot-screen" role="alert">
-        <div className="boot-mark" aria-hidden="true">
-          cm
-        </div>
+        <BrandMark className="boot-mark" />
         <h1>cardigan_money</h1>
         <p className="error-text">{boot.message}</p>
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>

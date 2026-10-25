@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Cable card app icon concept">
+  <defs>
+    <linearGradient id="ca-bg" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#26313a"/>
+      <stop offset="0.5" stop-color="#181f26"/>
+      <stop offset="1" stop-color="#0d1216"/>
+    </linearGradient>
+    <radialGradient id="ca-glow" cx="0.68" cy="0.28" r="0.6">
+      <stop offset="0" stop-color="#7fc2b0" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#7fc2b0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ca-card" x1="0.05" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#b3e5d6"/>
+      <stop offset="0.45" stop-color="#8fd5c2"/>
+      <stop offset="1" stop-color="#5aa592"/>
+    </linearGradient>
+    <linearGradient id="ca-chip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e4c48a"/>
+      <stop offset="0.55" stop-color="#c9a567"/>
+      <stop offset="1" stop-color="#9a7238"/>
+    </linearGradient>
+    <filter id="ca-shadow" x="-30%" y="-30%" width="170%" height="180%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <clipPath id="ca-tile">
+      <rect x="100" y="100" width="824" height="824" rx="184"/>
+    </clipPath>
+    <clipPath id="ca-cardclip">
+      <rect x="212" y="300" width="600" height="390" rx="44"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#ca-tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#ca-bg)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#ca-glow)"/>
+    <g fill="none" stroke="#f7f3e8" stroke-width="70" stroke-linecap="round" opacity="0.025">
+      <path d="M 80 790 C 260 620 420 910 600 730 C 730 600 840 640 960 530"/>
+    </g>
+    <g stroke="#f7f3e8" stroke-width="16" stroke-linecap="round" opacity="0.03">
+      <path d="M 150 880 V 1024 M 230 880 V 1024 M 310 880 V 1024 M 390 880 V 1024 M 470 880 V 1024 M 550 880 V 1024 M 630 880 V 1024 M 710 880 V 1024 M 790 880 V 1024 M 870 880 V 1024"/>
+    </g>
+  </g>
+
+  <g transform="rotate(-8 512 505)" filter="url(#ca-shadow)">
+    <rect x="212" y="300" width="600" height="390" rx="44" fill="url(#ca-card)"/>
+    <rect x="213.5" y="301.5" width="597" height="387" rx="42.5" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.28"/>
+
+    <g clip-path="url(#ca-cardclip)" stroke="#164d42" stroke-width="2" opacity="0.06">
+      <path d="M 240 320 V 680 M 274 320 V 680 M 308 320 V 680 M 342 320 V 680 M 376 320 V 680 M 410 320 V 680 M 444 320 V 680 M 478 320 V 680 M 512 320 V 680 M 546 320 V 680 M 580 320 V 680 M 614 320 V 680 M 648 320 V 680 M 682 320 V 680 M 716 320 V 680 M 750 320 V 680 M 784 320 V 680"/>
+    </g>
+
+    <text x="258" y="384" font-family="'New York', 'Iowan Old Style', Georgia, serif" font-size="35" font-weight="600" letter-spacing="-1.5" fill="#123a33">cm<tspan fill="#b26a4c">.</tspan></text>
+    <text x="774" y="380" text-anchor="end" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="11" letter-spacing="1.4" fill="#164d42">•••• 0410</text>
+
+    <rect x="258" y="420" width="76" height="58" rx="11" fill="url(#ca-chip)"/>
+    <path d="M 278 420 V 478 M 258 440 H 334 M 258 459 H 334" stroke="#7a5723" stroke-width="2" opacity="0.5"/>
+
+    <g fill="none" stroke="#164d42" stroke-width="7" stroke-linecap="round" opacity="0.8">
+      <path d="M 728 430 a 24 24 0 0 1 0 32"/>
+      <path d="M 744 417 a 44 44 0 0 1 0 58"/>
+      <path d="M 760 404 a 64 64 0 0 1 0 84"/>
+    </g>
+
+    <rect x="212" y="522" width="600" height="74" fill="#1f4c42"/>
+    <g fill="none" stroke="#f7f3e8" stroke-linecap="round">
+      <path d="M 228 558 C 288 526 348 590 408 558 C 468 526 528 590 588 558 C 648 526 708 590 768 558 C 790 546 800 548 812 554" stroke-width="10"/>
+      <path d="M 228 578 C 288 546 348 610 408 578 C 468 546 528 610 588 578 C 648 546 708 610 768 578 C 790 566 800 568 812 574" stroke-width="4" opacity="0.65"/>
+    </g>
+
+    <text x="258" y="656" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="9" font-weight="500" letter-spacing="2.8" fill="#164d42" opacity="0.7">CARDIGAN</text>
+    <circle cx="778" cy="652" r="7" fill="#b26a4c"/>
+  </g>
+
+  <rect x="101" y="101" width="822" height="822" rx="183" fill="none" stroke="#070b0e" stroke-width="2" opacity="0.6"/>
+  <rect x="112" y="112" width="800" height="800" rx="174" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.07"/>
+</svg>
