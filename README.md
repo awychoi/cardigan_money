@@ -1,129 +1,119 @@
 # cardigan_money
 
-A local-first macOS app for one person's credit-card balances and calendar-month spending. Tauri 2, React, TypeScript, Rust, and a SQLCipher-encrypted ledger.
+A local-first, encrypted personal finance app for macOS. It tracks one person's credit-card
+balances and calendar-month spending, and keeps everything on the Mac — no account, no cloud,
+no telemetry.
 
-> **Status: Phase 10 local release candidate (offline/demo/CSV scope, Plaid Sandbox verified).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups and the full restore matrix (same-vault, cross-vault, fresh install, selective scopes, and destructive recovery), crypto-erase, sync engine/scheduler, and hardening are implemented. Plaid **Sandbox** linking/sync is verified against Sandbox Items; **Production/live institutions remain disabled and unverified**. The UI overhaul is complete: spend history, theme chart options, chart components, the Overview rebuild, the Transactions re-grade, and Settings sectioning. This is an ad-hoc-signed local build, not distribution-ready.
+Built with Tauri 2, React, TypeScript, Rust, and SQLCipher.
 
-## What it is
+![Overview screen with synthetic demo data](docs/design/app-ledger-overview.jpg)
 
-- Calendar months organize spending. Statement cycles do not.
-- Current balances and upcoming obligations are computed independently of the selected spending month.
-- Pending, posted, refunds, payments, fees, and transfers are distinct.
-- Missing, stale, unsupported, and explicitly zero are different states.
-- The ledger is encrypted at rest and unlocks only with the owner's passphrase. The passphrase is entered in a native macOS sheet and never enters the webview.
-- Demo data and CSV work without any bank connection.
+## What it does
 
-## Security warning (read this)
+- Calendar-month spending, kept separate from statement cycles.
+- Card balances and upcoming payments that stay current regardless of the month you're viewing.
+- Pending, posted, refunds, fees, payments, and transfers are distinct states.
+- An encrypted ledger, unlocked with a passphrase typed into a native macOS sheet.
+- Works offline with demo data or CSV import; optional Plaid **Sandbox** connection for testing sync.
 
-- **There is no passphrase recovery.** If you lose the passphrase and the passphrase for every backup, the data is unrecoverable. No one can reset it.
-- `vault.header` is required. Losing every copy makes the ledger unreadable even if the database file survives. Self-contained backups mitigate this.
-- Do not store the passphrase in the repository, an environment file, chat, or a note kept with the backups.
-- The app locks on launch, manual Lock Now, screen lock, sleep, fast user switching, logout, quit, and idle timeout. Hiding the window is not a lock.
-- This is an ad-hoc-signed local build. There is no auto-update or notarization. Verify source and artifact hash before running a rebuild.
-- See [SECURITY.md](SECURITY.md) for the incident runbook and the full residual-risk statement.
+## Requirements
 
-## Prerequisites
+- macOS 13 or newer (developed and tested on Apple Silicon)
+- Xcode Command Line Tools: `xcode-select --install`
+- Rust stable via [rustup](https://rustup.rs)
+- Node.js 22.12+ and pnpm 12 (`corepack enable` or `npm install -g pnpm`)
+- Nothing else: SQLCipher is compiled in from the vendored crate
 
-- macOS on Apple Silicon (developed/tested on an M1 Max)
-- Xcode command-line tools (`xcode-select --install`)
-- Rust stable (the repo pins `stable` via `rust-toolchain.toml`)
-- Node.js 22.12+ and pnpm 12 (the repo pins `packageManager`)
-- No system SQLCipher installation is required; it is built from the vendored crate
-
-## Development commands
+## Run it
 
 ```bash
-# install frontend dependencies (lockfile is committed)
+git clone https://github.com/awychoi/cardigan_money.git
+cd cardigan_money
 pnpm install --frozen-lockfile
-
-# native desktop app (builds Rust + starts Vite on 127.0.0.1:1420)
 pnpm tauri dev
-
-# browser-only mock (no Rust) for UI work
-VITE_MOCK_BRIDGE=1 pnpm dev
-
-# tests
-pnpm test                 # Vitest + React Testing Library
-pnpm test:e2e             # Playwright against the mock bridge
-pnpm typecheck
-pnpm lint
-pnpm verify:all           # full gate: typecheck, lint, format, unit, build, e2e, Rust fmt/clippy/test
-pnpm theme:check          # validate every theme: schema + contrast
-pnpm theme:schema         # regenerate the editor JSON Schema
-
-# Rust
-cd src-tauri
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-cargo audit
-cargo deny check
-cargo test --test perf -- --ignored --nocapture   # 50k dataset measurement
 ```
 
-## Theming
+The first Rust build takes a few minutes; later launches are fast. The app opens locked: create a
+vault with a passphrase, or choose **Open demo (synthetic data)** to look around without one.
 
-The UI is driven by a theme document: one JSON file per theme in `src/themes/`, validated against
-`src/themes/theme.schema.json`. A theme sets design tokens (color, type, radii, spacing, motion,
-card art) and four component variants: sidebar or top navigation, card faces or data tiles,
-comfortable or compact density, full or calm motion. Themes are data — adding one needs no code
-change, and the picker in **Settings → Appearance** is generated from the files.
-
-- Full field reference, recipes, and limits: [docs/design/theming.md](docs/design/theming.md)
-- Add a theme: copy a file in `src/themes/`, set `id` to match the file name, run `pnpm theme:check`
-- Dark/light follows the existing appearance setting; every theme ships both palettes
-
-This checkout was prepared in a sandbox that allows writes only inside the repository, so `scripts/dev-env.sh` points `CARGO_HOME`, `RUSTUP_HOME`, the pnpm store, and the Playwright browser cache at `.toolchain/` and `.cache/`. Source it if your environment has the same restriction:
+Browser-only UI preview with mock data (no Rust, no real ledger):
 
 ```bash
-. scripts/dev-env.sh
-CARDIGAN_MONEY_APP_DATA_DIR="$PWD/.cache/appdata" pnpm tauri dev
+VITE_MOCK_BRIDGE=1 pnpm dev
 ```
 
-`CARDIGAN_MONEY_APP_DATA_DIR` is a **debug-build-only** test hook. Release builds ignore it and use the standard `~/Library/Application Support/com.awychoi.cardiganmoney` directory.
-
-## Build (Apple Silicon)
+## Build a macOS app
 
 ```bash
 pnpm tauri build
-# artifact: src-tauri/target/release/bundle/macos/cardigan_money.app
-codesign --force --deep --sign - "src-tauri/target/release/bundle/macos/cardigan_money.app"
-codesign --verify --deep --strict "src-tauri/target/release/bundle/macos/cardigan_money.app"
-shasum -a 256 "src-tauri/target/release/bundle/macos/cardigan_money.app/Contents/MacOS/cardigan-money"
+open src-tauri/target/release/bundle/macos/cardigan_money.app
 ```
 
-The build is ad-hoc signed for local use only. It does not use a Developer ID, hardened runtime, notarization, or App Sandbox, and must not be represented as distribution-ready.
+The build is ad-hoc signed for local use only — not notarized, not App Sandboxed, not a
+distributable release. If macOS complains about the signature, re-sign it locally:
 
-## Backups, passphrases, and demos
+```bash
+codesign --force --deep --sign - src-tauri/target/release/bundle/macos/cardigan_money.app
+```
 
-Implemented and covered by service-level tests; native dialogs remain owner smoke tests. See [backup/recovery](docs/operations/backup-recovery.md) and [native smoke](docs/operations/native-smoke.md). The rules:
+## Tests
 
-- Automatic backups are self-contained encrypted containers; every restore asks for the backup passphrase in a native sheet, and replacing an existing vault requires typing `replace`.
-- **Back up now** can use the vault passphrase (blank) or a separate passphrase for one file. It works while the vault is locked after the current passphrase is entered; the app stays locked.
-- Restore supports same-vault, cross-vault, fresh-install, selective-scope, and destructive no-current-passphrase recovery. Cross-vault full restores adopt the backup identity and retire the previous vault's backups; fresh restores create a vault without a pre-restore backup.
-- Restored provider connections start as `reconnect_required`; restored live balances, credit values, and due metadata stay hidden until fresh data arrives. Restored transaction history remains visible.
-- Changing the passphrase rotates the data encryption key. Older backups require the old passphrase and are labeled; they are never silently rewritten or deleted.
-- A plaintext CSV export is unprotected; the app warns before writing it.
-- Demo mode is a separate database with synthetic data and a fixed app-managed key. It cannot open the real ledger, import real CSVs, link a provider, create backups, or export real data.
+```bash
+pnpm verify          # typecheck, lint, unit tests, production build
+pnpm test:e2e        # Playwright; run `pnpm exec playwright install chromium` first
+cd src-tauri && cargo test
+```
 
-## Documentation
+## Secret scanning
 
-Start at [docs/README.md](docs/README.md) — the map of plans, security, operations, and reference docs.
+Every push is scanned for credentials by gitleaks in CI
+([secret-scan.yml](.github/workflows/secret-scan.yml)). To run the same scan before each commit:
 
-- [Completed plan: UI overhaul](docs/plans/ui-overhaul-2026-10.md)
-- [Completed plan: backup and restore overhaul](docs/plans/backup-restore-overhaul-2026-10.md)
-- [Implementation status](docs/reference/implementation-status.md) — what is built and what is still unverified
-- [Security policy](SECURITY.md) · [architecture](docs/security/architecture.md) · [threat model](docs/security/threat-model.md)
-- [Theming](docs/design/theming.md) · [UI direction](docs/design/proposal.md)
-- [Decision log](docs/reference/decisions.md)
+```bash
+git config core.hooksPath .githooks
+```
 
-## Current limitations and unverified items
+The hook runs `gitleaks` from `PATH` (or `.cache/gitleaks/gitleaks`) and blocks the commit if the
+scanner is missing or finds a secret. Install it with `brew install gitleaks`;
+`git commit --no-verify` bypasses it for one commit.
 
-- Live Plaid linking, Keychain ACLs, native file dialogs/sheets, screen-capture protection, screen-lock/sleep auto-lock, and VoiceOver behavior are **not verified** in this environment; see [native smoke](docs/operations/native-smoke.md) and the blocker in [Plaid feasibility](docs/integrations/plaid-feasibility.md).
-- Native file pickers, secure sheets, the close dialog, and the post-restore passphrase-change dialog are owner smoke items.
-- The scheduled sync is mock-provider tested; no live network call was made.
-- The release is ad-hoc signed, not notarized or App-Sandboxed.
+## Security notes
 
-## License
+- **There is no passphrase recovery.** Lose the passphrase and every backup passphrase, and the
+  data is unrecoverable.
+- The ledger is encrypted at rest with SQLCipher; backups are encrypted containers. Plaintext CSV
+  exports are not protected — the app warns before writing one.
+- Plaid **Production is disabled**; only Sandbox credentials work in this build. The app is not
+  affiliated with Plaid.
+- The UI never receives the passphrase or provider tokens; those stay in Rust and the macOS
+  Keychain.
+- Read [SECURITY.md](SECURITY.md) before relying on this for real data.
 
-Private, all rights reserved (`LicenseRef-Proprietary`). No license is granted for redistribution.
+## Project layout
+
+| Path | Contents |
+| --- | --- |
+| `src/` | React UI, themes, mock bridge |
+| `src-tauri/` | Rust backend: vault, storage, providers, security |
+| `src-tauri/migrations/` | SQL schema |
+| `e2e/` | Playwright tests |
+| `docs/` | Design, security, operations, and reference docs |
+
+## Docs
+
+- [Documentation map](docs/README.md)
+- [Security architecture](docs/security/architecture.md) · [threat model](docs/security/threat-model.md)
+- [Backup and recovery](docs/operations/backup-recovery.md)
+- [Plaid integration notes](docs/integrations/plaid-guide.md)
+- [Implementation status](docs/reference/implementation-status.md)
+
+## Status
+
+Early and experimental. Interfaces, storage formats, and behavior can change. Plaid production is
+disabled and only Sandbox linking has been verified. The macOS build is ad-hoc signed and not
+distribution-ready.
+
+## About this project
+
+This is a fun experimental agentic AI workflow project. It will keep being worked on and
+experimented with — expect rough edges, changing directions, and new ideas over time.
