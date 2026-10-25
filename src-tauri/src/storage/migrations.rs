@@ -32,6 +32,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "edits_rules_imports",
         sql: include_str!("../../migrations/0003_edits_rules_imports.sql"),
     },
+    Migration {
+        version: 4,
+        name: "restored_provider_snapshots",
+        sql: include_str!("../../migrations/0004_restored_provider_snapshots.sql"),
+    },
 ];
 
 pub fn supported_schema_version() -> u32 {
@@ -133,10 +138,11 @@ mod tests {
 
     #[test]
     fn supported_version_matches_latest_migration() {
-        assert_eq!(supported_schema_version(), 3);
+        assert_eq!(supported_schema_version(), 4);
         assert_eq!(MIGRATIONS[0].version, 1);
         assert_eq!(MIGRATIONS[1].version, 2);
         assert_eq!(MIGRATIONS[2].version, 3);
-        assert!(!checksum(MIGRATIONS[2].sql).is_empty());
+        assert_eq!(MIGRATIONS[3].version, 4);
+        assert!(!checksum(MIGRATIONS[3].sql).is_empty());
     }
 }

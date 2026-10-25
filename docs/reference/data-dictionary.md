@@ -11,8 +11,8 @@ All timestamps are UTC RFC 3339 with `Z`. Financial dates are date-only `YYYY-MM
 | `transaction_overrides` | One row per edited transaction: alias, category, type correction, excluded, notes, timestamps. Source fields remain untouched. |
 | `merchant_rules` | Match type/text, canonical merchant, optional category, priority, enabled. Derived display columns on transactions are recomputed; rules never merge rows. |
 | `import_batches` / `import_rows` | File hash, account, counts, status, timestamps; per-row source index/status/reason/fingerprint. Reimport of the same hash is a no-op. |
-| `balance_snapshots` | Append-only provider/manual balance observations: current/available/limit, currency, retrieved/as-of, provenance, connection. |
-| `payment_snapshots` | Provider/CSV payment metadata snapshots with due date, minimum due, statement balance, statement/closing dates, provenance. Missing amounts stay NULL. |
+| `balance_snapshots` | Append-only provider/manual balance observations: current/available/limit, currency, retrieved/as-of, provenance, connection, and a `restored` flag that hides provider values imported by a restore until fresh live data arrives. |
+| `payment_snapshots` | Provider/CSV payment metadata snapshots with due date, minimum due, statement balance, statement/closing dates, provenance, and a `restored` flag. Missing amounts stay NULL. |
 | `manual_payment_metadata` | Owner-entered dated facts (statement balance, minimum due, next due, valid-through) independent of provider snapshots. |
 | `settings` | Close behavior, appearance, sync on launch/windows, currency, idle lock, backup status. No secrets. |
 | `security_events` | Typed, sanitized audit events. No passphrases, tokens, URLs, account numbers, or provider payloads. |

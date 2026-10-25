@@ -16,7 +16,7 @@ A single-user, local-first macOS desktop application for one person's credit-car
 | Plaid access tokens | Persistent read access to linked accounts | macOS Keychain only |
 | Plaid client secret | Mints link tokens and exchanges public tokens | macOS Keychain only |
 | Hosted Link URL and link token | Short-lived bearer material during linking | Rust memory; the URL is passed to the system browser and may remain in browser history |
-| CSV exports and portable exports | Copies outside the app's control | Owner-chosen filesystem locations |
+| CSV exports and backup containers | Copies outside the app's control | Owner-chosen filesystem locations |
 | Security event history | Detect repeated unlock failures, unexpected exports, integrity failures | Encrypted database |
 
 ## 3. Adversaries

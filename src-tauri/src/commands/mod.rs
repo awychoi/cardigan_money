@@ -6,13 +6,14 @@ use crate::error::{AppError, AppResult, ErrorPayload};
 use crate::ipc::{guard_main_window, GatewayRequest, GatewayResponse, API_VERSION};
 use crate::providers::csv::CsvMapping;
 use crate::security::secure_input::{self, SecurePurpose};
-use crate::services::backups::{self, BackupItem, BackupResult, RestoreResult};
+use crate::services::backups::{self, BackupItem, BackupResult};
 use crate::services::dashboard::{self, Dashboard};
 use crate::services::exports::ExportResult;
 use crate::services::imports::{
     self, ImportBatchView, ImportFileView, ImportResult, ValidationPreview,
 };
 use crate::services::plaid_link::{self, PlaidLinkStatus, PlaidStatus, PlaidVerificationReport};
+use crate::services::restore::{self, RestoreOptions, RestorePreview, RestoreResult};
 use crate::services::sync::{self, ConnectionView, SyncRunView, SyncRuntimeStatus, SyncSummary};
 use crate::services::vault::SecuritySummary;
 use crate::services::{security as security_service, vault as vault_service};
@@ -689,11 +690,7 @@ pub fn execute<R: tauri::Runtime>(
             state.require_real("create a backup in demo mode")?;
             state.rate_limit("backup_create", 5, 60)?;
             let _: EmptyPayload = request.decode_payload()?;
-            let result: BackupResult = backups::create_backup(
-                state,
-                app,
-                crate::services::backups::BackupKind::Manual,
-            )?;
+            let result: BackupResult = backups::create_manual_backup(state, app)?;
             GatewayResponse::ok(result)
         }
         "backup_list" => {
@@ -717,19 +714,30 @@ pub fn execute<R: tauri::Runtime>(
             backups::delete_backup(state, &payload.id)?;
             GatewayResponse::ok(BackupDeletedView { deleted: true })
         }
-        "backup_restore" => {
-            state.require_real("restore a backup in demo mode")?;
-            state.rate_limit("backup_restore", 3, 60)?;
+        "backup_list_retired" => {
+            state.require_real("list backups in demo mode")?;
             let _: EmptyPayload = request.decode_payload()?;
-            let result: RestoreResult = backups::restore(state, app)?;
+            let backups = backups::list_retired_backups(state)?;
+            GatewayResponse::ok(BackupsView { backups })
+        }
+        "backup_restore_prepare" => {
+            state.require_real("restore a backup in demo mode")?;
+            state.rate_limit("backup_restore_prepare", 5, 60)?;
+            let _: EmptyPayload = request.decode_payload()?;
+            let preview: RestorePreview = restore::prepare_restore_interactive(state, app)?;
+            GatewayResponse::ok(preview)
+        }
+        "backup_restore_apply" => {
+            state.require_real("restore a backup in demo mode")?;
+            state.rate_limit("backup_restore_apply", 3, 60)?;
+            let options: RestoreOptions = request.decode_payload()?;
+            let result: RestoreResult = restore::apply_restore_interactive(state, app, options)?;
             GatewayResponse::ok(result)
         }
-        "portable_export" => {
-            state.require_real("portable export in demo mode")?;
-            state.rate_limit("portable_export", 3, 60)?;
+        "backup_restore_cancel" => {
             let _: EmptyPayload = request.decode_payload()?;
-            let item: BackupItem = backups::portable_export(state, app)?;
-            GatewayResponse::ok(item)
+            restore::cancel_pending_restore(state)?;
+            GatewayResponse::ok(CancelledView { cancelled: true })
         }
         "crypto_erase" => {
             state.require_real("erase data in demo mode")?;
@@ -1091,6 +1099,44 @@ mod tests {
                 .theme,
             crate::storage::settings::Theme::Dark
         );
+    }
+
+    #[test]
+    fn restore_commands_are_blocked_in_demo_and_require_pending_state() {
+        let app = app();
+        let state = state();
+        execute(&app, &state, req("demo_open", json!({}))).unwrap();
+        for command in [
+            "backup_restore_prepare",
+            "backup_restore_apply",
+            "backup_list_retired",
+        ] {
+            let err = execute(&app, &state, req(command, json!({"scope": "full"}))).unwrap_err();
+            assert_eq!(err.code(), "blocked", "{command}");
+        }
+        // The cancel command only clears renderer-free pending state.
+        let cancelled = execute(&app, &state, req("backup_restore_cancel", json!({}))).unwrap();
+        assert_eq!(cancelled["cancelled"], true);
+
+        execute(&app, &state, req("demo_close", json!({}))).unwrap();
+        let err = execute(
+            &app,
+            &state,
+            req("backup_restore_apply", json!({"scope": "full"})),
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), "invalid_input");
+        let err = execute(
+            &app,
+            &state,
+            req("backup_restore_apply", json!({"scope": "bogus"})),
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), "invalid_input");
+        for command in ["backup_restore", "portable_export"] {
+            let err = execute(&app, &state, req(command, json!({}))).unwrap_err();
+            assert_eq!(err.code(), "invalid_input", "{command}");
+        }
     }
 
     #[test]

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { command, type VaultState } from "../../lib/bridge";
+import { command, type RestoreResult, type VaultState } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
+import { RestoreBackupFlow } from "../settings/RestoreBackupFlow";
 
-type Busy = "create" | "unlock" | null;
+type Busy = "create" | "unlock" | "backup" | null;
 
 export function VaultGate({
   exists,
@@ -15,6 +16,7 @@ export function VaultGate({
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   async function createVault() {
     setBusy("create");
@@ -39,6 +41,44 @@ export function VaultGate({
       setError(friendlyError(caught));
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function backUpNow() {
+    setBusy("backup");
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await command("backup_create", {});
+      setNotice(
+        result.listed
+          ? `Encrypted backup created: ${result.backup.id}`
+          : `Encrypted backup created, but it is not listed or retained automatically: ${result.backup.id}. Use a standard cm-backup-… name in the app backup folder to include it in the normal list and retention.`,
+      );
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function restored(result: RestoreResult) {
+    setRestoreOpen(false);
+    setError(null);
+    try {
+      const vault = await command("vault_status", {});
+      onOpened(vault);
+      if (vault.unlocked) {
+        setNotice("Backup restored. The vault is unlocked.");
+      } else if (result.vaultKeyChanged) {
+        setNotice("Backup restored. Unlock with the new vault passphrase.");
+      } else if (result.adoptedBackupKey) {
+        setNotice("Backup restored. Unlock with the backup passphrase.");
+      } else {
+        setNotice("Backup restored. Unlock to continue.");
+      }
+    } catch (caught) {
+      setError(friendlyError(caught));
     }
   }
 
@@ -73,15 +113,40 @@ export function VaultGate({
               protected by SQLCipher and opens only with your passphrase.
             </p>
             <div className="vault-actions">
-              <Button variant="primary" onClick={unlockVault} disabled={busy !== null}>
+              <Button
+                variant="primary"
+                onClick={unlockVault}
+                disabled={busy !== null || restoreOpen}
+              >
                 {busy === "unlock" ? "Waiting for the native sheet…" : "Unlock vault"}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setError(null);
+                  setNotice(null);
+                  setRestoreOpen(true);
+                }}
+                disabled={busy !== null || restoreOpen}
+              >
+                Restore from backup…
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={backUpNow}
+                disabled={busy !== null || restoreOpen}
+              >
+                {busy === "backup" ? "Waiting for the native sheets…" : "Back up now"}
               </Button>
             </div>
             <p className="sheet-note" role="note">
               The passphrase is requested by a native macOS sheet. This window never sees it.
+              Restoring while locked asks for the current passphrase to create a pre-restore backup.
+              “Back up now” asks for the current passphrase, creates the encrypted backup, and
+              leaves the vault locked.
             </p>
             <div className="vault-demo">
-              <Button variant="ghost" onClick={openDemo} disabled={busy !== null}>
+              <Button variant="ghost" onClick={openDemo} disabled={busy !== null || restoreOpen}>
                 Open demo (synthetic data)
               </Button>
               <span className="fine-print">
@@ -102,8 +167,23 @@ export function VaultGate({
               <li>No account, provider, or network is required to begin.</li>
             </ul>
             <div className="vault-actions">
-              <Button variant="primary" onClick={createVault} disabled={busy !== null}>
+              <Button
+                variant="primary"
+                onClick={createVault}
+                disabled={busy !== null || restoreOpen}
+              >
                 {busy === "create" ? "Waiting for the native sheet…" : "Create vault…"}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setError(null);
+                  setNotice(null);
+                  setRestoreOpen(true);
+                }}
+                disabled={busy !== null || restoreOpen}
+              >
+                Restore from backup…
               </Button>
             </div>
             <p className="sheet-note" role="note">
@@ -111,13 +191,20 @@ export function VaultGate({
               Losing it makes the ledger permanently unreadable.
             </p>
             <div className="vault-demo">
-              <Button variant="ghost" onClick={openDemo} disabled={busy !== null}>
+              <Button variant="ghost" onClick={openDemo} disabled={busy !== null || restoreOpen}>
                 Open demo (synthetic data)
               </Button>
               <span className="fine-print">No passphrase needed. Synthetic data only.</span>
             </div>
           </>
         )}
+
+        {restoreOpen ? (
+          <RestoreBackupFlow
+            onRestored={(result) => void restored(result)}
+            onCancel={() => setRestoreOpen(false)}
+          />
+        ) : null}
 
         {error ? (
           <p className="inline-error" role="alert">

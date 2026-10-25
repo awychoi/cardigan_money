@@ -188,13 +188,18 @@ fn portable_export_uses_its_own_password_and_can_be_restored() {
 }
 
 #[test]
-fn backup_from_a_different_vault_is_rejected() {
+fn backup_from_a_different_vault_requires_explicit_cross_vault_options() {
     let (_tmp1, state1, app1, _account1) = setup();
     let backup = create_backup(&state1, &app1, BackupKind::Manual).unwrap();
     let path1 = backups::backups_dir(&state1).join(&backup.backup.id);
 
     let (_tmp2, state2, _app2, _account2) = setup();
-    let result = prepare_restore(&state2, &path1, &SecretString::new(PASS.into()));
+    // Validation and staging are allowed; the cross-vault decision is made by
+    // the restore flow (typed confirmation, identity adoption, Plaid choice).
+    let plan = prepare_restore(&state2, &path1, &SecretString::new(PASS.into())).unwrap();
+    assert!(plan.staged_path.exists());
+    // The legacy same-vault helper refuses to guess cross-vault options.
+    let result = install_restore_confirmed(&state2, plan);
     assert!(matches!(
         result,
         Err(cardigan_money_lib::error::AppError::Blocked(_))

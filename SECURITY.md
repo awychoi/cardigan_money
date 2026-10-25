@@ -66,9 +66,9 @@ This is a personal application owned by one user. Report issues privately to the
 
 ### Corrupt database or failed migration
 1. Do not run repair tools on the only copy. Preserve the vault directory for forensics.
-2. Restore from the newest verified encrypted backup using the native file picker and passphrase sheet. Restore is available only inside an unlocked vault that has the same vault ID as the backup.
+2. Restore from the newest verified encrypted backup using the native file picker and passphrase sheet. Restore supports same-vault, cross-vault, and fresh-install recovery, plus a destructive full-database path when the current passphrase is unavailable.
 3. A failed restore leaves the current database intact by design. If the app cannot unlock, the header may be damaged; try the mirrored header only through the app, never by hand-editing.
-4. If both header copies are lost, the ledger cannot be opened in place even if the DB file survives. A self-contained backup can replace the data only after an unlocked vault with the same vault ID exists. **Restore into a fresh install with no vault is not supported yet**; preserve the app-data vault directory and follow the [backup guide](docs/operations/backup-recovery.md#limitations).
+4. If both header copies are lost, the ledger cannot be opened in place even if the DB file survives. Restore a self-contained backup from the locked gate: the backup carries its own header and vault identity. A fresh install can create a new vault directly from the backup. Preserve the app-data vault directory and follow the [backup guide](docs/operations/backup-recovery.md).
 
 ### Failed rekey
 The rotation journal and a pre-change encrypted backup exist. Relaunch and unlock with the new passphrase if the rekey completed; if not, unlock with the old passphrase and retry. If neither works, restore the pre-change backup. Do not delete the journal manually before trying unlock.
@@ -79,7 +79,7 @@ The rotation journal and a pre-change encrypted backup exist. Relaunch and unloc
 3. Review security events and network/export history.
 
 ### Lost passphrase
-There is no recovery. A self-contained backup restores access only if its passphrase is known **and** the backup can be restored into an existing vault with the same vault ID; fresh-install restore is not supported. Do not ask anyone to "reset" the vault; no such mechanism exists by design.
+There is no recovery. A self-contained backup restores access only if its passphrase is known. It can be restored into an existing vault or a fresh install. Do not ask anyone to "reset" the vault; no such mechanism exists by design.
 
 ## 5. Operational expectations
 

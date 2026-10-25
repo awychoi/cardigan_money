@@ -171,7 +171,7 @@ struct BalanceRow {
 fn latest_balance(conn: &Connection, account_id: &str) -> AppResult<Option<BalanceRow>> {
     conn.query_row(
         "SELECT current_balance_minor, available_credit_minor, credit_limit_minor, retrieved_at, provenance \
-         FROM balance_snapshots WHERE account_id = ?1 \
+         FROM balance_snapshots WHERE account_id = ?1 AND (provenance <> 'provider' OR restored = 0) \
          ORDER BY retrieved_at DESC, id DESC LIMIT 1",
         [account_id],
         |row| {
@@ -207,7 +207,7 @@ fn latest_provider_payment(
     conn.query_row(
         "SELECT next_due_date, minimum_due_minor, statement_balance_minor, last_statement_issue_date, \
                 next_closing_date, retrieved_at \
-         FROM payment_snapshots WHERE account_id = ?1 AND provenance = 'provider' \
+         FROM payment_snapshots WHERE account_id = ?1 AND provenance = 'provider' AND restored = 0 \
          ORDER BY retrieved_at DESC, id DESC LIMIT 1",
         [account_id],
         |row| {

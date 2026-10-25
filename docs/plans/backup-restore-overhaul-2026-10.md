@@ -1,6 +1,6 @@
 # Backup and restore overhaul
 
-Status: approved design, implementation not started.
+Status: implemented 2026-10-24. See the implementation evidence at the end.
 Date: 2026-10-24.
 
 ## Goal
@@ -29,9 +29,10 @@ existing vault.
 6. Accept a non-private backup file only after an explicit acknowledgement.
    The acknowledgement bypasses only the POSIX mode check; owner, regular-file,
    no-symlink, size, header, hash, and seal checks remain.
-7. After a cross-vault restore, other-vault backups stay on disk under normal
-   retention but are hidden from the app's backup list. Restoring one requires
-   the native file picker and the cross-vault warning.
+7. After a cross-vault restore, the previous vault's backups are renamed with
+   a retired prefix and kept until manually deleted. They are excluded from
+   automatic pruning and from the restored vault's normal backup list. The
+   restored vault starts with its own backups under normal retention.
 8. If an existing vault is locked and the current passphrase is unavailable, a
    separate destructive restore path may replace it without a pre-restore
    backup. It requires typed confirmation and is full-database only.
@@ -78,11 +79,11 @@ action is removed from the UI. Existing `portable` containers remain restorable.
 | Target | Backup | Vault ID and passphrase | Pre-restore backup | Confirmation | Old backups |
 |---|---|---|---|---|---|
 | Existing, same vault, full | Same vault | Keep current vault ID and passphrase | Yes; abort on failure | Type `replace` | Visible |
-| Existing, different vault, full | Any vault | Adopt backup `vault_id`; backup passphrase becomes vault passphrase | Yes; abort on failure | Type `replace` and cross-vault warning | Hidden, normal retention |
+| Existing, different vault, full | Any vault | Adopt backup `vault_id`; backup passphrase becomes vault passphrase | Yes; abort on failure | Type `replace` and cross-vault warning | Renamed retired; never auto-pruned |
 | Fresh install, full | Any vault | Adopt backup `vault_id` and passphrase | None | Warning; no typed word required | None |
 | Existing, partial scope | Same or different | Keep current vault ID and passphrase | Yes; abort on failure | Type `replace` | Visible |
 | Fresh install, partial scope | Any vault | Adopt backup `vault_id` and passphrase | None | Warning | None |
-| Existing, destructive no-current-passphrase | Any vault | Adopt backup `vault_id` and passphrase | No | Type `replace`; explicit no-backup warning | Hidden when the ID changes |
+| Existing, destructive no-current-passphrase | Any vault | Adopt backup `vault_id` and passphrase | No | Type `replace`; explicit no-backup warning | Renamed retired when the ID changes |
 
 A restore into an existing vault is available while locked only if the current
 vault passphrase is supplied for the pre-restore backup. The destructive path
@@ -138,8 +139,15 @@ the complete candidate has been validated.
 
 ## Backup list and file selection
 
-- The list shows only backups in the default directory whose `vault_id` matches
-  the current vault. Other-vault backups are read for retention but not exposed.
+- The normal list shows only backups in the default directory whose `vault_id`
+  matches the current vault and whose names have the normal backup prefix.
+- On a full cross-vault restore, every normal backup from the previous vault —
+  including the pre-restore backup — is renamed with a `cm-retired-` prefix.
+  Retired files are never auto-pruned and are not part of the restored vault's
+  retention. They remain on disk until manually deleted.
+- A separate retired-backup view may list `cm-retired-` files so the user can
+  delete them deliberately; restoring one still requires the native file picker
+  and the cross-vault warning.
 - Each list item includes kind, creation time, size, and schema/generation.
   There is no passphrase hint.
 - A non-private backup is rejected by default. The restore flow offers an
@@ -204,7 +212,8 @@ when a pre-restore backup uses a different (previous) passphrase.
 - Existing same-vault restore: current passphrase remains, typed confirmation,
   pre-restore failure aborts, tokens retained, reconnect gate.
 - Existing cross-vault restore: warning, identity/passphrase adoption, old
-  backups hidden, Plaid Item choice, pre-restore failure aborts.
+  backups renamed retired and exempt from pruning, Plaid Item choice,
+  pre-restore failure aborts.
 - Locked existing restore: current passphrase required for the backup, no UI
   session, destructive path, token choice.
 - Selective scopes: table sets, reset semantics, FK cleanup, vault identity,
@@ -213,3 +222,24 @@ when a pre-restore backup uses a different (previous) passphrase.
 - Non-private acknowledgement: mode bypass only, symlink/owner/size still
   rejected.
 - Renderer contract: no path or passphrase fields.
+
+## Implementation evidence (2026-10-24)
+
+- Unified **Back up now**: `services/backups.rs` (default/custom destination,
+  optional backup passphrase, locked backup with the current vault passphrase
+  but no UI session, vault-aware listing and retention).
+- Restore engine: `services/restore.rs` implements the full matrix (same-vault,
+  cross-vault, fresh install, partial scopes, and the destructive
+  no-current-passphrase path), typed confirmation, staged validation, pre-restore
+  backup, identity adoption, retired-backup renames, provider reconnect gate,
+  non-private acknowledgement, and post-restore change-passphrase support.
+- Bridge/UI: `backup_restore_prepare` / `backup_restore_apply` /
+  `backup_restore_cancel`, `backup_list_retired`, the shared
+  `RestoreBackupFlow`, and restore entry points on the locked/fresh gate. The
+  renderer receives no path or secret-bearing field.
+- Schema 4 adds `restored` flags to provider balance/payment snapshots so
+  restored live values stay hidden until fresh live data arrives.
+- Verification: `cargo test --test restore_overhaul`, `--test backup_now`,
+  `--test backups`, the Vitest bridge/contract tests, and the Playwright backup
+  flow. Native file pickers/sheets and the post-restore dialog remain owner
+  smoke items (see `docs/operations/native-smoke.md`).

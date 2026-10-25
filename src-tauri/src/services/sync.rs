@@ -34,6 +34,7 @@ pub struct ConnectionRow {
     environment: String,
     institution_name: Option<String>,
     cursor: Option<String>,
+    status: String,
     #[allow(dead_code)]
     credential_ref: String,
 }
@@ -85,6 +86,10 @@ pub struct ConnectionView {
     pub sanitized_error: Option<String>,
     pub has_cursor: bool,
     pub account_count: i64,
+    /// True when a provider access token is present for this connection. A
+    /// cross-vault/fresh restore deliberately resets the reference and deletes
+    /// the old token, so the UI must offer a new link instead of update mode.
+    pub has_token: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -185,6 +190,25 @@ fn sync_all_inner(state: &AppState, trigger: &str) -> AppResult<SyncSummary> {
     }
     let mut results = Vec::new();
     for connection in connections {
+        // A restored connection must be re-authorised before any provider call.
+        // It is not a failure of the connection itself: no network request is
+        // made and no sync run is recorded.
+        if connection.status == "reconnect_required" {
+            results.push(ConnectionSyncResult {
+                connection_id: connection.id,
+                institution: connection
+                    .institution_name
+                    .unwrap_or_else(|| "Provider".into()),
+                status: "failed".into(),
+                transactions_added: 0,
+                transactions_modified: 0,
+                transactions_removed: 0,
+                balances_written: 0,
+                liabilities_status: "skipped".into(),
+                error_code: Some("reconnect_required".into()),
+            });
+            continue;
+        }
         match sync_connection(state, &connection, trigger) {
             Ok(result) => results.push(result),
             Err(AppError::Locked) => {
@@ -224,7 +248,7 @@ fn sync_all_inner(state: &AppState, trigger: &str) -> AppResult<SyncSummary> {
 
 fn load_connections(conn: &Connection) -> AppResult<Vec<ConnectionRow>> {
     let mut stmt = conn.prepare(
-        "SELECT id, provider, environment, institution_name, cursor, credential_ref \
+        "SELECT id, provider, environment, institution_name, cursor, status, credential_ref \
          FROM connections WHERE status <> 'disconnected' ORDER BY institution_name, id",
     )?;
     let rows = stmt
@@ -235,7 +259,8 @@ fn load_connections(conn: &Connection) -> AppResult<Vec<ConnectionRow>> {
                 environment: row.get(2)?,
                 institution_name: row.get(3)?,
                 cursor: row.get(4)?,
-                credential_ref: row.get(5)?,
+                status: row.get(5)?,
+                credential_ref: row.get(6)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -271,6 +296,11 @@ fn sync_connection(
     connection: &ConnectionRow,
     trigger: &str,
 ) -> AppResult<ConnectionSyncResult> {
+    if connection.status == "reconnect_required" {
+        return Err(AppError::Blocked(
+            "this connection must be reconnected before it can sync",
+        ));
+    }
     let client = provider_for(state, connection)?;
     let result = sync_connection_with_client(state, connection, client.as_ref(), trigger);
     result
@@ -745,6 +775,11 @@ pub fn sync_connection_with_client(
     client: &dyn ProviderClient,
     trigger: &str,
 ) -> AppResult<ConnectionSyncResult> {
+    if connection.status == "reconnect_required" {
+        return Err(AppError::Blocked(
+            "this connection must be reconnected before it can sync",
+        ));
+    }
     let mut run = start_run(state, connection, trigger)?;
     let mut result = ConnectionSyncResult {
         connection_id: connection.id.clone(),
@@ -1064,14 +1099,21 @@ pub fn list_connections(state: &AppState) -> AppResult<Vec<ConnectionView>> {
         let mut stmt = conn.prepare(
             "SELECT c.id, c.provider, c.environment, c.institution_name, c.status, c.last_attempt_at, \
                 c.last_success_at, c.sanitized_error, c.cursor IS NOT NULL, \
-                (SELECT count(*) FROM account_sources s WHERE s.connection_id = c.id AND s.unlinked_at IS NULL) \
+                (SELECT count(*) FROM account_sources s WHERE s.connection_id = c.id AND s.unlinked_at IS NULL), \
+                c.credential_ref \
              FROM connections c WHERE c.status <> 'disconnected' ORDER BY c.institution_name, c.id",
         )?;
         let rows = stmt
             .query_map([], |row| {
+                let provider: String = row.get(1)?;
+                let credential_ref: String = row.get(10)?;
+                // A reference reset by a restore has no Keychain token. Avoid a
+                // Keychain read on every status refresh.
+                let has_token = provider != "plaid"
+                    || !credential_ref.starts_with(crate::providers::plaid::NEW_LINK_CREDENTIAL_PREFIX);
                 Ok(ConnectionView {
                     id: row.get(0)?,
-                    provider: row.get(1)?,
+                    provider,
                     environment: row.get(2)?,
                     institution_name: row.get(3)?,
                     status: row.get(4)?,
@@ -1080,6 +1122,7 @@ pub fn list_connections(state: &AppState) -> AppResult<Vec<ConnectionView>> {
                     sanitized_error: row.get(7)?,
                     has_cursor: row.get::<_, i64>(8)? != 0,
                     account_count: row.get(9)?,
+                    has_token,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -1153,7 +1196,7 @@ pub fn runtime_status(state: &AppState) -> AppResult<SyncRuntimeStatus> {
 pub fn connection_by_id(state: &AppState, id: &str) -> AppResult<ConnectionRow> {
     state.with_db(|conn, _h, _s| {
         conn.query_row(
-            "SELECT id, provider, environment, institution_name, cursor, credential_ref \
+            "SELECT id, provider, environment, institution_name, cursor, status, credential_ref \
              FROM connections WHERE id = ?1",
             [id],
             |row| {
@@ -1163,7 +1206,8 @@ pub fn connection_by_id(state: &AppState, id: &str) -> AppResult<ConnectionRow> 
                     environment: row.get(2)?,
                     institution_name: row.get(3)?,
                     cursor: row.get(4)?,
-                    credential_ref: row.get(5)?,
+                    status: row.get(5)?,
+                    credential_ref: row.get(6)?,
                 })
             },
         )

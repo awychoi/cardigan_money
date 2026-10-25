@@ -50,6 +50,45 @@ describe("bridge contract", () => {
     });
   });
 
+  it("keeps the restore preview and result free of paths and secret fields", async () => {
+    await command("vault_unlock", {});
+    const preview = await command("backup_restore_prepare", {});
+    const previewText = JSON.stringify(preview).toLowerCase();
+    expect(previewText).not.toContain("path");
+    expect(previewText).not.toContain("passphrase");
+    expect(previewText).not.toContain("password");
+    expect(preview.backup.id).not.toContain("/");
+    expect(preview.backup.id).not.toContain("\\");
+
+    const result = await command("backup_restore_apply", {
+      scope: "full",
+      confirmation: "replace",
+    });
+    const resultText = JSON.stringify(result).toLowerCase();
+    expect(resultText).not.toContain("path");
+    expect(resultText).not.toContain("passphrase");
+    expect(resultText).not.toContain("password");
+    expect(result.preRestoreBackupId).toBeTruthy();
+    expect(result.preRestoreProtection).toBe("current");
+    expect(result.adoptedBackupKey).toBe(false);
+  });
+
+  it("requires the typed confirmation before a replacing restore", async () => {
+    await command("vault_unlock", {});
+    await command("backup_restore_prepare", {});
+    await expect(command("backup_restore_apply", { scope: "full" })).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+  });
+
+  it("removes the old portable-export action and keeps retired backups separate", async () => {
+    expect(isCommandName("portable_export")).toBe(false);
+    expect(isCommandName("backup_restore")).toBe(false);
+    await command("vault_unlock", {});
+    const retired = await command("backup_list_retired", {});
+    expect(retired.backups).toEqual([]);
+  });
+
   it("normalizes unknown errors without leaking their text", () => {
     const err = toBridgeError(new Error("secret=abc123"));
     expect(err.code).toBe("bridge_error");

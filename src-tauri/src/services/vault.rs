@@ -500,6 +500,82 @@ pub fn change_passphrase<R: tauri::Runtime>(
     }
 }
 
+/// Change the passphrase immediately after a restore, including when the
+/// restore deliberately left the app locked. The unlocked path reuses the
+/// normal rotation flow (pre-change backup, journal, session update). The locked
+/// path performs the same rotation without creating a UI session.
+pub fn change_passphrase_after_restore<R: tauri::Runtime>(
+    state: &AppState,
+    app: &AppHandle<R>,
+    current: SecretString,
+    new: SecretString,
+) -> AppResult<()> {
+    let unlocked = state
+        .session
+        .lock()
+        .map(|guard| guard.is_unlocked())
+        .unwrap_or(false);
+    if unlocked {
+        return change_passphrase(state, app, current, new);
+    }
+    change_passphrase_locked(state, current, new)
+}
+
+/// Sessionless rotation used only after a restore while locked. The journal is
+/// written before the rekey so the new passphrase is recoverable if the process
+/// stops mid-rotation. The app stays locked.
+fn change_passphrase_locked(
+    state: &AppState,
+    current: SecretString,
+    new: SecretString,
+) -> AppResult<()> {
+    validate_new_passphrase(&new)?;
+    if state.mode() == SessionMode::Demo {
+        return Err(AppError::Blocked("passphrase change in demo mode"));
+    }
+    {
+        let guard = state.session.lock().map_err(|_| AppError::Internal)?;
+        if guard.is_unlocked() {
+            return Err(AppError::Blocked("vault is already unlocked"));
+        }
+    }
+    let header = load_header(&state.paths)?.header().clone();
+    let dek = header.unwrap_dek(&current)?;
+    let (conn, _cipher) = open_ledger(&state.paths.database, &dek, false)?;
+    cipher_integrity_check(&conn)?;
+    sqlite_integrity_check(&conn)?;
+    let meta = load_meta(&conn)?;
+    if meta.vault_id != header.vault_id_hex() || meta.generation != header.generation {
+        return Err(AppError::IntegrityFailure);
+    }
+    crate::services::backups::create_backup_inner(
+        &conn,
+        &header,
+        &dek,
+        &state.paths.root,
+        &crate::services::backups::backups_dir(state),
+        crate::services::backups::BackupKind::PreChange,
+    )?;
+    let (new_header, new_dek) = header.rotate(&new, header.params)?;
+    drop(new);
+    let journal = RotationJournal::new(header.generation, new_header.clone());
+    write_journal(&state.paths, &journal)?;
+    (|| -> AppResult<()> {
+        rekey_ledger(&conn, &new_dek)?;
+        set_generation(&conn, new_header.generation, true)?;
+        cipher_integrity_check(&conn)?;
+        write_header(&state.paths, &new_header)?;
+        remove_journal(&state.paths)?;
+        record_event(
+            &conn,
+            "rekey",
+            "success",
+            Some(serde_json::json!({ "generation": new_header.generation })),
+        )?;
+        Ok(())
+    })()
+}
+
 pub fn security_events(state: &AppState, limit: u32) -> AppResult<Vec<SecurityEvent>> {
     state.with_db(|conn, _header, _settings| recent_events(conn, limit))
 }

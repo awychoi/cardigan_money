@@ -26,6 +26,10 @@ pub trait CredentialStore: Send + Sync {
     fn set(&self, account: &str, secret: &SecretString) -> AppResult<()>;
     fn get(&self, account: &str) -> AppResult<Option<SecretString>>;
     fn delete(&self, account: &str) -> AppResult<()>;
+    /// Delete every app-managed credential whose account name starts with
+    /// `prefix`. Used by the destructive no-passphrase restore path, which
+    /// cannot read the old ledger to discover credential references.
+    fn delete_prefix(&self, prefix: &str) -> AppResult<usize>;
 }
 
 #[derive(Debug, Default)]
@@ -50,6 +54,13 @@ impl CredentialStore for MemoryStore {
         values.remove(account);
         Ok(())
     }
+
+    fn delete_prefix(&self, prefix: &str) -> AppResult<usize> {
+        let mut values = self.values.lock().map_err(|_| AppError::Internal)?;
+        let before = values.len();
+        values.retain(|account, _| !account.starts_with(prefix));
+        Ok(before - values.len())
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -66,6 +77,10 @@ impl CredentialStore for KeychainStore {
 
     fn delete(&self, account: &str) -> AppResult<()> {
         keychain_delete(KEYCHAIN_SERVICE, account)
+    }
+
+    fn delete_prefix(&self, prefix: &str) -> AppResult<usize> {
+        keychain_delete_prefix(KEYCHAIN_SERVICE, prefix)
     }
 }
 
@@ -120,6 +135,46 @@ fn keychain_set(service: &str, account: &str, value: &[u8]) -> AppResult<()> {
     } else {
         Err(AppError::Keychain)
     }
+}
+
+#[cfg(target_os = "macos")]
+fn keychain_delete_prefix(service: &str, account_prefix: &str) -> AppResult<usize> {
+    use core_foundation::base::TCFType;
+    use core_foundation::dictionary::CFDictionary;
+    use core_foundation::string::CFString;
+    use core_foundation_sys::base::CFTypeRef;
+    use core_foundation_sys::string::CFStringRef;
+    use security_framework::item::{ItemClass, ItemSearchOptions, Limit, SearchResult};
+    use security_framework_sys::item::kSecAttrAccount;
+
+    let mut options = ItemSearchOptions::new();
+    options
+        .class(ItemClass::generic_password())
+        .service(service)
+        .load_attributes(true)
+        .limit(Limit::All);
+    let results = options.search().map_err(|_| AppError::Keychain)?;
+    let key = unsafe { kSecAttrAccount as *const std::ffi::c_void };
+    let mut deleted = 0usize;
+    for result in results {
+        let SearchResult::Dict(dict) = result else {
+            continue;
+        };
+        let dict: CFDictionary = dict.into_untyped();
+        let Some(value) = dict.find(key) else {
+            continue;
+        };
+        let raw: CFTypeRef = *value as CFTypeRef;
+        if raw.is_null() {
+            continue;
+        }
+        let account = unsafe { CFString::wrap_under_get_rule(raw as CFStringRef) }.to_string();
+        if account.starts_with(account_prefix) {
+            keychain_delete(service, &account)?;
+            deleted += 1;
+        }
+    }
+    Ok(deleted)
 }
 
 #[cfg(target_os = "macos")]
@@ -237,6 +292,11 @@ fn keychain_delete(_service: &str, _account: &str) -> AppResult<()> {
     Err(AppError::Unsupported)
 }
 
+#[cfg(not(target_os = "macos"))]
+fn keychain_delete_prefix(_service: &str, _account_prefix: &str) -> AppResult<usize> {
+    Err(AppError::Unsupported)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,5 +312,23 @@ mod tests {
         );
         store.delete(ACCOUNT_SECRET).unwrap();
         assert!(store.get(ACCOUNT_SECRET).unwrap().is_none());
+    }
+
+    #[test]
+    fn memory_store_deletes_only_matching_prefixes() {
+        let store = MemoryStore::default();
+        for account in [
+            "plaid-access-token-one",
+            "plaid-access-token-two",
+            ACCOUNT_CLIENT_ID,
+            ACCOUNT_SECRET,
+        ] {
+            store
+                .set(account, &SecretString::new(format!("value-{account}")))
+                .unwrap();
+        }
+        assert_eq!(store.delete_prefix("plaid-access-token-").unwrap(), 2);
+        assert!(store.get("plaid-access-token-one").unwrap().is_none());
+        assert!(store.get(ACCOUNT_SECRET).unwrap().is_some());
     }
 }

@@ -160,6 +160,52 @@ unsafe fn present_confirm(
     Ok(response == NSAlertFirstButtonReturn)
 }
 
+/// Post-restore acknowledgement. Returns true for "Change passphrase now" and
+/// false for "Change later". Both choices leave the restored data in place.
+pub fn restore_complete<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    message: &'static str,
+) -> AppResult<bool> {
+    #[cfg(target_os = "macos")]
+    {
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        app.run_on_main_thread(move || {
+            let result = unsafe { present_restore_complete(message) };
+            let _ = tx.send(result);
+        })
+        .map_err(|_| AppError::NativeInput)?;
+        match rx.recv_timeout(std::time::Duration::from_secs(300)) {
+            Ok(Ok(value)) => Ok(value),
+            Ok(Err(())) => Err(AppError::NativeInput),
+            Err(_) => Err(AppError::NativeInput),
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, message);
+        Err(AppError::NativeInput)
+    }
+}
+
+#[cfg(target_os = "macos")]
+unsafe fn present_restore_complete(message: &'static str) -> Result<bool, ()> {
+    use objc2::rc::Retained;
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSWindow, NSWindowSharingType};
+    use objc2_foundation::NSString;
+
+    let mtm = MainThreadMarker::new().ok_or(())?;
+    let alert = NSAlert::new(mtm);
+    alert.setMessageText(&NSString::from_str("Restore complete"));
+    alert.setInformativeText(&NSString::from_str(message));
+    let _change = alert.addButtonWithTitle(&NSString::from_str("Change passphrase now"));
+    let _later = alert.addButtonWithTitle(&NSString::from_str("Change later"));
+    let window: Retained<NSWindow> = alert.window();
+    window.setSharingType(NSWindowSharingType::None);
+    let response = alert.runModal();
+    Ok(response == NSAlertFirstButtonReturn)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

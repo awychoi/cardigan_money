@@ -9,6 +9,7 @@ groups below.
 | I want to… | Read |
 |---|---|
 | see the completed UI overhaul | [plans/ui-overhaul-2026-10.md](plans/ui-overhaul-2026-10.md) |
+| see the completed backup/restore overhaul | [plans/backup-restore-overhaul-2026-10.md](plans/backup-restore-overhaul-2026-10.md) |
 | know what is actually built and verified | [reference/implementation-status.md](reference/implementation-status.md) |
 | know why a technical choice was made | [reference/decisions.md](reference/decisions.md) |
 | understand the security posture | [SECURITY.md](../SECURITY.md), [security/architecture.md](security/architecture.md), [security/threat-model.md](security/threat-model.md) |
@@ -19,7 +20,7 @@ groups below.
 
 | Folder | Contains |
 |---|---|
-| [`plans/`](plans) | The one live plan, plus archived plans |
+| [`plans/`](plans) | Completed plans, plus archived plans |
 | [`security/`](security) | Architecture, threat model, incident runbook, dated reviews |
 | [`design/`](design) | UI proposal, interactive mockup, theming reference, screenshots |
 | [`operations/`](operations) | Backup/recovery, performance, native smoke, adversarial verification |
@@ -29,6 +30,7 @@ groups below.
 **Plans**
 
 - [plans/ui-overhaul-2026-10.md](plans/ui-overhaul-2026-10.md) — completed: charts, Overview, Transactions, Settings
+- [plans/backup-restore-overhaul-2026-10.md](plans/backup-restore-overhaul-2026-10.md) — completed: unified Back up now, restore matrix, scopes, provider gate, retired backups
 - [plans/archive/2026-10-initial-build-plan.md](plans/archive/2026-10-initial-build-plan.md) — archived
 
 **Security**
@@ -68,8 +70,9 @@ groups below.
 ## House rules
 
 1. **Two markdown files at the root.** New documents go into a group above, never the root.
-2. **One live plan.** When a plan is superseded, move it to `plans/archive/`, rename it with its
-   month, and add an `Archived` banner at the top. The current plan is the only source of intent.
+2. **One active plan at a time.** When a plan is complete or superseded, keep it in `plans/`
+   with its evidence, or move it to `plans/archive/` with an `Archived` banner. The active plan is
+   the source of intent; completed plans are a record, not a substitute for the implementation log.
 3. **Security reviews are dated and immutable.** Do not edit findings; record dispositions in the
    decision log and, if needed, a new dated review.
 4. **Decisions are append-only.** Owner and security decisions are normative; the implementation

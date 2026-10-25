@@ -72,9 +72,20 @@ This plan maps the specification's required tests (§16) to commands and phases.
 - Overrides persist across restart and sync.
 
 ### Phase 7
-- Backup creation/verification; wrong passphrase, tamper, truncation, wrong vault ID, wrong schema, nonempty restore, failed restore leaves original.
+- Backup creation/verification; wrong passphrase, tamper, truncation, wrong schema, nonempty restore, failed restore leaves original.
 - Rekey changes passphrase/DEK; old passphrase fails; old backups labeled; crash recovery determinism.
-- Portable export separate password; no provider tokens; no plaintext temp DB.
+- Legacy portable container restores with its own password; no provider tokens; no plaintext temp DB.
+
+### Backup and restore overhaul (2026-10-24)
+- Back up now: unlocked blank/custom passphrase, locked current-passphrase requirement without a UI session, custom destination not listed/pruned, default directory listed and retained, wrong passphrase writes nothing, no snapshot temp litter.
+- Fresh restore: full and scoped, wrong passphrase, tamper, atomic temporary-directory install, no partial vault, provider reconnect gate.
+- Existing same-vault: current header/passphrase retained, typed `replace`, pre-restore failure aborts, Keychain tokens and credential references retained, reconnect gate.
+- Existing cross-vault: warning, identity/passphrase adoption, fresh header/DEK, old backups renamed `cm-retired-` and exempt from pruning, Plaid delete/keep choices, pre-restore failure aborts.
+- Locked existing restore: current passphrase required for the pre-restore backup, no UI session, destructive full-only path, DeleteAll/LeaveAll token choice.
+- Selective scopes: exact table sets, settings defaults/retention, security-event and connection resets, FK nulling, current-vault identity retained.
+- Post-restore change: change now while locked and unlocked, cancel/failure leaves restored data valid, pre-change backup exists.
+- Non-private acknowledgement: bypasses only the mode check; symlink, owner, size, header, hash, and seal checks still reject.
+- Renderer contract: no path or passphrase/secret field in the preview or result; legacy `portable_export`/`backup_restore` commands are gone.
 
 ### Phase 8
 - Idempotent repeat sync; pagination; pending/posted across pages; cursor rollback after failed write; lock mid-sync does not advance cursor.

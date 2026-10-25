@@ -1,6 +1,6 @@
 # Implementation status: cardigan_money
 
-Last updated: 2026-10-24. Phase 10 is a local release candidate for the offline/demo/CSV scope; the UI overhaul (Phases 0–6) is complete. Owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production Plaid is disabled.
+Last updated: 2026-10-24. Phase 10 is a local release candidate for the offline/demo/CSV scope; the UI overhaul (Phases 0–6) and the backup/restore overhaul are complete. Owner native smoke, Keychain attribute inspection, and live reconnect remain external checks. Production Plaid is disabled.
 This is the honesty document: it records what was built, what actually ran, and what remains unverified. It is updated at the end of every phase.
 
 ## 1. Phase tracker
@@ -261,11 +261,11 @@ Known limits to carry forward: native file dialogs are exercised by the owner sm
 - Backup creation via consistent SQLite backup-API snapshot, checkpointed, verified (header decode, seal, hash), owner-only 0600, atomic write, strict filename, no plaintext temp.
 - Kinds: daily, manual, pre-migration, pre-restore, pre-change, portable. Automatic daily backup after unlock when >24 h old; pre-migration before pending migrations; pre-restore immediately before replacement; pre-change during passphrase rotation. Backup failures never prevent unlock and are recorded.
 - Retention: 7 daily, 10 manual, 5 each pre-migration/pre-restore/pre-change; strict pattern only; never the last backup.
-- Restore: native `.cmbak` picker + native passphrase sheet; full validation before install (header, seal, length, DB hash, vault ID, cipher/SQLite integrity, schema/migration compatibility); staged database rekeyed to the current DEK; metadata generation/schema reconciled; pre-restore backup; atomic file swap; post-swap verification and rollback attempt; current passphrase retained. Backup bytes are never modified. Restore requires an unlocked vault; empty-install restore is documented as unsupported.
-- Portable encrypted export: separate passphrase (native two-field sheet), fresh export DEK, snapshot rekeyed to it, embedded export header, arbitrary destination, 0600, no provider credentials. Tested restore with its own passphrase.
+- Restore (superseded by the 2026-10-24 overhaul below): native `.cmbak` picker + native passphrase sheet; full validation before install; staged database rekeyed to the current DEK; pre-restore backup; atomic file swap and rollback attempt. The overhaul adds cross-vault, fresh-install, selective-scope, locked, and destructive paths; see §10.
+- Legacy portable container (kind 6): separate passphrase, fresh export DEK, embedded header. The separate UI action is removed; existing portable containers remain restorable through the unified flow.
 - Crypto-erase: typed confirmation + native confirmation; locks the session, best-effort overwrites and deletes vault/header/journal/backups/demo/staged files, fsyncs, and returns the no-vault state. External copies are explicitly out of scope.
 - Security events for backup creation/verification/failure, restore success, export, and lock-before-erase.
-- UI: Backups & recovery panel (back up now, list, delete, restore warning, portable export, crypto-erase danger zone, last-backup status), hidden in demo.
+- UI (superseded by the 2026-10-24 overhaul): Backups & recovery panel, hidden in demo.
 - Recovery guide: `docs/operations/backup-recovery.md`.
 
 ### Actual test runs
@@ -286,7 +286,7 @@ Known limits to carry forward: native file dialogs are exercised by the owner sm
 - Crypto-erase removes app data and cannot reopen: **tested**.
 - Admin actions audited: **yes** (backup, restore, export, lock); native dialogs are owner-smoke items.
 
-Known limits: native file pickers/sheets/confirmations are not automated; empty-install restore is not implemented; a crash between the two restore renames is a documented window mitigated by the pre-restore backup/`.restore-old`; backups exclude Keychain material by design.
+Known limits (updated by §10): native file pickers/sheets/confirmations are not automated; a crash between the two restore renames is a documented window mitigated by the pre-restore backup/`.restore-old`; backups exclude Keychain material by design.
 
 ## 3g. Phase 8 — sync engine, scheduler, mock provider, network boundary
 
@@ -371,7 +371,7 @@ The review's settings hardening initially required a vault header even in demo m
 - Automated suites: **161 Rust passed** (1 ignored 50k perf), **72 Vitest**, **40 Playwright**; release perf met search/month targets; artifact scan passed.
 - Audits: `cargo audit` 0 vulnerabilities/5 allowed warnings, `cargo deny` all ok, `pnpm audit` clean.
 - Ad-hoc signed artifact: **9448f3939a6ae0574010758dbe7e1c4103eca8331f2076850da2da0140467c08**, `codesign --verify --deep --strict` passes, arm64.
-- Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; fresh-install restore unsupported; ad-hoc/non-notarized.
+- Honest gaps: owner native smoke (Keychain ACL, native sheet/dialogs, screen-capture protection, screen-lock/sleep, close/quit, VoiceOver) is **not performed/claimed**; Plaid Production is **disabled** (Sandbox is verified); live reconnect/update mode and Keychain ACL inspection are unverified; the post-restore native prompt is not automated; ad-hoc/non-notarized.
 - The offline/demo/CSV scope is implemented and evidenced. The project is not represented as distribution-ready or watertight.
 
 ## 3j. UI overhaul — Phase 0 `spend_history` (2026-10-24)
@@ -489,7 +489,7 @@ The review's settings hardening initially required a vault header even in demo m
 - Empty/loading states: **yes**.
 - Dark-mode QA for every theme: **yes** (six theme/mode combinations).
 - Final full gate: **yes**.
-- Goal: the UI overhaul plan is complete; remaining work is release-level (native smoke, Production Plaid decision, fresh-install restore, signing).
+- Goal: the UI and backup/restore overhaul plans are complete; remaining work is release-level (native smoke, Production Plaid decision, signing).
 
 ## 4. Toolchain and environment
 
@@ -510,7 +510,7 @@ The review's settings hardening initially required a vault header even in demo m
 | SEC-01 fail-open encryption | **Mitigated and tested**: key-first, cipher/provider checks, plaintext rejection, plain-SQLite negative build, wrong-key non-destructiveness. `cipher_status` unsupported on 4.6.1 and handled explicitly. |
 | SEC-02 passphrase in renderer | **Implemented**: native AppKit secure input for create/unlock/change; no HTML password field; renderer receives only outcomes. Native passphrase entry itself awaits the owner smoke. |
 | SEC-03 circular key hierarchy | **Mitigated**: external authenticated header; in-memory-only DEK. |
-| SEC-04 backup vs. no-prompt | **Implemented**: self-contained authenticated containers carry their own wrapped DEK; restore always asks for the backup passphrase. Restore requires an unlocked existing vault with the same vault ID; fresh-install restore is not supported. |
+| SEC-04 backup vs. no-prompt | **Implemented**: self-contained authenticated containers carry their own wrapped DEK; every restore asks for the backup passphrase in a native sheet. Same-vault, cross-vault, fresh-install, selective-scope, locked, and destructive paths are implemented; see §10. |
 | SEC-05 lock lifecycle | **Implemented** in Rust: manual, screen lock, sleep, session switch, quit, idle timeout; connection close + DEK drop + renderer clear + lock event. OS-trigger verification pending owner smoke. |
 | SEC-06 Plaid desktop flow | **Sandbox verified**: Hosted Link + polling + token exchange + Transactions Sync against Sandbox Items. Production is disabled and unverified. |
 | SEC-07 renderer privilege/network | **Mitigated for the shell**: CSP, one capability, gateway, nav/new-window blocking, no remote content. Native release verification pending owner smoke. |
@@ -525,7 +525,7 @@ Open Critical/High findings: none. SEC-02 and SEC-05 are implemented and tested 
 ## 6. Blockers and external dependencies
 
 - **Plaid:** Sandbox linking is implemented and verified against owner-supplied Items. Production is disabled in code; enabling it needs an owner decision, Production credentials, and a new verification pass. Live reconnect/update mode and Keychain ACL inspection remain unverified.
-- **Fresh-install restore:** unsupported. A self-contained backup can only be restored into an existing unlocked vault with the same vault ID. Until a vault-gate restore flow exists, preserve the app-data vault directory alongside backups; see [backup/recovery](../operations/backup-recovery.md#limitations).
+- **Fresh-install restore:** supported through **Restore from backup…** on the locked/fresh gate. The backup's vault identity and passphrase become the new vault. See [backup/recovery](../operations/backup-recovery.md).
 - **Real CSV samples:** none supplied. The app ships a generic mapping flow; no issuer presets are invented.
 - **Native smoke tests:** the DSH build sandbox blocks writes to `~/Library/Application Support`, `~/Library/WebKit`, and the login Keychain. Native development runs use a debug-only app-data override. Standard-path launch, Keychain ACL, screen-capture protection, and screen-lock notifications must be verified by the owner on the built `.app` outside this sandbox (checklist in [native smoke](../operations/native-smoke.md)).
 - **Signing:** ad-hoc only; no stable local signing identity has been created (owner may choose one later). Note that Keychain ACL prompts may change across rebuilds.
@@ -543,4 +543,37 @@ Measured 2026-10-23 in release on a 50,000-transaction encrypted dataset (`cargo
 
 The initial build is complete for the offline/demo/CSV scope, and the [UI overhaul](../plans/ui-overhaul-2026-10.md) (Phases 0–6) is complete.
 
-Release blockers are not UI work: owner native smoke, the Production Plaid decision, fresh-install restore (or an explicit docs limitation), and distribution signing remain outstanding.
+Release blockers are not UI work: owner native smoke, the Production Plaid decision, and distribution signing remain outstanding.
+
+## 10. Backup and restore overhaul (2026-10-24)
+
+### Implemented
+- **One manual backup action.** **Back up now** always presents the native passphrase sheet. A blank passphrase uses the current header/DEK when unlocked; a non-blank one creates a fresh header/DEK for that file with the current KDF parameters and the same `vault_id`. The native save dialog defaults to the app backup directory and accepts a different destination. Backups written elsewhere are not listed or pruned. While locked, the sheet also requires the current vault passphrase; the app opens the ledger only to create and verify the container, keeps no UI session, and never renders data.
+- **Backup list and retention.** The normal list shows only `cm-backup-*` containers for the current `vault_id`; retention counts only those files and never removes the last one. Retired `cm-retired-*` containers are listed separately, excluded from retention, and delete-only.
+- **Restore matrix.** `services/restore.rs` implements same-vault full (keep identity), cross-vault full (adopt backup identity with a fresh header/DEK), fresh-install full (atomic temporary-directory install), selective scopes on a staged candidate, and the destructive full-only path for a locked vault without the current passphrase. Replacing an existing vault requires the owner to type `replace`; cross-vault and destructive paths add explicit warnings.
+- **Scoped restore.** Full database; financial data + settings; financial data only. The last two reset the documented table sets, write default settings where required, delete connections/sync history/account sources, null `source_connection_id`, and null `import_batch_id` when import history is reset. Existing targets keep the current `vault_id` and passphrase; fresh targets adopt the backup identity.
+- **Provider gate.** All restores mark provider balance/payment snapshots `restored = 1` (schema 4). Restored provider connections become `reconnect_required`, with cursors and last-success timestamps cleared. Scheduled and manual sync are blocked until reconnect; the overview hides restored live balances, available credit, limits, and due metadata while keeping restored transaction history. `ConnectionView.hasToken` distinguishes a retained same-vault token (Reconnect/update mode) from a cross-vault/fresh/destructive connection whose reference was reset (the UI offers **Link again…**).
+- **Token and Item choices.** Same-vault full keeps Keychain tokens and credential references. Cross-vault full offers delete-local, delete-and-revoke, or keep; partial scopes delete old tokens because no connection remains. The destructive path offers delete-all-app-managed-tokens or leave. Cross-vault/fresh/destructive restores reset restored connection credential references.
+- **Retired backups.** A full cross-vault restore (and a destructive restore whose `vault_id` changes) renames every normal previous-vault backup, including the pre-restore backup, with `cm-retired-`. They are never auto-pruned and remain until deleted from the retired view.
+- **Non-private acceptance.** Inspect reports the file mode without enforcing it; apply accepts a non-private file only with an explicit acknowledgement. The acknowledgement bypasses only the mode check; owner, regular-file, no-symlink, size, header, hash, and seal checks remain.
+- **Validation and install.** Header/seal/hash/length, `vault_id` consistency, SQLCipher/SQLite integrity, foreign keys, schema compatibility, migration, and a schema-object allowlist run before install. Same-vault/partial restore keeps the current header/DEK; cross-vault/fresh create a fresh header/DEK under the backup passphrase and never adopt the backup's DEK. Existing installs keep the old files until the new vault verifies; fresh installs are renamed into place.
+- **Post-restore prompt.** A native acknowledgement offers **Change passphrase now** / **Change later**. A cancelled or failed sheet never rolls back restored data. The locked sessionless rotation path is implemented for restores that leave the vault locked.
+- **UI and bridge.** `backup_restore_prepare` → renderer choices (scope, acknowledgement, Plaid choice, typed word) → `backup_restore_apply`; `backup_restore_cancel` and `backup_list_retired` are separate commands. The preview/result carry no path or passphrase/secret field. Restore entry points exist on both the locked and fresh gate. The old `portable_export` and uncontrolled `backup_restore` commands are removed.
+- **Rate limits and demo guards.** Prepare/apply are rate-limited; restore, backup creation, retired listing, and deletion are real-mode only.
+
+### Actual test runs (2026-10-24)
+| Suite | Result |
+| --- | --- |
+| `cargo test` | **191 passed**, 0 failed, 1 ignored (50k perf) — includes 24 restore-overhaul, 4 backup-now, 9 backup, 90 lib |
+| `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo fmt --all --check` | clean |
+| `pnpm test` | **75 passed** (14 files), including restore preview/result redaction and command-removal contract tests |
+| `pnpm test:e2e` | **42 passed**, including typed-confirmation restore, locked-gate backup, and fresh-gate restore |
+| `pnpm verify` | typecheck, lint, Vitest, production build, and release-artifact scan passed |
+
+### Exit gates and honest gaps
+- Matrix coverage, identity/passphrase retention/adoption, scoped reset semantics, FK cleanup, pre-restore abort, retired naming/pruning exemption, provider gate, non-private acknowledgement, and post-restore locked rotation: **covered by Rust tests**.
+- Renderer path/secret exclusion and fresh/locked restore entry points: **covered by Vitest and Playwright**.
+- Native file pickers, native passphrase sheets, and the post-restore dialog: **owner smoke only** (this environment cannot drive secure input).
+- Existing-vault installs use old-file rename/rollback; a crash between renames remains a narrow documented window mitigated by the pre-restore backup and `.cmdb.restore-old`. Fresh installs are assembled in a temporary directory and renamed into place.
+- Backups from schema 3 are migrated to schema 4 during staged validation. The schema-object allowlist rejects unknown tables, triggers, views, attached databases, and foreign-key violations.

@@ -2,27 +2,59 @@ import { test, expect } from "@playwright/test";
 import { openSettingsSection, openUnlocked } from "./helpers";
 
 test.describe("backup and recovery UI (browser mock)", () => {
-  test("creates, lists, restores, and deletes an encrypted backup", async ({ page }) => {
+  test("creates, restores with a typed confirmation, and deletes an encrypted backup", async ({
+    page,
+  }) => {
     await openUnlocked(page);
     await openSettingsSection(page, "Backups & recovery");
     await page.getByRole("button", { name: "Back up now" }).click();
-    await expect(page.getByText(/Encrypted backup created/)).toBeVisible();
+    await expect(page.getByText(/Encrypted backup created/).first()).toBeVisible();
     await expect(page.getByText("manual").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Restore backup…" }).click();
     await expect(page.getByText(/Replace the current ledger/)).toBeVisible();
-    await page.getByRole("button", { name: "Choose backup and restore…" }).click();
-    await expect(page.getByText(/pre-restore backup was created/)).toBeVisible();
+    const apply = page.getByRole("button", { name: "Restore this backup…" });
+    await expect(apply).toBeDisabled();
+    await page.getByLabel("Type replace to confirm").fill("replace");
+    await expect(apply).toBeEnabled();
+    await apply.click();
+    await expect(page.getByText(/Restored a manual backup/)).toBeVisible();
+    await expect(page.getByText(/pre-restore backup was created and verified/)).toBeVisible();
 
     await page.getByRole("button", { name: "Delete" }).first().click();
     await expect(page.getByText("Backup deleted.")).toBeVisible();
   });
 
-  test("portable export reports a separate-password container", async ({ page }) => {
+  test("back up now is the only manual backup action", async ({ page }) => {
     await openUnlocked(page);
     await openSettingsSection(page, "Backups & recovery");
-    await page.getByRole("button", { name: "Portable encrypted export…" }).click();
-    await expect(page.getByText(/Portable encrypted export written/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Back up now" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Portable encrypted export/ })).toHaveCount(0);
+  });
+
+  test("backs up from the locked gate without unlocking", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: /Your encrypted ledger is locked/ }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Back up now" }).click();
+    await expect(page.getByText(/Encrypted backup created/).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Your encrypted ledger is locked/ }),
+    ).toBeVisible();
+  });
+
+  test("a fresh install can restore a backup from the locked gate", async ({ page }) => {
+    await page.goto("/?mockVault=empty");
+    await expect(page.getByRole("heading", { name: /Create your encrypted ledger/ })).toBeVisible();
+    await page.getByRole("button", { name: "Restore from backup…" }).click();
+    await expect(page.getByText(/fresh install/i).first()).toBeVisible();
+    await expect(page.getByLabel("Type replace to confirm")).toHaveCount(0);
+    await page.getByRole("button", { name: "Restore this backup…" }).click();
+    await expect(
+      page.getByRole("heading", { name: /Your encrypted ledger is locked/ }),
+    ).toBeVisible();
+    await expect(page.getByText(/Backup restored/).first()).toBeVisible();
   });
 
   test("crypto-erase requires the typed confirmation and returns to the gate", async ({ page }) => {

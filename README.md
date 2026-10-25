@@ -2,7 +2,7 @@
 
 A local-first macOS app for one person's credit-card balances and calendar-month spending. Tauri 2, React, TypeScript, Rust, and a SQLCipher-encrypted ledger.
 
-> **Status: Phase 10 local release candidate (offline/demo/CSV scope, Plaid Sandbox verified).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups/restore, portable exports, crypto-erase, sync engine/scheduler, and hardening are implemented. Plaid **Sandbox** linking/sync is verified against Sandbox Items; **Production/live institutions remain disabled and unverified**. The UI overhaul is complete: spend history, theme chart options, chart components, the Overview rebuild, the Transactions re-grade, and Settings sectioning. This is an ad-hoc-signed local build, not distribution-ready.
+> **Status: Phase 10 local release candidate (offline/demo/CSV scope, Plaid Sandbox verified).** Encrypted vault, dashboard, account management, edits/rules/manual metadata, bounded CSV import/export, self-contained encrypted backups and the full restore matrix (same-vault, cross-vault, fresh install, selective scopes, and destructive recovery), crypto-erase, sync engine/scheduler, and hardening are implemented. Plaid **Sandbox** linking/sync is verified against Sandbox Items; **Production/live institutions remain disabled and unverified**. The UI overhaul is complete: spend history, theme chart options, chart components, the Overview rebuild, the Transactions re-grade, and Settings sectioning. This is an ad-hoc-signed local build, not distribution-ready.
 
 ## What it is
 
@@ -98,9 +98,12 @@ The build is ad-hoc signed for local use only. It does not use a Developer ID, h
 
 Implemented and covered by service-level tests; native dialogs remain owner smoke tests. See [backup/recovery](docs/operations/backup-recovery.md) and [native smoke](docs/operations/native-smoke.md). The rules:
 
-- Automatic backups are self-contained encrypted containers; restore always asks for the passphrase.
+- Automatic backups are self-contained encrypted containers; every restore asks for the backup passphrase in a native sheet, and replacing an existing vault requires typing `replace`.
+- **Back up now** can use the vault passphrase (blank) or a separate passphrase for one file. It works while the vault is locked after the current passphrase is entered; the app stays locked.
+- Restore supports same-vault, cross-vault, fresh-install, selective-scope, and destructive no-current-passphrase recovery. Cross-vault full restores adopt the backup identity and retire the previous vault's backups; fresh restores create a vault without a pre-restore backup.
+- Restored provider connections start as `reconnect_required`; restored live balances, credit values, and due metadata stay hidden until fresh data arrives. Restored transaction history remains visible.
 - Changing the passphrase rotates the data encryption key. Older backups require the old passphrase and are labeled; they are never silently rewritten or deleted.
-- Portable exports use a separate passphrase and contain a full financial history. A plaintext CSV export is unprotected; the app warns before writing it.
+- A plaintext CSV export is unprotected; the app warns before writing it.
 - Demo mode is a separate database with synthetic data and a fixed app-managed key. It cannot open the real ledger, import real CSVs, link a provider, create backups, or export real data.
 
 ## Documentation
@@ -108,6 +111,7 @@ Implemented and covered by service-level tests; native dialogs remain owner smok
 Start at [docs/README.md](docs/README.md) — the map of plans, security, operations, and reference docs.
 
 - [Completed plan: UI overhaul](docs/plans/ui-overhaul-2026-10.md)
+- [Completed plan: backup and restore overhaul](docs/plans/backup-restore-overhaul-2026-10.md)
 - [Implementation status](docs/reference/implementation-status.md) — what is built and what is still unverified
 - [Security policy](SECURITY.md) · [architecture](docs/security/architecture.md) · [threat model](docs/security/threat-model.md)
 - [Theming](docs/design/theming.md) · [UI direction](docs/design/proposal.md)
@@ -116,7 +120,7 @@ Start at [docs/README.md](docs/README.md) — the map of plans, security, operat
 ## Current limitations and unverified items
 
 - Live Plaid linking, Keychain ACLs, native file dialogs/sheets, screen-capture protection, screen-lock/sleep auto-lock, and VoiceOver behavior are **not verified** in this environment; see [native smoke](docs/operations/native-smoke.md) and the blocker in [Plaid feasibility](docs/integrations/plaid-feasibility.md).
-- Restore requires an existing unlocked vault; fresh-install restore is unsupported.
+- Native file pickers, secure sheets, the close dialog, and the post-restore passphrase-change dialog are owner smoke items.
 - The scheduled sync is mock-provider tested; no live network call was made.
 - The release is ad-hoc signed, not notarized or App-Sandboxed.
 

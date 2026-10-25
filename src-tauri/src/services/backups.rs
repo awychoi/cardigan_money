@@ -1,5 +1,6 @@
-//! Self-contained authenticated backup containers, restore, portable encrypted
-//! export, retention, and crypto-erase.
+//! Self-contained authenticated backup containers, unified manual/automatic
+//! creation, listing and retention, legacy portable containers, and
+//! crypto-erase. Restore lives in `services::restore`.
 //!
 //! Container v1: fixed 256-byte header + SQLCipher database bytes.
 //! The header embeds a complete vault header (KDF params + wrapped DEK), so a
@@ -17,25 +18,29 @@ use sha2::{Digest, Sha256};
 use tauri::AppHandle;
 
 use crate::error::{AppError, AppResult};
-use crate::security::cipher::{
-    cipher_integrity_check, open_ledger, rekey_ledger, sqlite_integrity_check,
-};
+use crate::security::cipher::{cipher_integrity_check, open_ledger, sqlite_integrity_check};
 use crate::security::crypto::{self, LockedKey, SecretString};
 use crate::security::files::{
-    enforce_private_file, ensure_private_dir, file_exists_no_follow, fsync_dir,
-    remove_file_if_exists,
+    ensure_private_dir, file_exists_no_follow, fsync_dir, remove_file_if_exists,
 };
 use crate::security::native_dialog;
 use crate::security::secure_input::{self, SecurePurpose};
-use crate::security::vault::{VaultHeader, HEADER_LEN as VAULT_HEADER_LEN};
+use crate::security::vault::{load_header, VaultHeader, HEADER_LEN as VAULT_HEADER_LEN};
 use crate::services::vault::VaultState;
 use crate::state::AppState;
 use crate::storage::events::record_event;
-use crate::storage::migrations::{run_migrations, supported_schema_version};
-use crate::storage::settings::{load_settings, save_settings};
+use crate::storage::migrations::supported_schema_version;
+use crate::storage::settings::{load_settings, save_settings, Settings};
 use crate::storage::snapshot::{create_encrypted_snapshot, create_encrypted_snapshot_with_key};
 use crate::storage::time::now_rfc3339;
 use crate::storage::vault_meta;
+
+// Restore lives in its own module because of the scope/identity matrix; keep a
+// single public import surface for existing backup callers.
+pub use crate::services::restore::{
+    execute_restore, install_restore_confirmed, prepare_restore, PendingRestore, PlaidTokenChoice,
+    RestoreOptions, RestorePlan, RestorePreview, RestoreResult, RestoreScope,
+};
 
 const MAGIC: &[u8; 8] = b"CMBAK01\0";
 const CONTAINER_VERSION: u16 = 1;
@@ -95,7 +100,7 @@ impl BackupKind {
         }
     }
 
-    fn as_str(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         self.token()
     }
 }
@@ -228,7 +233,7 @@ impl BackupHeader {
         })
     }
 
-    fn verify_seal(&self, dek: &LockedKey) -> AppResult<()> {
+    pub(crate) fn verify_seal(&self, dek: &LockedKey) -> AppResult<()> {
         crypto::open_sealed(
             &seal_key(dek)?,
             &self.seal_nonce,
@@ -255,14 +260,7 @@ pub struct BackupItem {
 pub struct BackupResult {
     pub backup: BackupItem,
     pub pruned: usize,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RestoreResult {
-    pub restored: bool,
-    pub kind: String,
-    pub pre_restore_backup_id: String,
+    pub listed: bool,
 }
 
 pub fn backups_dir(state: &AppState) -> PathBuf {
@@ -298,7 +296,26 @@ fn valid_filename(name: &str) -> bool {
     parts.len() >= 6
 }
 
-fn open_read_nofollow(path: &Path) -> AppResult<(std::fs::File, std::fs::Metadata)> {
+pub const RETIRED_PREFIX: &str = "cm-retired-";
+
+/// A retired container keeps the original valid backup name after a prefix.
+/// Retired files are never listed with the normal backups and never pruned.
+fn valid_retired_filename(name: &str) -> bool {
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        return false;
+    }
+    let lower = name.to_ascii_lowercase();
+    if !lower.starts_with(RETIRED_PREFIX) || !lower.ends_with(".cmbak") {
+        return false;
+    }
+    lower.contains("cm-backup-")
+}
+
+fn valid_any_backup_filename(name: &str) -> bool {
+    valid_filename(name) || valid_retired_filename(name)
+}
+
+pub(crate) fn open_read_nofollow(path: &Path) -> AppResult<(std::fs::File, std::fs::Metadata)> {
     let file = std::fs::OpenOptions::new()
         .read(true)
         .custom_flags(libc::O_NOFOLLOW)
@@ -332,14 +349,18 @@ fn hash_file(path: &Path) -> AppResult<(u64, [u8; 32])> {
     Ok((total, out))
 }
 
-fn read_header(path: &Path) -> AppResult<BackupHeader> {
+pub(crate) fn read_header_with_policy(
+    path: &Path,
+    allow_non_private: bool,
+) -> AppResult<(BackupHeader, bool)> {
     let (mut file, meta) = open_read_nofollow(path)?;
     if meta.len() < CONTAINER_HEADER_LEN as u64
         || meta.len() > CONTAINER_HEADER_LEN as u64 + MAX_BACKUP_BYTES
     {
         return Err(AppError::HeaderInvalid("backup file size"));
     }
-    if meta.mode() & 0o077 != 0 {
+    let non_private = meta.mode() & 0o077 != 0;
+    if non_private && !allow_non_private {
         return Err(AppError::PermissionDenied(
             "backup permissions are not owner-only",
         ));
@@ -352,7 +373,18 @@ fn read_header(path: &Path) -> AppResult<BackupHeader> {
     if meta.len() != expected_total {
         return Err(AppError::HeaderInvalid("backup length mismatch"));
     }
-    Ok(header)
+    Ok((header, non_private))
+}
+
+fn read_header(path: &Path) -> AppResult<BackupHeader> {
+    read_header_with_policy(path, false).map(|(header, _)| header)
+}
+
+/// Read the public container header without failing solely because the file
+/// mode is not owner-only. The caller must obtain an explicit acknowledgement
+/// before using the same flag for the full restore validation.
+pub fn inspect_backup_header(path: &Path) -> AppResult<(BackupHeader, bool)> {
+    read_header_with_policy(path, true)
 }
 
 fn verify_db_bytes(path: &Path, header: &BackupHeader) -> AppResult<()> {
@@ -427,11 +459,12 @@ pub fn create_backup_inner(
     ensure_private_dir(backup_dir)?;
     let snapshot = vault_root.join(format!(".backup-snapshot-{}.cmdb", uuid::Uuid::new_v4()));
     create_encrypted_snapshot(conn, &snapshot, dek)?;
+    let (len, hash) = hash_file(&snapshot)?;
+    let header = BackupHeader::new(kind, vault_header.clone(), len, hash, dek)?;
+    let name = container_name(kind, vault_header, header.created_at);
+    let destination = backup_dir.join(&name);
+    let destination_existed = file_exists_no_follow(&destination)?;
     let result = (|| -> AppResult<BackupItem> {
-        let (len, hash) = hash_file(&snapshot)?;
-        let header = BackupHeader::new(kind, vault_header.clone(), len, hash, dek)?;
-        let name = container_name(kind, vault_header, header.created_at);
-        let destination = backup_dir.join(&name);
         write_container(&destination, &header, &snapshot, true)?;
         // Verify what was written, including the seal.
         let read = read_header(&destination)?;
@@ -449,12 +482,24 @@ pub fn create_backup_inner(
         })
     })();
     let _ = std::fs::remove_file(&snapshot);
+    // A failed verification must not leave a corrupt container that could be
+    // mistaken for a pre-restore backup.
+    if result.is_err() && !destination_existed {
+        let _ = remove_file_if_exists(&destination);
+    }
     result
 }
 
 /// Retention: 7 daily, 5 each pre-migration/pre-restore/pre-change, 10 manual.
 /// Never removes the last valid backup overall. Strict filename pattern only.
 pub fn prune_backups(backup_dir: &Path) -> AppResult<usize> {
+    prune_backups_for_vault(backup_dir, None)
+}
+
+/// Vault-aware retention. When `vault_id` is supplied only that vault's normal
+/// backups count toward, or are removed by, retention. Retired containers are
+/// excluded by the strict normal-name pattern.
+pub fn prune_backups_for_vault(backup_dir: &Path, vault_id: Option<&[u8; 16]>) -> AppResult<usize> {
     if !backup_dir.is_dir() {
         return Ok(0);
     }
@@ -473,6 +518,9 @@ pub fn prune_backups(backup_dir: &Path) -> AppResult<usize> {
             continue;
         }
         if let Ok(header) = read_header(&entry.path()) {
+            if vault_id.is_some_and(|vault_id| header.vault_header.vault_id != *vault_id) {
+                continue;
+            }
             items.push((name, header.kind, header));
         }
     }
@@ -509,11 +557,43 @@ pub fn prune_backups(backup_dir: &Path) -> AppResult<usize> {
     Ok(removed)
 }
 
+/// The vault ID the app considers current, available while locked because the
+/// header is on disk. `None` means a fresh install (or an unreadable header).
+pub fn current_vault_id(state: &AppState) -> Option<[u8; 16]> {
+    if let Ok(guard) = state.session.lock() {
+        if let Some(header) = guard.header.as_ref() {
+            return Some(header.vault_id);
+        }
+    }
+    load_header(&state.paths)
+        .ok()
+        .map(|loaded| loaded.header().vault_id)
+}
+
+pub(crate) fn backup_item(name: String, header: &BackupHeader, size_bytes: u64) -> BackupItem {
+    BackupItem {
+        id: name,
+        kind: header.kind.as_str().to_string(),
+        created_at: chrono::DateTime::<chrono::Utc>::from_timestamp(header.created_at, 0)
+            .map(|value| value.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+            .unwrap_or_else(|| "unknown".to_string()),
+        size_bytes,
+        generation: header.vault_header.generation,
+        schema_version: header.vault_header.schema_version,
+    }
+}
+
 pub fn list_backups(state: &AppState) -> AppResult<Vec<BackupItem>> {
     let dir = backups_dir(state);
     if !dir.is_dir() {
         return Ok(Vec::new());
     }
+    // The normal list only contains containers for the current vault. A
+    // cross-vault restore retires the previous vault's files, but older
+    // installations may still have other-vault files on disk.
+    let Some(vault_id) = current_vault_id(state) else {
+        return Ok(Vec::new());
+    };
     let mut items = Vec::new();
     for entry in std::fs::read_dir(&dir).map_err(|_| AppError::Io)? {
         let entry = entry.map_err(|_| AppError::Io)?;
@@ -523,17 +603,35 @@ pub fn list_backups(state: &AppState) -> AppResult<Vec<BackupItem>> {
         }
         let path = entry.path();
         if let Ok(header) = read_header(&path) {
+            if header.vault_header.vault_id != vault_id {
+                continue;
+            }
             let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
-            items.push(BackupItem {
-                id: name,
-                kind: header.kind.as_str().to_string(),
-                created_at: chrono::DateTime::<chrono::Utc>::from_timestamp(header.created_at, 0)
-                    .map(|value| value.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
-                    .unwrap_or_else(|| "unknown".to_string()),
-                size_bytes: size,
-                generation: header.vault_header.generation,
-                schema_version: header.vault_header.schema_version,
-            });
+            items.push(backup_item(name, &header, size));
+        }
+    }
+    items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    Ok(items)
+}
+
+/// Retired backups from a previous vault. They are deliberately separate from
+/// the normal list, are never pruned, and remain until the owner deletes them.
+pub fn list_retired_backups(state: &AppState) -> AppResult<Vec<BackupItem>> {
+    let dir = backups_dir(state);
+    if !dir.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut items = Vec::new();
+    for entry in std::fs::read_dir(&dir).map_err(|_| AppError::Io)? {
+        let entry = entry.map_err(|_| AppError::Io)?;
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !valid_retired_filename(&name) {
+            continue;
+        }
+        let path = entry.path();
+        if let Ok(header) = read_header(&path) {
+            let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+            items.push(backup_item(name, &header, size));
         }
     }
     items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
@@ -541,7 +639,7 @@ pub fn list_backups(state: &AppState) -> AppResult<Vec<BackupItem>> {
 }
 
 pub fn delete_backup(state: &AppState, id: &str) -> AppResult<()> {
-    if !valid_filename(id) {
+    if !valid_any_backup_filename(id) {
         return Err(AppError::InvalidInput("backup id"));
     }
     let path = backups_dir(state).join(id);
@@ -550,6 +648,57 @@ pub fn delete_backup(state: &AppState, id: &str) -> AppResult<()> {
     }
     remove_file_if_exists(&path)?;
     Ok(())
+}
+
+/// Rename every normal backup in the default directory with the retired
+/// prefix. Used only after a successful full cross-vault restore. Returns the
+/// number of files renamed; a rename failure is reported but does not roll the
+/// restored database back.
+pub fn retire_normal_backups(state: &AppState) -> AppResult<usize> {
+    retire_normal_backups_except(state, None)
+}
+
+/// Retire normal backups except containers that already belong to
+/// `keep_vault_id`. A full cross-vault restore keeps the restored vault's own
+/// backups (including the source file if it was stored in the default
+/// directory) and retires the previous vault's containers, including the
+/// pre-restore backup.
+pub fn retire_normal_backups_except(
+    state: &AppState,
+    keep_vault_id: Option<&[u8; 16]>,
+) -> AppResult<usize> {
+    let dir = backups_dir(state);
+    if !dir.is_dir() {
+        return Ok(0);
+    }
+    let mut renamed = 0usize;
+    for entry in std::fs::read_dir(&dir).map_err(|_| AppError::Io)? {
+        let entry = entry.map_err(|_| AppError::Io)?;
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !valid_filename(&name) {
+            continue;
+        }
+        if let (Some(keep), Ok((header, _))) = (keep_vault_id, inspect_backup_header(&entry.path()))
+        {
+            if header.vault_header.vault_id == *keep {
+                continue;
+            }
+        }
+        let target_name = format!("{RETIRED_PREFIX}{name}");
+        let target = dir.join(&target_name);
+        if file_exists_no_follow(&target)? {
+            // Never overwrite an existing retired container. Leave the source
+            // in place; the next restore attempt can resolve it deliberately.
+            continue;
+        }
+        if std::fs::rename(entry.path(), &target).is_ok() {
+            renamed += 1;
+        }
+    }
+    if renamed > 0 {
+        let _ = fsync_dir(&dir);
+    }
+    Ok(renamed)
 }
 
 pub fn create_backup<R: tauri::Runtime>(
@@ -567,7 +716,7 @@ pub fn create_backup<R: tauri::Runtime>(
     let dek = guard.dek.as_ref().ok_or(AppError::Locked)?;
     let dir = backups_dir(state);
     let item = create_backup_inner(conn, &header, dek, &state.paths.root, &dir, kind)?;
-    let pruned = prune_backups(&dir)?;
+    let pruned = prune_backups_for_vault(&dir, Some(&header.vault_id))?;
     let _ = record_event(
         conn,
         "backup_created",
@@ -589,7 +738,334 @@ pub fn create_backup<R: tauri::Runtime>(
     Ok(BackupResult {
         backup: item,
         pruned,
+        listed: true,
     })
+}
+
+fn same_directory(candidate: Option<&Path>, directory: &Path) -> bool {
+    let Some(candidate) = candidate else {
+        return false;
+    };
+    if candidate == directory {
+        return true;
+    }
+    match (candidate.canonicalize(), directory.canonicalize()) {
+        (Ok(candidate), Ok(directory)) => candidate == directory,
+        _ => false,
+    }
+}
+
+fn ensure_backup_extension(mut path: PathBuf) -> PathBuf {
+    if path.extension().is_none() {
+        path.set_extension("cmbak");
+    }
+    path
+}
+
+fn choose_backup_destination<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    directory: &Path,
+    suggested_name: &str,
+) -> AppResult<Option<PathBuf>> {
+    let directory = directory.to_path_buf();
+    let suggested_name = suggested_name.to_string();
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    app.run_on_main_thread(move || {
+        let picked = rfd::FileDialog::new()
+            .add_filter("cardigan_money backup", &["cmbak"])
+            .set_directory(&directory)
+            .set_file_name(&suggested_name)
+            .set_title("Save an encrypted cardigan_money backup")
+            .save_file();
+        let _ = tx.send(picked);
+    })
+    .map_err(|_| AppError::NativeInput)?;
+    rx.recv_timeout(std::time::Duration::from_secs(300))
+        .map_err(|_| AppError::NativeInput)
+}
+
+fn create_backup_at(
+    conn: &Connection,
+    vault_root: &Path,
+    destination: &Path,
+    kind: BackupKind,
+    header: &VaultHeader,
+    dek: &LockedKey,
+    parent_private: bool,
+) -> AppResult<BackupItem> {
+    ensure_private_dir(vault_root)?;
+    let snapshot = vault_root.join(format!(".backup-snapshot-{}.cmdb", uuid::Uuid::new_v4()));
+    let destination_existed = file_exists_no_follow(destination)?;
+    let result = (|| -> AppResult<BackupItem> {
+        create_encrypted_snapshot_with_key(conn, &snapshot, dek)?;
+        let (len, hash) = hash_file(&snapshot)?;
+        let backup_header = BackupHeader::new(kind, header.clone(), len, hash, dek)?;
+        write_container(destination, &backup_header, &snapshot, parent_private)?;
+        let read = read_header(destination)?;
+        read.verify_seal(dek)?;
+        verify_db_bytes(destination, &read)?;
+        let id = destination
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .ok_or(AppError::Io)?;
+        Ok(BackupItem {
+            id,
+            kind: kind.as_str().to_string(),
+            created_at: chrono::DateTime::<chrono::Utc>::from_timestamp(
+                backup_header.created_at,
+                0,
+            )
+            .map(|value| value.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+            .unwrap_or_else(now_rfc3339),
+            size_bytes: CONTAINER_HEADER_LEN as u64 + len,
+            generation: header.generation,
+            schema_version: header.schema_version,
+        })
+    })();
+    let _ = std::fs::remove_file(&snapshot);
+    if result.is_err() && !destination_existed {
+        let _ = remove_file_if_exists(destination);
+    }
+    result
+}
+
+fn record_manual_backup_success(
+    conn: &Connection,
+    item: &BackupItem,
+    listed: bool,
+) -> AppResult<Option<Settings>> {
+    let _ = record_event(
+        conn,
+        "backup_created",
+        "success",
+        Some(serde_json::json!({ "kind": "manual", "listed": listed })),
+    );
+    let _ = record_event(
+        conn,
+        "backup_verified",
+        "success",
+        Some(serde_json::json!({ "kind": "manual" })),
+    );
+    let mut settings = match load_settings(conn) {
+        Ok(settings) => settings,
+        Err(_) => return Ok(None),
+    };
+    settings.last_backup_at = Some(item.created_at.clone());
+    settings.last_backup_status = Some("verified".into());
+    if save_settings(conn, &settings).is_err() {
+        return Ok(None);
+    }
+    Ok(Some(settings))
+}
+
+/// Create a user backup at an explicit destination with explicit passphrases.
+/// The native wrapper supplies the file picker and secure-sheet values. A
+/// blank `backup_passphrase` uses the vault header/DEK; while locked a
+/// `vault_passphrase` is mandatory and no UI session is created.
+pub fn create_manual_backup_to(
+    state: &AppState,
+    destination: &Path,
+    backup_passphrase: SecretString,
+    vault_passphrase: Option<SecretString>,
+) -> AppResult<BackupResult> {
+    state.require_real("create a backup in demo mode")?;
+    let backup_dir = backups_dir(state);
+    ensure_private_dir(&backup_dir)?;
+    let destination = ensure_backup_extension(destination.to_path_buf());
+    let in_default_directory = same_directory(destination.parent(), &backup_dir);
+    let listed = in_default_directory
+        && destination
+            .file_name()
+            .map(|name| valid_filename(&name.to_string_lossy()))
+            .unwrap_or(false);
+    let unlocked = {
+        let guard = state.session.lock().map_err(|_| AppError::Internal)?;
+        guard.is_unlocked()
+    };
+
+    if unlocked {
+        let header = {
+            let guard = state.session.lock().map_err(|_| AppError::Internal)?;
+            guard.header.as_ref().ok_or(AppError::Locked)?.clone()
+        };
+        let custom_passphrase = !backup_passphrase.expose().is_empty();
+        if custom_passphrase {
+            crypto::validate_new_passphrase(&backup_passphrase)?;
+        }
+        let target = if custom_passphrase {
+            Some(VaultHeader::create(
+                &backup_passphrase,
+                header.params,
+                header.vault_id,
+                supported_schema_version(),
+            )?)
+        } else {
+            None
+        };
+
+        let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
+        let conn = guard.conn.as_ref().ok_or(AppError::Locked)?;
+        let (target_header, target_dek) = match &target {
+            Some((target_header, target_dek)) => (target_header, target_dek),
+            None => (&header, guard.dek.as_ref().ok_or(AppError::Locked)?),
+        };
+        let item = create_backup_at(
+            conn,
+            &state.paths.root,
+            &destination,
+            BackupKind::Manual,
+            target_header,
+            target_dek,
+            in_default_directory,
+        )?;
+        let pruned = if listed {
+            prune_backups_for_vault(&backup_dir, Some(&header.vault_id))?
+        } else {
+            0
+        };
+        let updated_settings = record_manual_backup_success(conn, &item, listed)?;
+        if let Some(settings) = updated_settings {
+            guard.settings = Some(settings);
+        }
+        drop(guard);
+        drop(backup_passphrase);
+        drop(vault_passphrase);
+        Ok(BackupResult {
+            backup: item,
+            pruned,
+            listed,
+        })
+    } else {
+        let Some(vault_passphrase) = vault_passphrase else {
+            return Err(AppError::Locked);
+        };
+        if vault_passphrase.expose().is_empty() {
+            return Err(AppError::InvalidInput("vault passphrase"));
+        }
+        let custom_passphrase = !backup_passphrase.expose().is_empty();
+        if custom_passphrase {
+            crypto::validate_new_passphrase(&backup_passphrase)?;
+        }
+        // Serialize with restore and with an unlock that may be racing this
+        // sessionless backup. The guard stays held until the backup is verified
+        // and recorded.
+        let session_guard = state.session.lock().map_err(|_| AppError::Internal)?;
+        if session_guard.is_unlocked() {
+            return Err(AppError::Blocked("the vault was unlocked; retry"));
+        }
+        let header = load_header(&state.paths)?.header().clone();
+        let vault_dek = header.unwrap_dek(&vault_passphrase)?;
+        let (conn, _cipher) = open_ledger(&state.paths.database, &vault_dek, false)?;
+        cipher_integrity_check(&conn)?;
+        sqlite_integrity_check(&conn)?;
+        let meta = vault_meta::load(&conn)?;
+        if meta.vault_id != header.vault_id_hex() {
+            return Err(AppError::IntegrityFailure);
+        }
+        if meta.schema_version > supported_schema_version() {
+            return Err(AppError::SchemaTooNew);
+        }
+
+        let target = if custom_passphrase {
+            Some(VaultHeader::create(
+                &backup_passphrase,
+                header.params,
+                header.vault_id,
+                supported_schema_version(),
+            )?)
+        } else {
+            None
+        };
+        let (target_header, target_dek) = match &target {
+            Some((target_header, target_dek)) => (target_header, target_dek),
+            None => (&header, &vault_dek),
+        };
+        let item = create_backup_at(
+            &conn,
+            &state.paths.root,
+            &destination,
+            BackupKind::Manual,
+            target_header,
+            target_dek,
+            in_default_directory,
+        )?;
+        let pruned = if listed {
+            prune_backups_for_vault(&backup_dir, Some(&header.vault_id))?
+        } else {
+            0
+        };
+        let _ = record_manual_backup_success(&conn, &item, listed);
+        drop(conn);
+        drop(session_guard);
+        drop(vault_dek);
+        drop(vault_passphrase);
+        drop(backup_passphrase);
+        Ok(BackupResult {
+            backup: item,
+            pruned,
+            listed,
+        })
+    }
+}
+
+pub fn create_manual_backup<R: tauri::Runtime>(
+    state: &AppState,
+    app: &AppHandle<R>,
+) -> AppResult<BackupResult> {
+    state.require_real("create a backup in demo mode")?;
+    let backup_dir = backups_dir(state);
+    ensure_private_dir(&backup_dir)?;
+    let unlocked = {
+        let guard = state.session.lock().map_err(|_| AppError::Internal)?;
+        guard.is_unlocked()
+    };
+    let header = if unlocked {
+        let guard = state.session.lock().map_err(|_| AppError::Internal)?;
+        Some(guard.header.as_ref().ok_or(AppError::Locked)?.clone())
+    } else {
+        Some(load_header(&state.paths)?.header().clone())
+    };
+    let suggested_name = container_name(
+        BackupKind::Manual,
+        header.as_ref().ok_or(AppError::VaultMissing)?,
+        now_unix(),
+    );
+
+    if unlocked {
+        let Some(mut values) = secure_input::ask(app, SecurePurpose::BackupPassphrase)? else {
+            return Err(AppError::Cancelled);
+        };
+        let backup_passphrase = values.pop().ok_or(AppError::NativeInput)?;
+        drop(values);
+        let Some(destination) = choose_backup_destination(app, &backup_dir, &suggested_name)?
+        else {
+            return Err(AppError::Cancelled);
+        };
+        create_manual_backup_to(state, &destination, backup_passphrase, None)
+    } else {
+        let Some(mut values) = secure_input::ask(app, SecurePurpose::BackupUnlock)? else {
+            return Err(AppError::Cancelled);
+        };
+        if values.len() != 2 {
+            return Err(AppError::NativeInput);
+        }
+        let vault_passphrase = values.remove(0);
+        let backup_passphrase = values.pop().ok_or(AppError::NativeInput)?;
+        drop(values);
+        if vault_passphrase.expose().is_empty() {
+            return Err(AppError::InvalidInput("vault passphrase"));
+        }
+        let Some(destination) = choose_backup_destination(app, &backup_dir, &suggested_name)?
+        else {
+            return Err(AppError::Cancelled);
+        };
+        create_manual_backup_to(
+            state,
+            &destination,
+            backup_passphrase,
+            Some(vault_passphrase),
+        )
+    }
 }
 
 pub fn maybe_daily_backup(state: &AppState) {
@@ -632,297 +1108,9 @@ pub fn maybe_daily_backup(state: &AppState) {
     }
 }
 
-fn stage_database(source: &Path, destination: &Path, header: &BackupHeader) -> AppResult<()> {
-    let (mut input, _) = open_read_nofollow(source)?;
-    input
-        .seek(SeekFrom::Start(CONTAINER_HEADER_LEN as u64))
-        .map_err(|_| AppError::Io)?;
-    let mut out = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(0o600)
-        .open(destination)
-        .map_err(|_| AppError::Io)?;
-    let mut hasher = Sha256::new();
-    let mut total = 0u64;
-    let mut buffer = [0u8; 64 * 1024];
-    loop {
-        let read = input.read(&mut buffer).map_err(|_| AppError::Io)?;
-        if read == 0 {
-            break;
-        }
-        total += read as u64;
-        hasher.update(&buffer[..read]);
-        out.write_all(&buffer[..read]).map_err(|_| AppError::Io)?;
-    }
-    out.sync_all().map_err(|_| AppError::Io)?;
-    let mut hash = [0u8; 32];
-    hash.copy_from_slice(&hasher.finalize());
-    if total != header.db_len || hash != header.db_sha256 {
-        let _ = std::fs::remove_file(destination);
-        return Err(AppError::IntegrityFailure);
-    }
-    enforce_private_file(destination)?;
-    Ok(())
-}
-
-pub struct RestorePlan {
-    pub header: BackupHeader,
-    pub backup_dek: LockedKey,
-    pub staged_path: PathBuf,
-    pub kind: String,
-}
-
-/// Validate a backup completely and stage its database, without touching the
-/// live ledger. The caller must remove `staged_path`.
-pub fn prepare_restore(
-    state: &AppState,
-    backup_path: &Path,
-    passphrase: &SecretString,
-) -> AppResult<RestorePlan> {
-    let header = read_header(backup_path)?;
-    let current_header =
-        state.with_db(|_conn, header, _settings| header.cloned().ok_or(AppError::Locked))?;
-    if header.vault_header.vault_id != current_header.vault_id {
-        return Err(AppError::Blocked("backup belongs to a different vault"));
-    }
-    let backup_dek = header.vault_header.unwrap_dek(passphrase)?;
-    header.verify_seal(&backup_dek)?;
-    verify_db_bytes(backup_path, &header)?;
-    let staged = state
-        .paths
-        .root
-        .join(format!("restore-staged-{}.cmdb", uuid::Uuid::new_v4()));
-    stage_database(backup_path, &staged, &header)?;
-    let result = (|| -> AppResult<()> {
-        let (conn, _cipher) = open_ledger(&staged, &backup_dek, false)?;
-        cipher_integrity_check(&conn)?;
-        sqlite_integrity_check(&conn)?;
-        let meta = vault_meta::load(&conn)?;
-        if meta.vault_id != header.vault_header.vault_id_hex() {
-            return Err(AppError::IntegrityFailure);
-        }
-        if meta.schema_version > supported_schema_version() {
-            return Err(AppError::SchemaTooNew);
-        }
-        Ok(())
-    })();
-    if let Err(error) = result {
-        let _ = std::fs::remove_file(&staged);
-        return Err(error);
-    }
-    Ok(RestorePlan {
-        kind: header.kind.as_str().to_string(),
-        header,
-        backup_dek,
-        staged_path: staged,
-    })
-}
-
-/// Install a staged restore. Requires the vault to be unlocked so the staged
-/// database can be rekeyed to the current DEK and the current header retained.
-/// Native-confirmed restore. Tests call `install_restore_confirmed` directly.
-pub fn install_restore<R: tauri::Runtime>(
-    state: &AppState,
-    app: &AppHandle<R>,
-    plan: RestorePlan,
-) -> AppResult<RestoreResult> {
-    let confirmed = native_dialog::confirm_destructive(
-        app,
-        "Replace the current ledger?",
-        "Restoring this backup replaces accounts, transactions, rules, imports, and settings. A pre-restore encrypted backup is created first. The current passphrase remains in effect.",
-        "Restore backup",
-    )?;
-    if !confirmed {
-        let _ = std::fs::remove_file(&plan.staged_path);
-        return Err(AppError::Cancelled);
-    }
-    install_restore_confirmed(state, plan)
-}
-
-/// Install a validated staged restore without a native prompt. The caller must
-/// have confirmed with the owner.
-pub fn install_restore_confirmed(state: &AppState, plan: RestorePlan) -> AppResult<RestoreResult> {
-    let mut guard = state.session.lock().map_err(|_| AppError::Internal)?;
-    if !guard.is_unlocked() {
-        let _ = std::fs::remove_file(&plan.staged_path);
-        return Err(AppError::Locked);
-    }
-    if guard.mode() != crate::state::SessionMode::Real {
-        let _ = std::fs::remove_file(&plan.staged_path);
-        return Err(AppError::Blocked("restore is unavailable in demo mode"));
-    }
-    let current_header = guard.header.clone().ok_or(AppError::Locked)?;
-    if current_header.vault_id != plan.header.vault_header.vault_id {
-        let _ = std::fs::remove_file(&plan.staged_path);
-        return Err(AppError::Blocked("restore target vault changed"));
-    }
-
-    let dek = match guard.dek.take() {
-        Some(dek) => dek,
-        None => {
-            let _ = std::fs::remove_file(&plan.staged_path);
-            return Err(AppError::Locked);
-        }
-    };
-    let live_conn = match guard.conn.take() {
-        Some(conn) => conn,
-        None => {
-            guard.dek = Some(dek);
-            let _ = std::fs::remove_file(&plan.staged_path);
-            return Err(AppError::Locked);
-        }
-    };
-
-    // Re-key the staged database to the current DEK and reconcile metadata.
-    let rekey_result = (|| -> AppResult<()> {
-        let (staged_conn, _) = open_ledger(&plan.staged_path, &plan.backup_dek, false)?;
-        rekey_ledger(&staged_conn, &dek)?;
-        vault_meta::set_generation(&staged_conn, current_header.generation, false)?;
-        vault_meta::set_schema_version(&staged_conn, supported_schema_version())?;
-        vault_meta::set_integrity_checked(&staged_conn)?;
-        run_migrations(&staged_conn, &dek, &state.paths.root)?;
-        cipher_integrity_check(&staged_conn)?;
-        sqlite_integrity_check(&staged_conn)?;
-        Ok(())
-    })();
-    if let Err(error) = rekey_result {
-        guard.conn = Some(live_conn);
-        guard.dek = Some(dek);
-        let _ = std::fs::remove_file(&plan.staged_path);
-        return Err(error);
-    }
-
-    // Pre-restore backup of the live ledger.
-    let pre = match create_backup_inner(
-        &live_conn,
-        &current_header,
-        &dek,
-        &state.paths.root,
-        &backups_dir(state),
-        BackupKind::PreRestore,
-    ) {
-        Ok(item) => item,
-        Err(error) => {
-            guard.conn = Some(live_conn);
-            guard.dek = Some(dek);
-            let _ = std::fs::remove_file(&plan.staged_path);
-            return Err(error);
-        }
-    };
-
-    drop(live_conn);
-    let old_path = state.paths.database.with_extension("cmdb.restore-old");
-    let _ = std::fs::remove_file(&old_path);
-    let _ = std::fs::remove_file(format!("{}-wal", state.paths.database.display()));
-    let _ = std::fs::remove_file(format!("{}-shm", state.paths.database.display()));
-    if std::fs::rename(&state.paths.database, &old_path).is_err() {
-        guard.dek = Some(dek);
-        let _ = std::fs::remove_file(&plan.staged_path);
-        return Err(AppError::Io);
-    }
-    if std::fs::rename(&plan.staged_path, &state.paths.database).is_err() {
-        let _ = std::fs::rename(&old_path, &state.paths.database);
-        guard.dek = Some(dek);
-        return Err(AppError::Io);
-    }
-    let _ = fsync_dir(&state.paths.root);
-
-    match open_ledger(&state.paths.database, &dek, false) {
-        Ok((new_conn, cipher)) => {
-            if let Err(error) = cipher_integrity_check(&new_conn)
-                .and_then(|_| sqlite_integrity_check(&new_conn))
-                .and_then(|_| load_settings(&new_conn).map(|_| ()))
-            {
-                drop(new_conn);
-                let _ = std::fs::remove_file(&state.paths.database);
-                let _ = std::fs::rename(&old_path, &state.paths.database);
-                if let Ok((conn, cipher)) = open_ledger(&state.paths.database, &dek, false) {
-                    guard.conn = Some(conn);
-                    guard.cipher = Some(cipher);
-                }
-                guard.dek = Some(dek);
-                return Err(error);
-            }
-            let settings = load_settings(&new_conn)?;
-            let _ = std::fs::remove_file(&old_path);
-            let _ = record_event(
-                &new_conn,
-                "restore_succeeded",
-                "success",
-                Some(serde_json::json!({ "kind": plan.kind })),
-            );
-            guard.conn = Some(new_conn);
-            guard.cipher = Some(cipher);
-            guard.dek = Some(dek);
-            guard.settings = Some(settings);
-            Ok(RestoreResult {
-                restored: true,
-                kind: plan.kind.clone(),
-                pre_restore_backup_id: pre.id,
-            })
-        }
-        Err(error) => {
-            let _ = std::fs::remove_file(&state.paths.database);
-            let _ = std::fs::rename(&old_path, &state.paths.database);
-            if let Ok((conn, cipher)) = open_ledger(&state.paths.database, &dek, false) {
-                guard.conn = Some(conn);
-                guard.cipher = Some(cipher);
-            }
-            guard.dek = Some(dek);
-            Err(error)
-        }
-    }
-}
-
-pub fn choose_backup_file<R: tauri::Runtime>(app: &AppHandle<R>) -> AppResult<Option<PathBuf>> {
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    app.run_on_main_thread(move || {
-        let picked = rfd::FileDialog::new()
-            .add_filter("cardigan_money backup", &["cmbak"])
-            .set_title("Choose an encrypted cardigan_money backup")
-            .pick_file();
-        let _ = tx.send(picked);
-    })
-    .map_err(|_| AppError::NativeInput)?;
-    rx.recv_timeout(std::time::Duration::from_secs(300))
-        .map_err(|_| AppError::NativeInput)
-}
-
-pub fn restore<R: tauri::Runtime>(
-    state: &AppState,
-    app: &AppHandle<R>,
-) -> AppResult<RestoreResult> {
-    state.require_real("restore a backup in demo mode")?;
-    let Some(path) = choose_backup_file(app)? else {
-        return Err(AppError::Cancelled);
-    };
-    let Some(mut values) = secure_input::ask(app, SecurePurpose::RestoreBackup)? else {
-        return Err(AppError::Cancelled);
-    };
-    let passphrase = values.pop().ok_or(AppError::NativeInput)?;
-    drop(values);
-    let plan = prepare_restore(state, &path, &passphrase)?;
-    install_restore(state, app, plan)
-}
-
-pub fn portable_export<R: tauri::Runtime>(
-    state: &AppState,
-    app: &AppHandle<R>,
-) -> AppResult<BackupItem> {
-    state.require_real("portable export in demo mode")?;
-    let Some(passphrase) = secure_input::ask_new_confirmed(app, SecurePurpose::ExportPassword)?
-    else {
-        return Err(AppError::Cancelled);
-    };
-    crate::security::crypto::validate_new_passphrase(&passphrase)?;
-    let Some(destination) = choose_portable_destination(app)? else {
-        return Err(AppError::Cancelled);
-    };
-    portable_export_to(state, &destination, passphrase)
-}
-
-/// Testable portable export with an explicit destination and passphrase.
+/// Legacy portable-container creation helper for compatibility tests. There
+/// is no renderer or gateway action for this anymore; existing portable
+/// containers remain restorable through the unified restore flow.
 pub fn portable_export_to(
     state: &AppState,
     destination: &Path,
@@ -979,24 +1167,6 @@ pub fn portable_export_to(
     })();
     let _ = std::fs::remove_file(&snapshot);
     result
-}
-
-fn choose_portable_destination<R: tauri::Runtime>(
-    app: &AppHandle<R>,
-) -> AppResult<Option<PathBuf>> {
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    app.run_on_main_thread(move || {
-        let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
-        let picked = rfd::FileDialog::new()
-            .add_filter("cardigan_money portable backup", &["cmbak"])
-            .set_file_name(format!("cardigan-money-portable-{date}.cmbak"))
-            .set_title("Portable encrypted export (choose a strong password in the next sheet)")
-            .save_file();
-        let _ = tx.send(picked);
-    })
-    .map_err(|_| AppError::NativeInput)?;
-    rx.recv_timeout(std::time::Duration::from_secs(300))
-        .map_err(|_| AppError::NativeInput)
 }
 
 fn overwrite_and_remove(path: &Path) {
@@ -1080,6 +1250,12 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
                 &credential_ref,
             ));
     }
+    // Catch tokens whose credential reference is no longer reachable (for
+    // example after a destructive restore). Best effort; the Keychain may
+    // deny enumeration.
+    let _ = state
+        .credentials
+        .delete_prefix(crate::providers::plaid::ACCESS_TOKEN_PREFIX);
     let _ = state
         .credentials
         .delete(crate::security::keychain::ACCOUNT_CLIENT_ID);
@@ -1094,8 +1270,16 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
     if let Ok(entries) = std::fs::read_dir(&state.app_data) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with("restore-staged-") || name.starts_with(".backup-snapshot-") {
-                overwrite_and_remove(&entry.path());
+            if name.starts_with("restore-staged-")
+                || name.starts_with(".backup-snapshot-")
+                || name.starts_with("vault-install-")
+                || name.starts_with("restore-migrate-")
+            {
+                if entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
+                    remove_tree(&entry.path());
+                } else {
+                    overwrite_and_remove(&entry.path());
+                }
             }
         }
     }

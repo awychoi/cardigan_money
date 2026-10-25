@@ -15,7 +15,7 @@ DEK (32 random bytes, mlock best-effort while unlocked)
     ├── SQLCipher raw key  PRAGMA key = "x'<64 hex>'"   [security/cipher.rs]
     │      └── ledger.cmdb + encrypted WAL
     ├── SQLCipher raw key for consistent encrypted snapshots
-    └── wrapped under an export KEK for portable exports (separate password)
+    └── wrapped under an export KEK for legacy portable containers (retained for compatibility)
 ```
 
 - The passphrase is never stored, logged, sent over IPC, placed in Keychain, or written to disk.
@@ -104,7 +104,7 @@ WAL and SHM are verified by test to contain no plaintext sentinel after writes. 
 ## 4. Native secure input
 
 - AppKit `NSAlert` + `NSSecureTextField` accessory view, built in Rust (`security/secure_input.rs`), presented modally on the main thread.
-- Used for: create passphrase (two fields + match), unlock, passphrase change, backup restore password, portable export password, and the Plaid client secret.
+- Used for: create passphrase (two fields + match), unlock, passphrase change, unified backup passphrase, locked-backup current passphrase, restore backup/current passphrases, post-restore new passphrase, and the Plaid client secret.
 - The renderer supplies only a purpose enum. Titles, messages, and field count are fixed by Rust. The renderer cannot overlay or read the sheet.
 - Returned values become `SecretString`; they are never logged or serialized. For creation, the two entries are compared in Rust (constant-time for the equality check where practical), then the zeroizing buffers are dropped.
 - The sheet window sets `NSWindowSharingNone` for the standard screen-capture path. This is the same best-effort protection as the main window; cameras/remote support are out of scope.
@@ -154,16 +154,21 @@ Self-contained authenticated snapshot: 256-byte header + SQLCipher database byte
 | 256 | db_len | SQLCipher database bytes |
 
 - **AAD** is bytes `0..238`. The seal key is `SHA-256("cardigan_money backup seal v1" || DEK)`. The embedded vault header is authenticated by the passphrase-derived KEK; the seal binds the public backup manifest and DB hash to the DEK. An attacker without the passphrase can modify neither validly. The DB hash is recomputed and compared before staging.
-- A backup from a different vault ID is rejected. Wrong passphrase, header tamper, seal tamper, DB tamper, truncation, or a changed file length fail before replacement.
+- A backup from a different vault ID is accepted only through the explicit cross-vault restore flow. Wrong passphrase, header tamper, seal tamper, DB tamper, truncation, or a changed file length fail before replacement.
 - **Automatic backups need no retained passphrase**: the embedded vault header is copied from the live vault, and the manifest seal uses the in-memory DEK. A backup made before a rotation opens with the old passphrase only.
-- **Portable exports** generate a fresh random export DEK and a new vault-header wrapper under the owner-chosen export passphrase; the snapshot is rekeyed to that export DEK. The vault ID is preserved, and restore validates it.
-- **Restore** requires an unlocked vault. After validation it rekeys the staged DB to the current DEK, reconciles generation/schema metadata with the current header, creates a pre-restore backup, closes the live connection, atomically swaps files, verifies integrity, reloads settings, and records a `restore_succeeded` event. A failure before the swap leaves the live files untouched; a post-swap failure restores the old file.
-- **Retention** matches only strict container filenames: 7 daily, 10 manual, 5 each pre-migration/pre-restore/pre-change, never the last remaining backup. Only regular files in the backups directory are considered; symlinks are skipped/rejected.
+- **Portable containers** (legacy kind 6) remain restorable. New user backups use the `manual` kind; a non-blank backup passphrase generates a fresh header and DEK under the current KDF parameters with the same `vault_id`, and the snapshot is rekeyed to it.
+- **Restore** is staged and validated before install. Full validation includes the header, embedded vault header, seal, length, DB SHA-256, `vault_id`, SQLCipher/SQLite integrity, foreign keys, schema compatibility, and a schema-object allowlist. The staged database is migrated, the selected scope is applied, and it is rekeyed to the target key.
+  - Same-vault full and partial restore keep the current header and DEK. A verified pre-restore backup is mandatory and any failure aborts before the swap.
+  - Cross-vault full and fresh full restore create a fresh header/DEK under the backup passphrase with the backup `vault_id`; they never adopt the backup's DEK. Fresh installs are assembled in a temporary directory and renamed into place.
+  - A destructive full restore for a locked vault without the current passphrase skips the pre-restore backup, keeps the old files until the new vault verifies, and requires typed confirmation plus a provider-token choice.
+  - Every restore marks restored provider snapshots with `restored = 1`, sets restored connections to `reconnect_required`, clears their cursors and last-success times, and resets credential references when the identity is replaced. Sync is blocked for those connections and the overview hides restored live balances, credit values, limits, and due metadata until fresh data arrives.
+  - Same-vault full restores keep Keychain tokens and connection credential references. Cross-vault full restores apply the owner's choice (delete local tokens, delete and revoke remotely, or keep for rollback); scopes that reset connections delete the old tokens. A full cross-vault restore renames the previous vault's normal backups with `cm-retired-`; retired containers are excluded from listing and pruning and remain until manually deleted.
+- **Retention** matches only normal container filenames and only the current vault: 7 daily, 10 manual, 5 each pre-migration/pre-restore/pre-change, never the last remaining backup. Retired containers are exempt. Only regular files are considered; symlinks are skipped/rejected. The normal list also filters by `vault_id`.
 - **Crypto-erase** locks the session, best-effort overwrites and deletes the vault, header mirror/journal, backups, demo database, and staged files, then fsyncs. Files outside the app-data directory and external copies are explicitly out of scope.
 
 ## 8. Keychain
 
-- Service `com.awychoi.cardiganmoney.provider`; one generic-password item per connection UUID; a separate item for the Plaid client secret.
+- Service `com.awychoi.cardiganmoney.plaid`; one generic-password item per connection credential reference; a separate item for the Plaid client ID/secret.
 - Attributes: `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, `kSecAttrSynchronizable=false`, data-protection Keychain (`kSecUseDataProtectionKeychain=true`).
 - Labels contain only the local connection UUID — no account numbers.
 - Tokens are loaded only for the duration of a Rust request and zeroized after use. They are never included in backups, exports, logs, errors, or renderer state.

@@ -353,14 +353,31 @@ export function ConnectionsSyncPanel({
                 <td>{connection.accountCount}</td>
                 <td>
                   {connection.provider === "plaid" && connection.status !== "healthy" ? (
-                    <Button
-                      variant="ghost"
-                      className="btn-small"
-                      onClick={() => void reconnect(connection.id)}
-                      disabled={busy}
-                    >
-                      Reconnect…
-                    </Button>
+                    connection.hasToken ? (
+                      <Button
+                        variant="ghost"
+                        className="btn-small"
+                        onClick={() => void reconnect(connection.id)}
+                        disabled={busy}
+                      >
+                        Reconnect…
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        className="btn-small"
+                        onClick={() => void startLink()}
+                        disabled={
+                          busy ||
+                          !plaid?.configured ||
+                          link?.state === "waiting" ||
+                          link?.state === "starting"
+                        }
+                        title="This connection came from a restore and has no local token. A new link is required."
+                      >
+                        Link again…
+                      </Button>
+                    )
                   ) : (
                     <span className="fine-print">—</span>
                   )}
@@ -370,6 +387,19 @@ export function ConnectionsSyncPanel({
           </tbody>
         </table>
       )}
+
+      {connections.some(
+        (connection) =>
+          connection.provider === "plaid" &&
+          connection.status !== "healthy" &&
+          !connection.hasToken,
+      ) ? (
+        <p className="fine-print">
+          A restored provider connection starts as reconnect required and has no local token. “Link
+          again…” creates a new Item and fresh live data; the restored connection remains visible
+          until it is disconnected.
+        </p>
+      ) : null}
 
       <h3>Recent sync runs</h3>
       {runs.length === 0 ? (

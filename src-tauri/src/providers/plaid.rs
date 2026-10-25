@@ -15,6 +15,10 @@ use crate::security::crypto::SecretString;
 use crate::security::keychain::{CredentialStore, ACCOUNT_CLIENT_ID, ACCOUNT_SECRET};
 
 pub const ACCESS_TOKEN_PREFIX: &str = "plaid-access-token-";
+/// Restored connections that require a brand-new link carry a reference with
+/// this prefix. No Keychain token exists for it, and the value still satisfies
+/// the 36-character `connections.credential_ref` constraint.
+pub const NEW_LINK_CREDENTIAL_PREFIX: &str = "newlink-";
 pub const SANDBOX_BASE: &str = "https://sandbox.plaid.com";
 pub const PRODUCTION_BASE: &str = "https://production.plaid.com";
 
@@ -84,6 +88,13 @@ fn validate_client_id(client_id: &SecretString) -> AppResult<()> {
 
 pub fn access_token_account(credential_ref: &str) -> String {
     format!("{ACCESS_TOKEN_PREFIX}{credential_ref}")
+}
+
+/// A reference for a restored connection that cannot use update mode because
+/// the old token was deleted (cross-vault, fresh, or destructive restore).
+pub fn new_link_credential_ref() -> String {
+    let uuid = uuid::Uuid::new_v4().simple().to_string();
+    format!("{NEW_LINK_CREDENTIAL_PREFIX}{}", &uuid[..28])
 }
 
 pub fn store_access_token(

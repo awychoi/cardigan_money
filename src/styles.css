@@ -1224,6 +1224,48 @@ select {
   margin: 0;
   color: var(--text);
 }
+.export-warning > input {
+  background: var(--bg);
+  border: var(--border-width) solid var(--border-control);
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.restore-options {
+  border: var(--border-width) solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+}
+.restore-options legend {
+  padding: 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.restore-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 12px;
+}
+.restore-option input {
+  margin-top: 2px;
+}
+.restore-option span {
+  color: var(--text);
+}
+.retired-backups {
+  margin-top: 12px;
+  font-size: 12px;
+}
+.retired-backups summary {
+  cursor: pointer;
+  color: var(--muted);
+}
 .rule-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

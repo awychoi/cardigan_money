@@ -92,6 +92,44 @@ pub fn set_schema_version(conn: &Connection, version: u32) -> AppResult<()> {
     Ok(())
 }
 
+fn unix_to_rfc3339(value: i64) -> Option<String> {
+    chrono::DateTime::<chrono::Utc>::from_timestamp(value, 0)
+        .map(|value| value.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+}
+
+/// Reconcile the restored database's public metadata with the header that was
+/// or will be installed. Used by same-vault restore (keep current identity) and
+/// by cross-vault/fresh restore (adopt the backup identity with a new DEK).
+pub fn reconcile_identity(
+    conn: &Connection,
+    header: &VaultHeader,
+    cipher: &CipherInfo,
+    schema_version: u32,
+) -> AppResult<()> {
+    let created = unix_to_rfc3339(header.created_at).unwrap_or_else(now_rfc3339);
+    let rotated = if header.rotated_at > 0 {
+        unix_to_rfc3339(header.rotated_at)
+    } else {
+        None
+    };
+    conn.execute(
+        "UPDATE vault_metadata SET vault_id = ?1, cipher_version = ?2, cipher_provider = ?3, \
+         schema_version = ?4, generation = ?5, created_at = ?6, rotated_at = ?7, \
+         last_integrity_check_at = ?8 WHERE id = 1",
+        rusqlite::params![
+            header.vault_id_hex(),
+            cipher.version,
+            cipher.provider,
+            schema_version,
+            header.generation,
+            created,
+            rotated,
+            now_rfc3339()
+        ],
+    )?;
+    Ok(())
+}
+
 /// Insert demo-mode audit metadata (no vault header; fixed synthetic key).
 pub fn insert_demo_metadata(
     conn: &Connection,

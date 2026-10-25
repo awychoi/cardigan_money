@@ -17,7 +17,10 @@ pub enum SecurePurpose {
     ChangeCurrent,
     ChangeNew,
     RestoreBackup,
-    ExportPassword,
+    RestoreCurrentVault,
+    RestoreChangeCurrentNew,
+    BackupPassphrase,
+    BackupUnlock,
     PlaidSetup,
 }
 
@@ -67,11 +70,36 @@ fn spec(purpose: SecurePurpose) -> PromptSpec {
             action: "Restore",
             cancel: "Cancel",
         },
-        SecurePurpose::ExportPassword => PromptSpec {
-            title: "Portable encrypted export",
-            message: "Choose a separate passphrase for the export file. It must be at least 16 characters. There is NO recovery if you lose it.",
-            labels: &["Export passphrase", "Confirm export passphrase"],
-            action: "Export",
+        SecurePurpose::RestoreCurrentVault => PromptSpec {
+            title: "Restore into a locked vault",
+            message: "Enter the current vault passphrase. It is used to make a pre-restore backup and to keep this vault's identity and passphrase. A wrong passphrase makes no changes.",
+            labels: &["Current vault passphrase"],
+            action: "Continue",
+            cancel: "Cancel",
+        },
+        SecurePurpose::RestoreChangeCurrentNew => PromptSpec {
+            title: "Change the vault passphrase after restore",
+            message: "Enter the current vault passphrase, then choose a new passphrase of at least 16 characters. If you cancel, the restored vault keeps its current passphrase.",
+            labels: &[
+                "Current vault passphrase",
+                "New passphrase",
+                "Confirm new passphrase",
+            ],
+            action: "Change passphrase",
+            cancel: "Cancel",
+        },
+        SecurePurpose::BackupPassphrase => PromptSpec {
+            title: "Back up cardigan_money",
+            message: "Leave this blank to use your vault passphrase. Enter a different passphrase to encrypt only this backup; a separate passphrase must be at least 16 characters. The app never stores it.",
+            labels: &["Backup passphrase (blank = vault passphrase)"],
+            action: "Continue",
+            cancel: "Cancel",
+        },
+        SecurePurpose::BackupUnlock => PromptSpec {
+            title: "Back up a locked vault",
+            message: "Enter the current vault passphrase so the app can read the ledger for this backup. Optionally enter a different backup passphrase; leave it blank to use the vault passphrase. The app stays locked and shows no ledger data.",
+            labels: &["Vault passphrase", "Backup passphrase (optional)"],
+            action: "Continue",
             cancel: "Cancel",
         },
         SecurePurpose::PlaidSetup => PromptSpec {
@@ -266,7 +294,10 @@ mod tests {
             SecurePurpose::ChangeCurrent,
             SecurePurpose::ChangeNew,
             SecurePurpose::RestoreBackup,
-            SecurePurpose::ExportPassword,
+            SecurePurpose::RestoreCurrentVault,
+            SecurePurpose::RestoreChangeCurrentNew,
+            SecurePurpose::BackupPassphrase,
+            SecurePurpose::BackupUnlock,
             SecurePurpose::PlaidSetup,
         ] {
             let spec = spec(purpose);

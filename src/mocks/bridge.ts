@@ -382,7 +382,9 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       break;
     }
     case "backup_create": {
-      requireUnlocked();
+      // The real app allows a locked backup after the native sheet collects the
+      // current passphrase. The mock has no secret prompt but keeps the shape.
+      if (!mockState.vaultExists) throw new BridgeError("vault_missing", "No vault.");
       const backup = {
         id: `cm-backup-manual-5a17c0de-gen1-20261023T120000Z-${crypto.randomUUID().slice(0, 4)}.cmbak`,
         kind: "manual",
@@ -392,7 +394,7 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         schemaVersion: 3,
       };
       mockBackups = [backup, ...mockBackups];
-      data = { backup, pruned: 0 };
+      data = { backup, pruned: 0, listed: true };
       break;
     }
     case "backup_list":
@@ -406,24 +408,70 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       data = { deleted: true };
       break;
     }
-    case "backup_restore":
+    case "backup_list_retired":
       requireUnlocked();
+      data = { backups: [] };
+      break;
+    case "backup_restore_prepare": {
+      const existing = mockState.vaultExists;
+      data = {
+        backup: {
+          id: "cm-backup-manual-5a17c0de-gen1-20261023T120000Z-0000.cmbak",
+          kind: "manual",
+          createdAt: "2026-10-23T12:00:00Z",
+          sizeBytes: 4096,
+          generation: 1,
+          schemaVersion: 3,
+        },
+        backupVaultPrefix: "5a17c0de",
+        currentVaultPrefix: existing ? "5a17c0de" : null,
+        freshInstall: !existing,
+        sameVault: existing,
+        requiresTypedConfirmation: existing,
+        requiresCurrentUnlock: existing && !mockState.unlocked,
+        destructiveAvailable: existing && !mockState.unlocked,
+        requiresPlaidChoice: false,
+        nonPrivate: false,
+      };
+      break;
+    }
+    case "backup_restore_apply": {
+      const request = payload as {
+        scope: "full" | "financial-settings" | "financial-only";
+        allowNonPrivate?: boolean;
+        confirmation?: string;
+        plaidChoice?: string | null;
+        destructive?: boolean;
+      };
+      const existing = mockState.vaultExists;
+      if (existing && request.confirmation !== "replace") {
+        throw new BridgeError("invalid_input", "Type replace to confirm.");
+      }
+      if (request.destructive && (mockState.unlocked || !existing)) {
+        throw new BridgeError("blocked", "The destructive path requires a locked vault.");
+      }
+      if (!existing) {
+        mockState.vaultExists = true;
+        mockState.unlocked = false;
+      }
       data = {
         restored: true,
         kind: "manual",
-        preRestoreBackupId: "cm-backup-pre-restore-5a17c0de-gen1-20261023T120000Z-0000.cmbak",
+        preRestoreBackupId: existing
+          ? "cm-backup-pre-restore-5a17c0de-gen1-20261023T120000Z-0000.cmbak"
+          : null,
+        scope: request.scope,
+        vaultIdChanged: false,
+        adoptedBackupKey: Boolean(request.destructive) || !existing,
+        retiredBackups: 0,
+        vaultKeyChanged: false,
+        preRestoreProtection: request.destructive ? "none" : existing ? "current" : "none",
+        unlocked: mockState.unlocked,
       };
       break;
-    case "portable_export":
-      requireUnlocked();
-      data = {
-        id: "cardigan-money-portable-2026-10-23.cmbak",
-        kind: "portable",
-        createdAt: "2026-10-23T12:00:00Z",
-        sizeBytes: 4096,
-        generation: 1,
-        schemaVersion: 3,
-      };
+    }
+    case "backup_restore_cancel":
+      data = { cancelled: true };
       break;
     case "crypto_erase":
       mockState.vaultExists = false;
@@ -491,6 +539,7 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         sanitizedError: null,
         hasCursor: true,
         accountCount: 1,
+        hasToken: true,
       };
       data = { link: structuredClone(mockPlaidLink) };
       break;

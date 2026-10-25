@@ -76,6 +76,10 @@ pub struct AppState {
     pub imports: ImportJobs,
     pub sync_gate: Mutex<()>,
     pub sync_runtime: Mutex<crate::services::sync::SyncRuntimeStatus>,
+    /// A native-picked backup that has been inspected but not yet applied. The
+    /// path and public header stay in Rust; the renderer only receives a
+    /// preview. Cleared on lock and after an apply attempt.
+    pub pending_restore: Mutex<Option<crate::services::restore::PendingRestore>>,
     pub credentials: std::sync::Arc<dyn CredentialStore>,
     pub plaid_link: Mutex<PlaidLinkRuntime>,
     pub quitting: AtomicBool,
@@ -95,6 +99,7 @@ impl AppState {
             imports: Mutex::new(std::collections::HashMap::new()),
             sync_gate: Mutex::new(()),
             sync_runtime: Mutex::new(Default::default()),
+            pending_restore: Mutex::new(None),
             credentials: std::sync::Arc::new(KeychainStore),
             plaid_link: Mutex::new(PlaidLinkRuntime::default()),
             quitting: AtomicBool::new(false),
@@ -139,6 +144,10 @@ impl AppState {
     /// Lock, zeroize, close the database, and notify the renderer. The renderer
     /// is never responsible for enforcing the lock.
     pub fn lock<R: tauri::Runtime>(&self, app: &AppHandle<R>, reason: &str) -> bool {
+        // A pending restore preview is invalid once the session ends.
+        if let Ok(mut pending) = self.pending_restore.lock() {
+            *pending = None;
+        }
         let state = {
             let mut session = match self.session.lock() {
                 Ok(guard) => guard,

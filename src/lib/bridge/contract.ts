@@ -619,17 +619,61 @@ export const zBackupItem = z
     schemaVersion: z.number().int(),
   })
   .strict();
-export const zBackupResult = z.object({ backup: zBackupItem, pruned: z.number().int() }).strict();
+export const zBackupResult = z
+  .object({ backup: zBackupItem, pruned: z.number().int(), listed: z.boolean() })
+  .strict();
+export const zRestoreScope = z.enum(["full", "financial-settings", "financial-only"]);
+export const zPlaidTokenChoice = z.enum([
+  "delete-local",
+  "delete-and-revoke",
+  "keep",
+  "delete-all",
+  "leave-all",
+]);
+export const zRestorePreview = z
+  .object({
+    backup: zBackupItem,
+    backupVaultPrefix: z.string(),
+    currentVaultPrefix: z.string().nullable(),
+    freshInstall: z.boolean(),
+    sameVault: z.boolean(),
+    requiresTypedConfirmation: z.boolean(),
+    requiresCurrentUnlock: z.boolean(),
+    destructiveAvailable: z.boolean(),
+    requiresPlaidChoice: z.boolean(),
+    nonPrivate: z.boolean(),
+  })
+  .strict();
+export const zRestoreOptions = z
+  .object({
+    scope: zRestoreScope,
+    allowNonPrivate: z.boolean().optional(),
+    confirmation: z.string().max(32).optional(),
+    plaidChoice: zPlaidTokenChoice.nullable().optional(),
+    destructive: z.boolean().optional(),
+  })
+  .strict();
 export const zRestoreResult = z
   .object({
     restored: z.boolean(),
     kind: z.string(),
-    preRestoreBackupId: z.string(),
+    preRestoreBackupId: z.string().nullable(),
+    scope: zRestoreScope,
+    vaultIdChanged: z.boolean(),
+    adoptedBackupKey: z.boolean(),
+    retiredBackups: z.number().int(),
+    vaultKeyChanged: z.boolean(),
+    preRestoreProtection: z.enum(["current", "previous", "none"]),
+    unlocked: z.boolean(),
   })
   .strict();
 
 export type BackupItem = z.infer<typeof zBackupItem>;
 export type BackupResult = z.infer<typeof zBackupResult>;
+export type RestorePreview = z.infer<typeof zRestorePreview>;
+export type RestoreScope = z.infer<typeof zRestoreScope>;
+export type PlaidTokenChoice = z.infer<typeof zPlaidTokenChoice>;
+export type RestoreOptions = z.infer<typeof zRestoreOptions>;
 export type RestoreResult = z.infer<typeof zRestoreResult>;
 
 export const zConnectionView = z
@@ -644,6 +688,7 @@ export const zConnectionView = z
     sanitizedError: z.string().nullable(),
     hasCursor: z.boolean(),
     accountCount: z.number().int(),
+    hasToken: z.boolean(),
   })
   .strict();
 export const zSyncStepView = z
@@ -838,8 +883,10 @@ export interface CommandDefs {
   backup_create: { request: Record<string, never>; response: BackupResult };
   backup_list: { request: Record<string, never>; response: { backups: BackupItem[] } };
   backup_delete: { request: { id: string }; response: { deleted: boolean } };
-  backup_restore: { request: Record<string, never>; response: RestoreResult };
-  portable_export: { request: Record<string, never>; response: BackupItem };
+  backup_list_retired: { request: Record<string, never>; response: { backups: BackupItem[] } };
+  backup_restore_prepare: { request: Record<string, never>; response: RestorePreview };
+  backup_restore_apply: { request: RestoreOptions; response: RestoreResult };
+  backup_restore_cancel: { request: Record<string, never>; response: { cancelled: boolean } };
   crypto_erase: { request: Record<string, never>; response: VaultState };
   sync_status: { request: Record<string, never>; response: SyncStatus };
   sync_now: { request: Record<string, never>; response: SyncSummary };
@@ -939,8 +986,10 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   backup_create: zEmpty,
   backup_list: zEmpty,
   backup_delete: z.object({ id: z.string().min(1).max(200) }).strict(),
-  backup_restore: zEmpty,
-  portable_export: zEmpty,
+  backup_list_retired: zEmpty,
+  backup_restore_prepare: zEmpty,
+  backup_restore_apply: zRestoreOptions,
+  backup_restore_cancel: zEmpty,
   crypto_erase: zEmpty,
   sync_status: zEmpty,
   sync_now: zEmpty,
@@ -999,8 +1048,10 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   backup_create: zBackupResult,
   backup_list: z.object({ backups: z.array(zBackupItem) }).strict(),
   backup_delete: z.object({ deleted: z.boolean() }).strict(),
-  backup_restore: zRestoreResult,
-  portable_export: zBackupItem,
+  backup_list_retired: z.object({ backups: z.array(zBackupItem) }).strict(),
+  backup_restore_prepare: zRestorePreview,
+  backup_restore_apply: zRestoreResult,
+  backup_restore_cancel: z.object({ cancelled: z.boolean() }).strict(),
   crypto_erase: zVaultState,
   sync_status: zSyncStatus,
   sync_now: zSyncSummary,
