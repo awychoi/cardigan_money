@@ -6,7 +6,7 @@ no telemetry.
 
 Built with Tauri 2, React, TypeScript, Rust, and SQLCipher.
 
-![Overview screen with synthetic demo data](docs/design/app-ledger-overview.jpg)
+![Overview screen with the Ledger theme in dark mode and synthetic demo data](docs/design/app-ledger-overview-dark.jpg)
 
 ## What it does
 
