@@ -102,6 +102,8 @@ distribution-ready.
 
 ## License
 
+Copyright (c) 2026 awychoi.
+
 [PolyForm Noncommercial 1.0.0](LICENSE) — free to use, modify, and share for any noncommercial
 purpose: personal projects, study, research, hobby use, and nonprofit, educational, or government
 work. Commercial use is not permitted.
