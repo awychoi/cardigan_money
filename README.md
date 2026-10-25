@@ -100,6 +100,16 @@ Early and experimental. Interfaces, storage formats, and behavior can change. Pl
 disabled and only Sandbox linking has been verified. The macOS build is ad-hoc signed and not
 distribution-ready.
 
+## License
+
+[PolyForm Noncommercial 1.0.0](LICENSE) — free to use, modify, and share for any noncommercial
+purpose: personal projects, study, research, hobby use, and nonprofit, educational, or government
+work. Commercial use is not permitted.
+
+The software is provided **as is, without warranty or condition of any kind**, and you use it
+**at your own risk**. The author is not liable for any damages arising from its use, including
+lost data, forgotten passphrases, or incorrect financial figures. Keep your own backups.
+
 ## About this project
 
 This is a fun experimental agentic AI workflow project. It will keep being worked on and

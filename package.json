@@ -2,6 +2,7 @@
   "name": "cardigan_money",
   "private": true,
   "version": "0.1.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "packageManager": "pnpm@12.11.2",
   "engines": {
