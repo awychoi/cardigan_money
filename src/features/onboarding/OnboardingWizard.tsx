@@ -212,10 +212,8 @@ export function OnboardingWizard({
             <div className="wizard-callout">
               <strong>How your Plaid credentials are stored</strong>
               <p>
-                Clicking the button opens a native macOS sheet with two fields: Client ID and the
-                matching secret. They are not typed into this window. They are stored only in the
-                macOS Keychain (WhenUnlockedThisDeviceOnly, not synced) — never in the ledger, logs,
-                renderer, or exports.
+                A native macOS sheet asks for the Client ID and secret. They are stored only in the
+                macOS Keychain, never in the ledger or exports.
               </p>
             </div>
 
@@ -390,8 +388,7 @@ export function OnboardingWizard({
           <>
             <h1 id="wizard-title">You are ready.</h1>
             <p className="muted">
-              Your encrypted ledger is unlocked. Nothing is required beyond this point; finish the
-              optional setup whenever you like.
+              Your encrypted ledger is unlocked. Everything from here is optional.
             </p>
             <dl className="facts">
               <div>
@@ -430,8 +427,8 @@ export function OnboardingWizard({
 
             {configuredEnvironments.length > 0 ? (
               <p className="fine-print">
-                Credentials are in the Keychain, but no institution is linked yet. Link one in
-                Settings → Accounts → Bank connections to start syncing.
+                Credentials are stored, but no bank is linked yet. Link one in Settings → Accounts →
+                Bank connections.
               </p>
             ) : null}
 
@@ -452,8 +449,7 @@ export function OnboardingWizard({
           </p>
         ) : null}
         <p className="fine-print">
-          The passphrase step is native and already complete. There is no recovery if the passphrase
-          and every backup passphrase are lost.
+          Your passphrase is already set. There is no recovery if it is lost.
         </p>
       </div>
     </main>

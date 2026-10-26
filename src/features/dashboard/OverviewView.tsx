@@ -193,7 +193,6 @@ export function OverviewView({
         <Button variant="primary" onClick={onAddAccount}>
           Add account
         </Button>
-        <p className="fine-print">Opens Settings → Accounts. No provider or network is required.</p>
       </section>
     );
   }
@@ -453,9 +452,8 @@ export function OverviewView({
 
       <footer className="overview-footnote">
         <p className="fine-print">
-          Current balances and upcoming payments are current as of{" "}
-          {formatDateOnly(overview.upcoming.asOfDate)}. Changing the spending month does not change
-          them.
+          Balances and upcoming payments as of {formatDateOnly(overview.upcoming.asOfDate)}; the
+          selected month does not change them.
         </p>
         {overview.balances.otherCurrency.length > 0 ? (
           <p className="fine-print overview-currency-note">

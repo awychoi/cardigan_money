@@ -250,15 +250,13 @@ export function ConnectionsSyncPanel({
     <section className="panel panel-wide" aria-labelledby="connections-title">
       <h2 id="connections-title">Bank connections</h2>
       <p className="inline-notice" role="note">
-        Plaid is optional. Sandbox uses test Items; Trial/Production links real institutions and
-        counts against your Plaid plan. Only credit accounts are imported. You can add cards
-        manually or import CSV without a provider.
+        Plaid is optional. Sandbox uses test data; Trial/Production links real banks and counts
+        against your Plaid plan. Only credit accounts are imported.
       </p>
       <p className="fine-print">
-        Sync runs in Rust after unlock, advances each connection&apos;s cursor only after the page
-        is committed, and keeps previously reported values when a stream is partially unavailable.
-        The renderer never sees provider tokens. Scheduled windows are 08:00 and 20:00 local time; a
-        scheduled run is skipped while locked and retried inside the five-minute window.
+        Sync runs after unlock and keeps the last reported values when a provider stream is
+        unavailable. Scheduled windows are 08:00 and 20:00 local time; a scheduled run is skipped
+        while locked.
         {!status?.providerLive
           ? " Add Plaid credentials below to enable linking; CSV import and manual cards work without a provider."
           : " Plaid credentials are configured; linked connections sync into this ledger."}
@@ -307,22 +305,19 @@ export function ConnectionsSyncPanel({
           </fieldset>
           {environment === "production" ? (
             <p className="inline-notice" role="note">
-              Real bank data will be imported. Plaid&apos;s free Trial includes up to 10 Production
-              Items; paid subscription products can bill while an Item exists, and removing an Item
-              does not restore Trial capacity. Only link institutions you are authorized to access.
+              Real bank data will be imported. Plaid&apos;s free Trial covers up to 10 Production
+              Items; paid plans bill while an Item exists, and removing one does not restore Trial
+              capacity. Only link institutions you are authorized to access.
             </p>
           ) : null}
           <p className="fine-print">
             The {label} client ID and secret are entered in a native sheet and stored only in the
-            macOS Keychain; the renderer never receives them.{" "}
-            {environmentStatus?.message ?? "Add credentials to enable linking."}
+            macOS Keychain. {environmentStatus?.message ?? "Add credentials to enable linking."}
           </p>
           {environmentConnections.length > 0 ? (
             <p className="inline-notice" role="note">
-              Already connected to a bank in this environment? Use <strong>Update…</strong> or{" "}
-              <strong>Reconnect…</strong> on that connection below. cardigan_money allows one active
-              Plaid Item per institution, so a duplicate link is refused before an access token is
-              requested.
+              Already connected here? Use <strong>Update…</strong> or <strong>Reconnect…</strong>{" "}
+              below. Only one active Plaid Item per institution is allowed.
             </p>
           ) : null}
           <div className="button-row">
@@ -363,8 +358,7 @@ export function ConnectionsSyncPanel({
             </p>
           ) : null}
           <p className="fine-print">
-            Capabilities requested: Transactions (required), Balance, and optional Liabilities.
-            Liabilities is shown as unavailable rather than assumed when the Item or plan lacks it.
+            Requests Transactions (required), Balance, and Liabilities where available.
           </p>
           {connections.length > 0 ? (
             <div className="button-row">
@@ -403,8 +397,7 @@ export function ConnectionsSyncPanel({
         <p className="muted">Checking connections…</p>
       ) : connections.length === 0 ? (
         <p className="muted">
-          No bank connected yet. Add Plaid credentials above, or import a CSV from the CSV import
-          tab. Manual cards need no provider.
+          No bank connected yet. Add Plaid credentials above, or import a CSV.
         </p>
       ) : (
         <table className="accounts-table">
@@ -494,9 +487,8 @@ export function ConnectionsSyncPanel({
           !connection.hasToken,
       ) ? (
         <p className="fine-print">
-          A restored provider connection starts as reconnect required and has no local token. “Link
-          again…” creates a new Item and fresh live data; the restored connection remains visible
-          until it is disconnected.
+          A restored connection starts as reconnect required. “Link again…” creates a fresh Item;
+          the restored one stays until you disconnect it.
         </p>
       ) : null}
 

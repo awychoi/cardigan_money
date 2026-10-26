@@ -142,8 +142,8 @@ export function PaymentDetailsForm({
         </label>
       </div>
       <p className="fine-print">
-        A statement balance is not the remaining amount due. Missing amounts are never shown as
-        $0.00. These dated facts are independent of provider snapshots.
+        A statement balance is not the remaining amount due, and missing amounts are never shown as
+        $0.00.
       </p>
       <div className="button-row">
         <Button variant="primary" onClick={() => void save()} disabled={busy}>

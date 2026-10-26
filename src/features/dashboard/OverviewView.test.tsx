@@ -43,7 +43,7 @@ describe("OverviewView", () => {
     expect(screen.getByRole("heading", { name: "Needs attention" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Gross spending by category/i })).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: /Monthly net spending/i })).toBeInTheDocument();
-    expect(screen.getByText(/current as of/i)).toBeInTheDocument();
+    expect(screen.getByText(/Balances and upcoming payments as of/i)).toBeInTheDocument();
     expect(screen.getByText(/Other currencies are shown separately/i)).toBeInTheDocument();
   });
 

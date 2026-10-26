@@ -243,8 +243,8 @@ export function CardsView({
                 {account.connectionStatus === "error" ||
                 account.connectionStatus === "reconnect_required" ? (
                   <span className="fine-print">
-                    Some statement or payment metadata may be unavailable until this connection is
-                    repaired. Missing values are never shown as $0.00.
+                    Statement details may be unavailable until this connection is repaired; missing
+                    values are never shown as $0.00.
                   </span>
                 ) : null}
                 <span className="card-foot">

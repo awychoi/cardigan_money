@@ -101,12 +101,12 @@ export function AccountManager({
           : "All accounts";
   const intro =
     mode.kind === "create"
-      ? "Manual entry needs no bank connection. You can connect a bank or import a CSV from the tabs above."
+      ? "No bank connection needed. Connect or import from the tabs above."
       : mode.kind === "edit"
-        ? "Update this card’s details. Historical transactions keep their records."
+        ? "Edit this card’s details; past transactions keep their records."
         : mode.kind === "payment"
-          ? `Optional statement and due-date facts for ${mode.account.displayName}. They never overwrite provider data and survive syncs.`
-          : "Every card in one list, labeled by source. Add a card manually here, connect a bank, or import a CSV from the tabs above.";
+          ? `Optional statement and due-date facts for ${mode.account.displayName}. They survive syncs.`
+          : "Every card in one list, labeled by source.";
 
   return (
     <section className="panel panel-wide" aria-labelledby="accounts-title">

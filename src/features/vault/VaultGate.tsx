@@ -54,7 +54,7 @@ export function VaultGate({
       setNotice(
         result.listed
           ? `Encrypted backup created: ${result.backup.id}`
-          : `Encrypted backup created, but it is not listed or retained automatically: ${result.backup.id}. Use a standard cm-backup-… name in the app backup folder to include it in the normal list and retention.`,
+          : `Encrypted backup created, but it is not listed or retained automatically: ${result.backup.id}. Rename it to a standard cm-backup-… name in the app backup folder to include it in retention.`,
       );
     } catch (caught) {
       setError(friendlyError(caught));
@@ -108,8 +108,8 @@ export function VaultGate({
           <>
             <h1 id="vault-title">Your encrypted ledger is locked.</h1>
             <p className="muted">
-              A calendar-month view of your cards, balances, and spending. The local ledger is
-              protected by SQLCipher and opens only with your passphrase.
+              Your cards, balances, and spending by calendar month. The ledger is encrypted and
+              opens only with your passphrase.
             </p>
             <div className="vault-actions">
               <Button
@@ -140,9 +140,6 @@ export function VaultGate({
             </div>
             <p className="sheet-note" role="note">
               The passphrase is requested by a native macOS sheet. This window never sees it.
-              Restoring while locked asks for the current passphrase to create a pre-restore backup.
-              “Back up now” asks for the current passphrase, creates the encrypted backup, and
-              leaves the vault locked.
             </p>
             <div className="vault-demo">
               <Button variant="ghost" onClick={openDemo} disabled={busy !== null || restoreOpen}>
@@ -186,8 +183,8 @@ export function VaultGate({
               </Button>
             </div>
             <p className="sheet-note" role="note">
-              You will enter the passphrase twice in a native sheet. Spaces and case are preserved.
-              Losing it makes the ledger permanently unreadable.
+              You will enter the passphrase twice in a native sheet. Losing it makes the ledger
+              permanently unreadable.
             </p>
             <div className="vault-demo">
               <Button variant="ghost" onClick={openDemo} disabled={busy !== null || restoreOpen}>
@@ -215,10 +212,6 @@ export function VaultGate({
             {notice}
           </p>
         ) : null}
-        <p className="fine-print">
-          This is a local, single-user build. It is not distribution-ready and does not claim to be
-          “watertight”.
-        </p>
       </div>
       <span className="sr-only">{notice ?? ""}</span>
     </main>

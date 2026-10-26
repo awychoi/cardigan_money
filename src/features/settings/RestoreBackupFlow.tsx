@@ -171,23 +171,21 @@ export function RestoreBackupFlow({
       </p>
       {preview.freshInstall ? (
         <p>
-          This is a fresh install. The backup&apos;s vault identity and passphrase become the new
-          vault. There is no pre-restore backup because there is no current vault.
+          Fresh install: the backup&apos;s vault identity and passphrase become the new vault. No
+          pre-restore backup is made.
         </p>
       ) : null}
       {isCrossVault && !destructive && !preview.freshInstall ? (
         scope === "full" ? (
           <p>
-            This backup belongs to a different vault. A full restore adopts the backup&apos;s vault
-            identity and passphrase. The current pre-restore backup (and every normal backup from
-            the previous vault) is renamed with a retired prefix and kept until you delete it. It
-            still requires the previous vault passphrase.
+            This backup belongs to a different vault. A full restore adopts its identity and
+            passphrase. The current pre-restore backup is retired and kept until you delete it, and
+            still requires the previous passphrase.
           </p>
         ) : (
           <p>
-            This backup belongs to a different vault. This partial restore keeps the current vault
-            identity and passphrase; the selected data comes from the backup, and unselected data is
-            reset. Normal backups are not retired.
+            This backup belongs to a different vault. A partial restore keeps the current identity
+            and passphrase; unselected data is reset.
           </p>
         )
       ) : null}
@@ -202,9 +200,8 @@ export function RestoreBackupFlow({
       ) : null}
       {preview.nonPrivate ? (
         <p>
-          <strong>This file is not owner-only (0600).</strong> Acknowledge this warning to proceed.
-          The acknowledgement bypasses only the file-mode check. Owner, regular-file, no-symlink,
-          size, header, hash, and seal checks still run.
+          <strong>This file is not owner-only (0600).</strong> Acknowledging bypasses only the
+          file-mode check; the remaining validation still runs.
         </p>
       ) : null}
       {preview.requiresCurrentUnlock && !preview.freshInstall && !destructive ? (
@@ -245,9 +242,9 @@ export function RestoreBackupFlow({
             }}
           />
           <span>
-            <strong>I do not have the current vault passphrase.</strong> Use the destructive path:
-            full database only, no pre-restore backup, with the old vault files kept until the new
-            vault is verified. This cannot be undone if the restore then fails.
+            <strong>I do not have the current vault passphrase.</strong> Full database only, no
+            pre-restore backup, old vault files kept until the new vault is verified. This cannot be
+            undone if the restore then fails.
           </span>
         </label>
       ) : null}
@@ -275,8 +272,8 @@ export function RestoreBackupFlow({
         <fieldset className="restore-options">
           <legend>The old vault&apos;s provider tokens</legend>
           <p>
-            The app cannot read the old connection references while the vault is locked. Choose
-            whether to delete every app-managed provider token or leave them in place.
+            Provider tokens cannot be read while the vault is locked. Choose whether to delete the
+            app-managed tokens or leave them.
           </p>
           {DESTRUCTIVE_CHOICES.map((choice) => (
             <label key={choice.id} className="restore-option">
@@ -308,9 +305,8 @@ export function RestoreBackupFlow({
 
       {preview.requiresTypedConfirmation && !preview.freshInstall ? (
         <p>
-          Type “replace” to confirm. The current ledger is replaced only after the backup is fully
-          validated and, unless you chose the destructive path, a pre-restore backup is created and
-          verified.
+          Type “replace” to confirm. Nothing is replaced until the backup validates; a pre-restore
+          backup is made first unless you chose destructive.
         </p>
       ) : null}
       {preview.requiresTypedConfirmation && !preview.freshInstall ? (

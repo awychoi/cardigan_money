@@ -390,9 +390,8 @@ export function SettingsView({
                 <p className="fine-print">Passphrase change is unavailable in demo mode.</p>
               )}
               <p className="fine-print">
-                Changing the passphrase rotates the data encryption key. Older backups remain
-                readable only with the old passphrase. There is no recovery if every passphrase is
-                lost.
+                Changing the passphrase re-encrypts the ledger. Older backups still need the old
+                passphrase, and there is no recovery if every passphrase is lost.
               </p>
             </section>
           ) : null}
@@ -402,10 +401,7 @@ export function SettingsView({
               <div className="accounts-hub-head">
                 <div>
                   <h2 id="accounts-hub-title">Accounts &amp; data</h2>
-                  <p className="fine-print">
-                    Cards, bank connections, and CSV imports live together here. Every card is
-                    labeled with where its data came from.
-                  </p>
+                  <p className="fine-print">Every card is labeled with where its data came from.</p>
                 </div>
               </div>
               <div className="settings-tabs" role="tablist" aria-label="Accounts and data">
@@ -550,10 +546,8 @@ export function SettingsView({
               <div className="hr" />
               <h3 className="settings-subhead">Demo mode</h3>
               <p className="fine-print">
-                Demo mode is a separate database with synthetic cards for exploring the dashboard.
-                It cannot open the real ledger, read the Keychain, import real CSV, or create
-                backups or exports. Opening demo closes the real session; you will need your
-                passphrase again.
+                A separate database with synthetic cards; it cannot reach your real ledger. Opening
+                demo ends the real session, and your passphrase is needed again.
               </p>
               <div className="button-row">
                 {demo ? (
@@ -575,8 +569,8 @@ export function SettingsView({
               <div className="hr" />
               <h3 className="settings-subhead">Quit</h3>
               <p className="fine-print">
-                Quitting closes the database, zeroizes the session, and stops scheduled syncing. The
-                passphrase is required again at next launch.
+                Closes the database and stops scheduled syncing. Your passphrase is needed at next
+                launch.
               </p>
               <div className="button-row">
                 <Button variant="secondary" onClick={quitApp} disabled={busy}>

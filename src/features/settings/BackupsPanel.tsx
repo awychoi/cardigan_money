@@ -93,7 +93,7 @@ export function BackupsPanel({
       setMessage(
         result.listed
           ? `Encrypted backup created: ${result.backup.id}`
-          : `Encrypted backup created, but it is not listed or retained automatically: ${result.backup.id}. Use a standard cm-backup-… name in the app backup folder to include it in the normal list and retention.`,
+          : `Encrypted backup created, but it is not listed or retained automatically: ${result.backup.id}. Rename it to a standard cm-backup-… name in the app backup folder to include it in retention.`,
       );
       await load();
       await refreshVault();
@@ -143,20 +143,17 @@ export function BackupsPanel({
     <section className="panel panel-wide" aria-labelledby="backups-title">
       <h2 id="backups-title">Backups &amp; recovery</h2>
       <p className="fine-print">
-        Backups are self-contained authenticated SQLCipher containers. Automatic daily backups are
-        kept (7), plus capped pre-migration, pre-restore, and pre-change backups. Losing the
-        passphrase and every backup passphrase makes the data unrecoverable. Backups exclude
-        provider tokens and the Plaid client secret. “Back up now” asks for a passphrase; leave it
-        blank to use your vault passphrase, or enter a separate passphrase for this backup. A backup
-        saved outside the app backup folder is your responsibility and is not pruned.
+        Automatic daily backups are kept (7), plus a few pre-migration and pre-restore copies.
+        Losing your passphrase and every backup passphrase makes the data unrecoverable. “Back up
+        now” can use a separate passphrase — leave it blank to reuse the vault passphrase. Backups
+        saved outside the app backup folder are never pruned.
       </p>
       <p className="fine-print">
         Last backup:{" "}
         {lastBackupAt
           ? `${formatDateOnly(lastBackupAt.slice(0, 10))} (${lastBackupStatus ?? "unknown"})`
           : "None recorded"}
-        . Auto-lock and scheduled sync may mean a backup is older than the last edit; use “Back up
-        now” after important changes.
+        . Auto-lock can make a backup older than your last edit.
       </p>
 
       {error ? (
@@ -235,9 +232,8 @@ export function BackupsPanel({
             Retired backups from a previous vault ({retired.length}) — never pruned automatically
           </summary>
           <p className="fine-print">
-            These containers belong to a vault that was replaced by a cross-vault restore. Restoring
-            one requires the native file picker, the previous passphrase, and the cross-vault
-            warning. They remain until you delete them.
+            These belong to a vault replaced by a cross-vault restore. Restoring one needs the
+            previous passphrase. They stay until you delete them.
           </p>
           <table className="accounts-table">
             <caption className="sr-only">Retired backups</caption>
@@ -275,9 +271,8 @@ export function BackupsPanel({
       <div className="danger-zone">
         <h3>Crypto-erase</h3>
         <p className="fine-print">
-          Deletes the encrypted ledger, header, backups (including retired containers), demo
-          database, and staged files. There is no recovery. Exports, Time Machine snapshots, and
-          other devices are outside this action.
+          Deletes the ledger, backups, demo database, and staged files. There is no recovery.
+          Exports and Time Machine snapshots are unaffected.
         </p>
         {eraseOpen ? (
           <div className="export-warning" role="alert">

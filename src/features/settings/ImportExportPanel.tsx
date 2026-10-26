@@ -229,10 +229,9 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
     <section className="panel panel-wide" aria-labelledby="import-title">
       <h2 id="import-title">CSV import</h2>
       <p className="fine-print">
-        Files are read locally by Rust. The renderer receives an opaque job id, counts, and preview
-        rows — never a file path. Limits: 20 MiB, 100,000 rows, 40 columns, 4,096 characters per
-        field. Ambiguous duplicates are shown for review, never deleted automatically. Exports are
-        started from the Transactions toolbar; this tab only imports.
+        CSV files are read locally. Limits: 20 MiB, 100,000 rows, 40 columns, 4,096 characters per
+        field. Ambiguous duplicates are shown for review, never deleted automatically. Exports start
+        from the Transactions toolbar.
       </p>
       {error ? (
         <p className="inline-error" role="alert">
@@ -249,8 +248,7 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
         <p className="muted">Loading cards…</p>
       ) : accounts.length === 0 ? (
         <p className="muted">
-          No cards yet. Add a card manually on the All accounts tab, or connect a bank, then return
-          here to import a CSV into it.
+          No cards yet. Add one on the All accounts tab or connect a bank first.
         </p>
       ) : !job ? (
         <div className="import-start">
@@ -624,8 +622,7 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
         </table>
       )}
       <p className="fine-print">
-        Export uses the ledger toolbar and always writes plaintext. Imported rows are labeled with
-        CSV provenance; rollback removes only that batch's unique contributions.
+        Exports always write plaintext. Rollback removes only the rows that import added.
       </p>
     </section>
   );

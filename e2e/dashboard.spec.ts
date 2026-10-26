@@ -9,7 +9,7 @@ test.describe("read-only dashboard (browser mock)", () => {
     await expect(page.getByText("Current card balances")).toBeVisible();
     await expect(page.getByText("Upcoming reported payments")).toBeVisible();
     await expect(page.getByText("Pending in this month")).toBeVisible();
-    await expect(page.getByText(/current as of/i)).toBeVisible();
+    await expect(page.getByText(/Balances and upcoming payments as of/i)).toBeVisible();
     await expect(page.getByText(/Other currencies are shown separately/i)).toBeVisible();
     await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
     await expect(page.getByRole("img", { name: /Monthly net spending/i })).toBeVisible();

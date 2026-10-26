@@ -382,9 +382,9 @@ export function LedgerView({
         <div className="export-warning" role="alert">
           <strong>Plaintext export.</strong>
           <p>
-            This writes a plaintext CSV to a location you choose. SQLCipher does not protect it, and
-            cloud-synced folders are outside this app's control. Formula-injection protection is
-            applied to text fields. The file is written owner-only (0600) and is not auto-opened.
+            This writes a plaintext CSV to a location you choose. SQLCipher does not protect it,
+            cloud-synced folders are outside this app's control, and the file is written owner-only
+            (0600).
           </p>
           <div className="button-row">
             <Button variant="primary" onClick={() => void exportCsv()}>

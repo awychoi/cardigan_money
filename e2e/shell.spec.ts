@@ -132,7 +132,7 @@ test.describe("secure shell (browser mock)", () => {
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByText(/Sandbox credentials \(Keychain\)/)).toBeVisible();
-    await expect(page.getByText(/no institution is linked yet/)).toBeVisible();
+    await expect(page.getByText(/no bank is linked yet/)).toBeVisible();
   });
 
   test("sends Add account from an empty overview to Settings → Accounts", async ({ page }) => {

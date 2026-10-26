@@ -95,8 +95,8 @@ export function MerchantRulesPanel({ onChanged }: { onChanged: () => void }) {
     <section className="panel panel-wide" aria-labelledby="rules-title">
       <h2 id="rules-title">Merchant rules</h2>
       <p className="fine-print">
-        Rules merge display labels and optionally assign a category. They never merge transaction
-        records, and a user override still wins.
+        Rules merge display labels and can assign a category. They never merge transaction records,
+        and your override still wins.
       </p>
       {message ? (
         <p className="inline-notice" role="status">
