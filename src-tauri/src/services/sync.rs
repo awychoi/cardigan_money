@@ -14,7 +14,7 @@ use crate::domain::text::{
 use crate::error::{AppError, AppResult};
 use crate::providers::mock::MockProvider;
 use crate::providers::plaid::{
-    load_access_token, load_sandbox_credentials, PlaidClient, PlaidProvider,
+    load_access_token, load_credentials, PlaidClient, PlaidEnvironment, PlaidProvider,
 };
 use crate::providers::{
     Capability, ProviderAccount, ProviderBalance, ProviderClient, ProviderErrorKind,
@@ -274,12 +274,9 @@ fn provider_for(
     match connection.provider.as_str() {
         "mock" => Ok(Box::new(MockProvider::default())),
         "plaid" => {
-            if connection.environment != "sandbox" {
-                return Err(AppError::Blocked(
-                    "Production Plaid is disabled until Sandbox verification",
-                ));
-            }
-            let credentials = load_sandbox_credentials(state.credentials.as_ref())?
+            let environment = PlaidEnvironment::parse(&connection.environment)
+                .ok_or(AppError::Blocked("unsupported Plaid environment"))?;
+            let credentials = load_credentials(state.credentials.as_ref(), environment)?
                 .ok_or(AppError::ProviderNotConfigured)?;
             let token = load_access_token(state.credentials.as_ref(), &connection.credential_ref)?
                 .ok_or(AppError::ProviderNotConfigured)?;

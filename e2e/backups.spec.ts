@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSettingsSection, openUnlocked } from "./helpers";
+import { openAccountsTab, openSettingsSection, openUnlocked } from "./helpers";
 
 test.describe("backup and recovery UI (browser mock)", () => {
   test("creates, restores with a typed confirmation, and deletes an encrypted backup", async ({
@@ -86,9 +86,9 @@ test.describe("sync status UI (browser mock)", () => {
   test("shows the provider-free state and disables manual sync", async ({ page }) => {
     await openUnlocked(page);
     await expect(page.getByText(/No provider connected/).first()).toBeVisible();
-    await openSettingsSection(page, "Connections & sync");
-    await expect(page.getByRole("heading", { name: "Connections & sync" })).toBeVisible();
-    await expect(page.getByText(/No provider connected. Import a CSV/)).toBeVisible();
+    await openAccountsTab(page, "Bank connections");
+    await expect(page.getByRole("heading", { name: "Bank connections" })).toBeVisible();
+    await expect(page.getByText(/No bank connected yet/)).toBeVisible();
     await expect(
       page.getByRole("main").getByRole("button", { name: "Sync now", exact: true }),
     ).toBeDisabled();
@@ -108,8 +108,8 @@ test("demo theme toggle applies immediately without a vault-locked warning", asy
 
 test("configures Sandbox credentials and links a mock Plaid Item", async ({ page }) => {
   await openUnlocked(page);
-  await openSettingsSection(page, "Connections & sync");
-  await expect(page.getByRole("heading", { name: "Plaid Sandbox" })).toBeVisible();
+  await openAccountsTab(page, "Bank connections");
+  await expect(page.getByRole("heading", { name: "Plaid connection" })).toBeVisible();
   await page.getByRole("button", { name: /Add Sandbox credentials/ }).click();
   await expect(page.getByText(/Sandbox credentials saved/)).toBeVisible();
   await page.getByRole("button", { name: "Link a Sandbox institution…" }).click();
@@ -119,4 +119,46 @@ test("configures Sandbox credentials and links a mock Plaid Item", async ({ page
   await page.getByRole("button", { name: "Show verification report" }).click();
   await expect(page.getByLabel("Plaid verification report")).toContainText("accountCount");
   await expect(page.getByLabel("Plaid verification report")).toContainText("Sandbox Bank");
+});
+
+test("configures Trial credentials and links a mock production Item", async ({ page }) => {
+  await openUnlocked(page);
+  await openAccountsTab(page, "Bank connections");
+  await expect(page.getByRole("heading", { name: "Plaid connection" })).toBeVisible();
+  await page.getByRole("radio", { name: /Trial \/ Production/ }).check();
+  await expect(page.getByText(/Real bank data will be imported/)).toBeVisible();
+  await page.getByRole("button", { name: /Add Trial \/ Production credentials/ }).click();
+  await expect(page.getByText(/Trial \/ Production credentials saved/)).toBeVisible();
+  await page.getByRole("button", { name: "Link a real institution…" }).click();
+  await expect(page.getByText(/Waiting for the Plaid Trial \/ Production flow/)).toBeVisible();
+  await expect(page.getByText(/Trial \/ Production Item linked/)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole("cell", { name: "Production Bank (mock)" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Trial / Production" })).toBeVisible();
+});
+
+test("updates a healthy Plaid connection through update mode", async ({ page }) => {
+  await openUnlocked(page);
+  await openAccountsTab(page, "Bank connections");
+  await page.getByRole("button", { name: /Add Sandbox credentials/ }).click();
+  await page.getByRole("button", { name: "Link a Sandbox institution…" }).click();
+  await expect(page.getByText(/Sandbox Item linked/)).toBeVisible({ timeout: 8000 });
+  await page.getByRole("button", { name: "Update…" }).click();
+  await expect(page.getByText(/Update the Sandbox Item in your browser/)).toBeVisible();
+  await expect(page.getByText(/Waiting for the Plaid Sandbox flow/)).toBeVisible();
+  await expect(page.getByText(/Sandbox Item updated/)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole("cell", { name: "Sandbox Bank" })).toHaveCount(1);
+});
+
+test("refuses a duplicate Plaid Item before an access token is requested", async ({ page }) => {
+  await openUnlocked(page);
+  await openAccountsTab(page, "Bank connections");
+  await page.getByRole("button", { name: /Add Sandbox credentials/ }).click();
+  await page.getByRole("button", { name: "Link a Sandbox institution…" }).click();
+  await expect(page.getByText(/Sandbox Item linked/)).toBeVisible({ timeout: 8000 });
+  await page.getByRole("button", { name: "Link a Sandbox institution…" }).click();
+  await expect(page.getByText(/Sandbox Bank is already connected/)).toBeVisible({
+    timeout: 8000,
+  });
+  await expect(page.getByText(/No Plaid access token was requested/)).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Sandbox Bank" })).toHaveCount(1);
 });

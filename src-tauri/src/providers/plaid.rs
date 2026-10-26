@@ -1,7 +1,7 @@
 //! Plaid Sandbox/Production HTTP adapter. The renderer never sees tokens; all
 //! requests run in Rust through the allowlisted, bounded network policy.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::error::{AppError, AppResult};
@@ -12,7 +12,10 @@ use crate::providers::{
     ProviderTransaction, TransactionsPage,
 };
 use crate::security::crypto::SecretString;
-use crate::security::keychain::{CredentialStore, ACCOUNT_CLIENT_ID, ACCOUNT_SECRET};
+use crate::security::keychain::{
+    CredentialStore, ACCOUNT_CLIENT_ID_PRODUCTION, ACCOUNT_CLIENT_ID_SANDBOX,
+    ACCOUNT_SECRET_PRODUCTION, ACCOUNT_SECRET_SANDBOX,
+};
 
 pub const ACCESS_TOKEN_PREFIX: &str = "plaid-access-token-";
 /// Restored connections that require a brand-new link carry a reference with
@@ -22,17 +25,58 @@ pub const NEW_LINK_CREDENTIAL_PREFIX: &str = "newlink-";
 pub const SANDBOX_BASE: &str = "https://sandbox.plaid.com";
 pub const PRODUCTION_BASE: &str = "https://production.plaid.com";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PlaidEnvironment {
     Sandbox,
     Production,
 }
 
 impl PlaidEnvironment {
+    pub const ALL: [Self; 2] = [Self::Sandbox, Self::Production];
+
     pub fn base_url(self) -> &'static str {
         match self {
             Self::Sandbox => SANDBOX_BASE,
             Self::Production => PRODUCTION_BASE,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Sandbox => "sandbox",
+            Self::Production => "production",
+        }
+    }
+
+    /// User-facing name. Production is where Plaid's free Trial plan lives, so
+    /// the UI says "Trial / Production" rather than implying paid enrollment.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Sandbox => "Sandbox",
+            Self::Production => "Trial / Production",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "sandbox" => Some(Self::Sandbox),
+            "production" => Some(Self::Production),
+            _ => None,
+        }
+    }
+
+    fn client_id_account(self) -> &'static str {
+        match self {
+            Self::Sandbox => ACCOUNT_CLIENT_ID_SANDBOX,
+            Self::Production => ACCOUNT_CLIENT_ID_PRODUCTION,
+        }
+    }
+
+    fn secret_account(self) -> &'static str {
+        match self {
+            Self::Sandbox => ACCOUNT_SECRET_SANDBOX,
+            Self::Production => ACCOUNT_SECRET_PRODUCTION,
         }
     }
 }
@@ -43,34 +87,49 @@ pub struct PlaidCredentials {
     pub environment: PlaidEnvironment,
 }
 
-pub fn load_sandbox_credentials(
+/// Load the client ID/secret for one environment. A partial pair is treated as
+/// unconfigured so a stale half-written credential can never be used with a
+/// different environment's secret.
+pub fn load_credentials(
     store: &dyn CredentialStore,
+    environment: PlaidEnvironment,
 ) -> AppResult<Option<PlaidCredentials>> {
-    let Some(client_id) = store.get(ACCOUNT_CLIENT_ID)? else {
+    let Some(client_id) = store.get(environment.client_id_account())? else {
         return Ok(None);
     };
-    let Some(secret) = store.get(ACCOUNT_SECRET)? else {
+    let Some(secret) = store.get(environment.secret_account())? else {
         return Ok(None);
     };
     Ok(Some(PlaidCredentials {
         client_id,
         secret,
-        environment: PlaidEnvironment::Sandbox,
+        environment,
     }))
 }
 
-pub fn save_sandbox_credentials(
+pub fn save_credentials(
     store: &dyn CredentialStore,
+    environment: PlaidEnvironment,
     client_id: SecretString,
     secret: SecretString,
 ) -> AppResult<()> {
     validate_client_id(&client_id)?;
     if secret.expose().len() < 8 || secret.expose().len() > 256 {
-        return Err(AppError::InvalidInput("Plaid Sandbox secret length"));
+        return Err(AppError::InvalidInput("Plaid secret length"));
     }
-    store.set(ACCOUNT_CLIENT_ID, &client_id)?;
-    store.set(ACCOUNT_SECRET, &secret)?;
+    store.set(environment.client_id_account(), &client_id)?;
+    store.set(environment.secret_account(), &secret)?;
     Ok(())
+}
+
+/// True when either environment has a complete client ID/secret pair.
+pub fn any_credentials_configured(store: &dyn CredentialStore) -> AppResult<bool> {
+    for environment in PlaidEnvironment::ALL {
+        if load_credentials(store, environment)?.is_some() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn validate_client_id(client_id: &SecretString) -> AppResult<()> {
@@ -206,6 +265,7 @@ impl LinkTokenGetResponse {
 pub struct PlaidClient {
     client: reqwest::blocking::Client,
     policy: NetworkPolicy,
+    environment: PlaidEnvironment,
     base_url: &'static str,
     client_id: SecretString,
     secret: SecretString,
@@ -222,11 +282,16 @@ impl PlaidClient {
         Ok(Self {
             client,
             policy,
+            environment: credentials.environment,
             base_url: credentials.environment.base_url(),
             client_id: credentials.client_id,
             secret: credentials.secret,
             access_token,
         })
+    }
+
+    pub fn environment(&self) -> PlaidEnvironment {
+        self.environment
     }
 
     fn post<T: for<'de> Deserialize<'de>>(&self, path: &str, mut body: Value) -> ProviderResult<T> {
@@ -285,6 +350,8 @@ impl PlaidClient {
         &self,
         client_user_id: &str,
     ) -> ProviderResult<LinkTokenResponse> {
+        // Desktop Hosted Link uses Plaid's browser pop-up OAuth flow; Plaid's
+        // OAuth guide explicitly supports web flows without a redirect_uri.
         self.post(
             "/link/token/create",
             json!({
@@ -495,6 +562,8 @@ fn map_plaid_error(code: Option<&str>) -> ProviderError {
         "PRODUCT_NOT_READY"
         | "PRODUCTS_NOT_SUPPORTED"
         | "NO_LIABILITIES"
+        | "NO_LIABILITY_ACCOUNTS"
+        | "INVALID_PRODUCT"
         | "PRODUCT_NOT_ENABLED" => ProviderError::new(
             ProviderErrorKind::Unsupported,
             "This Plaid product is unavailable for the Item.",

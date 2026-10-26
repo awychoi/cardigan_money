@@ -72,10 +72,12 @@ describe("app shell", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(await screen.findByRole("button", { name: "Unlock vault" }));
-    expect(await screen.findByText("Add your first account.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Skip for now" }));
-    expect(await screen.findByText("Connect a provider later.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
+    expect(await screen.findByText("Connect your bank.")).toBeInTheDocument();
+    expect(screen.getByText(/macOS Keychain/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue without a bank" }));
+    expect(await screen.findByText("Set your reporting timezone.")).toBeInTheDocument();
+    expect(screen.getByText(/Detected from this Mac/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByText("You are ready.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Finish setup" }));
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
@@ -86,18 +88,43 @@ describe("app shell", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(await screen.findByRole("button", { name: "Unlock vault" }));
-    await screen.findByText("Add your first account.");
+    await screen.findByText("Connect your bank.");
+    await user.click(screen.getByRole("button", { name: "Add a card manually" }));
+    expect(await screen.findByText("Add a card manually.")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Issuer"), "Chase");
     await user.type(screen.getByLabelText("Display name"), "Wizard Card");
     await user.type(screen.getByLabelText(/Last four/), "1234");
     await user.click(screen.getByRole("button", { name: "Add account" }));
-    expect(await screen.findByText(/Added Wizard Card/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continue without a provider" }));
-    await user.click(screen.getByRole("button", { name: "Finish setup" }));
+    expect(await screen.findByText("Set your reporting timezone.")).toBeInTheDocument();
+    expect(screen.getByText(/Added Wizard Card/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(await screen.findByRole("button", { name: "Finish setup" }));
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Settings" }));
     await user.click(screen.getByRole("button", { name: "Accounts" }));
     expect((await screen.findAllByText("Wizard Card", { exact: true })).length).toBeGreaterThan(0);
+  });
+
+  it("saves Plaid credentials through the onboarding credential step", async () => {
+    __setMockSettings({ onboardingCompleted: false });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Unlock vault" }));
+    await screen.findByText("Connect your bank.");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Add Sandbox credentials/ })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: /Add Sandbox credentials/ }));
+    expect(
+      await screen.findByText(/Sandbox credentials saved to the macOS Keychain/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Stored in Keychain")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByText("Set your reporting timezone.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText(/Sandbox credentials \(Keychain\)/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Finish setup" }));
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
   });
 
   it("shows real cipher, KDF, and security events in settings", async () => {

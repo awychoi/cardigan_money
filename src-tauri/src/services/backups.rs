@@ -1256,12 +1256,9 @@ pub fn crypto_erase_confirmed<R: tauri::Runtime>(
     let _ = state
         .credentials
         .delete_prefix(crate::providers::plaid::ACCESS_TOKEN_PREFIX);
-    let _ = state
-        .credentials
-        .delete(crate::security::keychain::ACCOUNT_CLIENT_ID);
-    let _ = state
-        .credentials
-        .delete(crate::security::keychain::ACCOUNT_SECRET);
+    for account in crate::security::keychain::PLAID_CLIENT_ACCOUNTS {
+        let _ = state.credentials.delete(account);
+    }
     state.lock(app, "crypto_erase");
     remove_tree(&state.app_data.join("vault"));
     remove_tree(&state.app_data.join("backups"));

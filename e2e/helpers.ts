@@ -21,3 +21,17 @@ export async function openSettingsSection(page: Page, section: string): Promise<
   await item.click();
   await expect(item).toHaveAttribute("aria-current", "page");
 }
+
+/**
+ * Accounts groups cards, bank connections, and CSV imports into one section
+ * with sub-tabs.
+ */
+export async function openAccountsTab(
+  page: Page,
+  tab: "All accounts" | "Bank connections" | "CSV import",
+): Promise<void> {
+  await openSettingsSection(page, "Accounts");
+  const item = page.getByRole("tab", { name: tab, exact: true });
+  await item.click();
+  await expect(item).toHaveAttribute("aria-selected", "true");
+}

@@ -81,7 +81,7 @@ UNTRUSTED                         VALIDATED BOUNDARY                  TRUSTED (m
 | Backup tampering | AEAD-authenticated header, DB length + SHA-256 bound as AAD, vault-ID/schema checks, read-only validation, atomic replacement |
 | Supply-chain compromise | Lockfiles/frozen installs, pinned toolchains, audits, explicit postinstall allowlist, official plugins only |
 | Logs/crash/state restoration | Redacting logger off by default, no financial payloads, core dumps disabled, state restoration disabled, no third-party crash reporting |
-| Plaid linking flow | Hosted Link + `/link/token/get` polling; no scheme/loopback/listener; unverified until owner enrols and Sandbox test passes |
+| Plaid linking flow | Hosted Link + `/link/token/get` polling; no scheme/loopback/listener; Sandbox verified; Trial/Production wired with separate credentials and host but unverified with a real Item |
 
 ## 7. Out of scope / non-goals
 

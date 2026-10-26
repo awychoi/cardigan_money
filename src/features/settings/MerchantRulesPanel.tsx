@@ -159,33 +159,35 @@ export function MerchantRulesPanel({ onChanged }: { onChanged: () => void }) {
             onChange={(event) => setForm({ ...form, priority: Number(event.target.value) })}
           />
         </label>
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={form.enabled}
-            onChange={(event) => setForm({ ...form, enabled: event.target.checked })}
-          />
-          Enabled
-        </label>
-        <div className="button-row">
-          <Button
-            variant="primary"
-            onClick={submit}
-            disabled={busy || !form.matchText.trim() || !form.canonicalMerchant.trim()}
-          >
-            {editingId ? "Save rule" : "Add rule"}
-          </Button>
-          {editingId ? (
+        <div className="rule-form-actions">
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={form.enabled}
+              onChange={(event) => setForm({ ...form, enabled: event.target.checked })}
+            />
+            Enabled
+          </label>
+          <div className="button-row">
             <Button
-              variant="ghost"
-              onClick={() => {
-                setEditingId(null);
-                setForm({ ...EMPTY });
-              }}
+              variant="primary"
+              onClick={submit}
+              disabled={busy || !form.matchText.trim() || !form.canonicalMerchant.trim()}
             >
-              Cancel
+              {editingId ? "Save rule" : "Add rule"}
             </Button>
-          ) : null}
+            {editingId ? (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({ ...EMPTY });
+                }}
+              >
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 

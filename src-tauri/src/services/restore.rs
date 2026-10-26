@@ -819,12 +819,16 @@ fn prepare_restored_connections(
     Ok(())
 }
 
-fn old_plaid_credential_refs(conn: &Connection) -> Vec<String> {
+/// Credential reference plus the connection's Plaid environment. Revocation
+/// must use that environment's client credentials and host.
+fn old_plaid_credential_refs(conn: &Connection) -> Vec<(String, String)> {
     let mut refs = Vec::new();
     if let Ok(mut stmt) =
-        conn.prepare("SELECT credential_ref FROM connections WHERE provider = 'plaid'")
+        conn.prepare("SELECT credential_ref, environment FROM connections WHERE provider = 'plaid'")
     {
-        if let Ok(rows) = stmt.query_map([], |row| row.get::<_, String>(0)) {
+        if let Ok(rows) = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        }) {
             for row in rows.flatten() {
                 refs.push(row);
             }
@@ -1152,10 +1156,10 @@ fn apply_plaid_choice(
     replace_identity: bool,
     destructive: bool,
     choice: Option<PlaidTokenChoice>,
-    old_refs: &[String],
+    old_refs: &[(String, String)],
 ) {
     let delete_refs = || {
-        for credential_ref in old_refs {
+        for (credential_ref, _) in old_refs {
             let _ = state
                 .credentials
                 .delete(&access_token_account(credential_ref));
@@ -1178,8 +1182,8 @@ fn apply_plaid_choice(
     }
     match choice {
         Some(PlaidTokenChoice::DeleteAndRevoke) => {
-            for credential_ref in old_refs {
-                revoke_old_item(state, credential_ref);
+            for (credential_ref, environment) in old_refs {
+                revoke_old_item(state, credential_ref, environment);
             }
             delete_refs();
         }
@@ -1189,8 +1193,12 @@ fn apply_plaid_choice(
     }
 }
 
-fn revoke_old_item(state: &AppState, credential_ref: &str) {
-    let Ok(Some(credentials)) = plaid::load_sandbox_credentials(state.credentials.as_ref()) else {
+fn revoke_old_item(state: &AppState, credential_ref: &str, environment: &str) {
+    let Some(environment) = plaid::PlaidEnvironment::parse(environment) else {
+        return;
+    };
+    let Ok(Some(credentials)) = plaid::load_credentials(state.credentials.as_ref(), environment)
+    else {
         return;
     };
     let Ok(Some(token)) = plaid::load_access_token(state.credentials.as_ref(), credential_ref)

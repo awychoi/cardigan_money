@@ -5,6 +5,7 @@ use crate::domain::money::parse_currency_amount;
 use crate::error::{AppError, AppResult, ErrorPayload};
 use crate::ipc::{guard_main_window, GatewayRequest, GatewayResponse, API_VERSION};
 use crate::providers::csv::CsvMapping;
+use crate::providers::plaid::{any_credentials_configured, PlaidEnvironment};
 use crate::security::secure_input::{self, SecurePurpose};
 use crate::services::backups::{self, BackupItem, BackupResult};
 use crate::services::dashboard::{self, Dashboard};
@@ -151,6 +152,12 @@ struct SyncRunsPayload {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ConnectionIdPayload {
     connection_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PlaidEnvironmentPayload {
+    environment: PlaidEnvironment,
 }
 
 #[derive(Debug, Serialize)]
@@ -756,13 +763,13 @@ pub fn execute<R: tauri::Runtime>(
         "plaid_setup" => {
             state.require_real("configure Plaid in demo mode")?;
             state.rate_limit("plaid_setup", 3, 60)?;
-            let _: EmptyPayload = request.decode_payload()?;
+            let payload: PlaidEnvironmentPayload = request.decode_payload()?;
             state.with_db(|_conn, _header, _settings| Ok(()))?;
-            let Some(mut values) = crate::security::secure_input::ask(
-                app,
-                crate::security::secure_input::SecurePurpose::PlaidSetup,
-            )?
-            else {
+            let purpose = match payload.environment {
+                PlaidEnvironment::Sandbox => SecurePurpose::PlaidSetupSandbox,
+                PlaidEnvironment::Production => SecurePurpose::PlaidSetupProduction,
+            };
+            let Some(mut values) = crate::security::secure_input::ask(app, purpose)? else {
                 return Err(AppError::Cancelled);
             };
             if values.len() != 2 {
@@ -770,21 +777,22 @@ pub fn execute<R: tauri::Runtime>(
             }
             let secret = values.pop().ok_or(AppError::NativeInput)?;
             let client_id = values.pop().ok_or(AppError::NativeInput)?;
-            let plaid = plaid_link::save_credentials(state, client_id, secret)?;
+            let plaid =
+                plaid_link::save_credentials(state, payload.environment, client_id, secret)?;
             GatewayResponse::ok(PlaidStatusView { plaid })
         }
         "plaid_test" => {
             state.require_real("configure Plaid in demo mode")?;
             state.rate_limit("plaid_test", 3, 60)?;
-            let _: EmptyPayload = request.decode_payload()?;
-            let plaid = plaid_link::test_credentials(state)?;
+            let payload: PlaidEnvironmentPayload = request.decode_payload()?;
+            let plaid = plaid_link::test_credentials(state, payload.environment)?;
             GatewayResponse::ok(PlaidStatusView { plaid })
         }
         "plaid_link_start" => {
             state.require_real("link Plaid in demo mode")?;
             state.rate_limit("plaid_link_start", 3, 60)?;
-            let _: EmptyPayload = request.decode_payload()?;
-            let link = plaid_link::start_link(state, app)?;
+            let payload: PlaidEnvironmentPayload = request.decode_payload()?;
+            let link = plaid_link::start_link(state, app, payload.environment)?;
             GatewayResponse::ok(PlaidLinkView { link })
         }
         "plaid_verification_report" => {
@@ -818,9 +826,7 @@ pub fn execute<R: tauri::Runtime>(
             let recent_runs = sync::recent_runs(state, 10)?;
             let runtime = sync::runtime_status(state)?;
             let provider_live = state.mode() == crate::state::SessionMode::Real
-                && crate::providers::plaid::load_sandbox_credentials(state.credentials.as_ref())
-                    .map(|value| value.is_some())
-                    .unwrap_or(false);
+                && any_credentials_configured(state.credentials.as_ref()).unwrap_or(false);
             GatewayResponse::ok(SyncStatusView {
                 connections,
                 recent_runs,

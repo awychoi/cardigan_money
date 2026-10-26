@@ -193,7 +193,7 @@ export function OverviewView({
         <Button variant="primary" onClick={onAddAccount}>
           Add account
         </Button>
-        <p className="fine-print">No provider or network is required.</p>
+        <p className="fine-print">Opens Settings → Accounts. No provider or network is required.</p>
       </section>
     );
   }

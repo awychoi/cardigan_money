@@ -1,5 +1,7 @@
 # Plaid Sandbox verification record — 2026-10-24
 
+> **Historical record.** Trial/Production wiring was added on 2026-10-25; this record still describes only the Sandbox verification. The one-active-Item-per-institution guard was added later on 2026-10-25 and is not exercised by this record.
+
 Verified against build SHA-256 `2ef8b68bdb1dd2708dadcb4bbb3e75bd6e71a4404393429c02a1218ee3bb3138`. Evidence supplied by the owner from the app's read-only **Show verification report** output. The report contains aggregates only; no tokens, credential references, account numbers, descriptions, or amounts.
 
 ## Evidence
@@ -25,7 +27,7 @@ Two Sandbox Items were linked. The owner quit the app, reopened it, unlocked the
 
 ## Not verified / limitations
 
-- **No Production Item or real institution** was linked. Production remains disabled in code.
+- **No Production Item or real institution** was linked. Production was disabled in code at the time of this test; it is now wired and enabled but still unverified with a real Item.
 - **Keychain attribute inspection was not performed** by the owner (Keychain Access UI/ACL). The functional round trip is verified; attribute inspection remains a native smoke item.
 - **Reconnect/update mode was implemented and unit/mock-covered but not exercised live.** The connection stayed healthy, so no reconnect prompt occurred.
 - The test used Sandbox institutions/accounts; no real personal financial data was involved.

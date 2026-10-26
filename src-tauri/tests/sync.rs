@@ -7,6 +7,7 @@ use cardigan_money_lib::providers::{
     ProviderClient, ProviderResult, ProviderTransaction, TransactionsPage,
 };
 use cardigan_money_lib::security::crypto::SecretString;
+use cardigan_money_lib::security::keychain::MemoryStore;
 use cardigan_money_lib::services::sync::{self, sync_connection_by_id_with_client};
 use cardigan_money_lib::services::vault;
 use cardigan_money_lib::state::AppState;
@@ -16,7 +17,10 @@ const PASS: &str = "correct horse battery staple sync";
 
 fn setup() -> (tempfile::TempDir, AppState, String) {
     let tmp = tempfile::tempdir().unwrap();
-    let state = AppState::new(tmp.path().to_path_buf()).unwrap();
+    let mut state = AppState::new(tmp.path().to_path_buf()).unwrap();
+    // Never touch the login Keychain from an automated test. The sandboxed
+    // test runner blocks that access and would otherwise hang here.
+    state.credentials = std::sync::Arc::new(MemoryStore::default());
     vault::create(&state, SecretString::new(PASS.into())).unwrap();
     let connection = state
         .with_db(|conn, _h, _s| {

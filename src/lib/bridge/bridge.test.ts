@@ -81,6 +81,31 @@ describe("bridge contract", () => {
     });
   });
 
+  it("keeps Sandbox and Trial/Production Plaid credentials and links separate", async () => {
+    await command("vault_unlock", {});
+    const initial = await command("plaid_status", {});
+    expect(initial.plaid.sandbox.configured).toBe(false);
+    expect(initial.plaid.production.configured).toBe(false);
+
+    const saved = await command("plaid_setup", { environment: "production" });
+    expect(saved.plaid.production.configured).toBe(true);
+    expect(saved.plaid.sandbox.configured).toBe(false);
+    await expect(command("plaid_test", { environment: "sandbox" })).rejects.toMatchObject({
+      code: "provider_not_configured",
+    });
+
+    const started = await command("plaid_link_start", { environment: "production" });
+    expect(started.link.environment).toBe("production");
+    const linked = await command("plaid_link_status", {});
+    expect(linked.link.state).toBe("linked");
+    expect(linked.link.message).toContain("Trial / Production Item linked");
+
+    const sync = await command("sync_status", {});
+    expect(sync.connections).toHaveLength(1);
+    expect(sync.connections[0].environment).toBe("production");
+    expect(sync.providerLive).toBe(true);
+  });
+
   it("removes the old portable-export action and keeps retired backups separate", async () => {
     expect(isCommandName("portable_export")).toBe(false);
     expect(isCommandName("backup_restore")).toBe(false);

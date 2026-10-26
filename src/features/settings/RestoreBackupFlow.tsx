@@ -25,7 +25,7 @@ const SCOPES: { id: RestoreScope; label: string; detail: string }[] = [
     id: "financial-only",
     label: "Financial data only",
     detail:
-      "Accounts, balances, transactions, manual payment metadata, and merchant rules. Settings return to defaults; connections, sync history, security events, and import history are reset.",
+      "Accounts, balances, transactions, manual payment details, and merchant rules. Settings return to defaults; connections, sync history, security events, and import history are reset.",
   },
 ];
 

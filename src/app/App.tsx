@@ -217,7 +217,13 @@ export function App() {
   }
 
   if (boot.vault.settings && !boot.vault.settings.onboardingCompleted) {
-    return <OnboardingWizard settings={boot.vault.settings} onFinished={handleSettingsChanged} />;
+    return (
+      <OnboardingWizard
+        settings={boot.vault.settings}
+        onSettingsChanged={handleSettingsChanged}
+        onFinished={handleSettingsChanged}
+      />
+    );
   }
 
   return (

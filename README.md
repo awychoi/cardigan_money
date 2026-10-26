@@ -1,6 +1,5 @@
-# cardigan_money
+![cardigan_money — the Knit Graph banner with the Forest button mark](docs/design/brand/preview/r2-center-stage.png)
 
-![cardigan_money — the Knit Graph banner with the Forest button mark](docs/design/brand/preview/h2-knit-graph.png)
 
 A local-first, encrypted personal finance app for macOS. It tracks one person's credit-card
 balances and calendar-month spending, and keeps everything on the Mac — no account, no cloud,
@@ -16,7 +15,8 @@ Built with Tauri 2, React, TypeScript, Rust, and SQLCipher.
 - Card balances and upcoming payments that stay current regardless of the month you're viewing.
 - Pending, posted, refunds, fees, payments, and transfers are distinct states.
 - An encrypted ledger, unlocked with a passphrase typed into a native macOS sheet.
-- Works offline with demo data or CSV import; optional Plaid **Sandbox** connection for testing sync.
+- Works offline with demo data or CSV import; optional Plaid **Sandbox** or **Trial/Production** connection for sync.
+- One active Plaid Item per institution. A duplicate link is refused before Plaid is asked for an access token, and **Update**/**Reconnect** reuses the existing Item, so accidents cannot spend Trial Item capacity.
 
 ## Requirements
 
@@ -72,8 +72,12 @@ cd src-tauri && cargo test
   data is unrecoverable.
 - The ledger is encrypted at rest with SQLCipher; backups are encrypted containers. Plaintext CSV
   exports are not protected — the app warns before writing one.
-- Plaid **Production is disabled**; only Sandbox credentials work in this build. The app is not
-  affiliated with Plaid.
+- Plaid supports **Sandbox** test Items and **Trial/Production** real Items with separate
+  credentials. The app allows one active Item per institution: if a bank is already connected, link
+  completion stops before the access-token exchange and points to **Update**/**Reconnect** instead,
+  so a duplicate cannot consume another Trial Item. Trial/Production linking is implemented but has
+  not been verified with a real Item; Trial limits and billing apply. The app is not affiliated with
+  Plaid.
 - The UI never receives the passphrase or provider tokens; those stay in Rust and the macOS
   Keychain.
 - Read [SECURITY.md](SECURITY.md) before relying on this for real data.
@@ -98,9 +102,9 @@ cd src-tauri && cargo test
 
 ## Status
 
-Early and experimental. Interfaces, storage formats, and behavior can change. Plaid production is
-disabled and only Sandbox linking has been verified. The macOS build is ad-hoc signed and not
-distribution-ready.
+Early and experimental. Interfaces, storage formats, and behavior can change. Only Plaid Sandbox
+linking has been verified; Trial/Production wiring is present but a real Item has not been
+verified. The macOS build is ad-hoc signed and not distribution-ready.
 
 ## License
 

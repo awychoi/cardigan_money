@@ -1,7 +1,21 @@
 import { useEffect, useState } from "react";
-import { command, type PlaidLinkStatus, type PlaidStatus, type SyncStatus } from "../../lib/bridge";
+import {
+  command,
+  type PlaidEnvironment,
+  type PlaidLinkStatus,
+  type PlaidStatus,
+  type SyncStatus,
+} from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
+
+function environmentLabel(environment: PlaidEnvironment | null): string {
+  return environment === "production" ? "Trial / Production" : "Sandbox";
+}
+
+function connectionEnvironment(value: string): PlaidEnvironment {
+  return value === "production" ? "production" : "sandbox";
+}
 
 export function ConnectionsSyncPanel({
   onSyncFinished,
@@ -11,7 +25,9 @@ export function ConnectionsSyncPanel({
   readOnly: boolean;
 }) {
   const [status, setStatus] = useState<SyncStatus | null>(null);
+  const [loading, setLoading] = useState(true);
   const [plaid, setPlaid] = useState<PlaidStatus | null>(null);
+  const [environment, setEnvironment] = useState<PlaidEnvironment>("sandbox");
   const [link, setLink] = useState<PlaidLinkStatus | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,21 +39,30 @@ export function ConnectionsSyncPanel({
       setStatus(await command("sync_status", {}));
     } catch (caught) {
       setError(friendlyError(caught));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadPlaid() {
+    try {
+      const result = await command("plaid_status", {});
+      setPlaid(result.plaid);
+      setEnvironment((current) => {
+        if (result.plaid[current].configured) return current;
+        if (result.plaid.sandbox.configured) return "sandbox";
+        if (result.plaid.production.configured) return "production";
+        return current;
+      });
+    } catch (caught) {
+      setError(friendlyError(caught));
     }
   }
 
   useEffect(() => {
     void load();
-    if (!readOnly) {
-      void (async () => {
-        try {
-          const result = await command("plaid_status", {});
-          setPlaid(result.plaid);
-        } catch (caught) {
-          setError(friendlyError(caught));
-        }
-      })();
-    }
+    if (!readOnly) void loadPlaid();
+    // The initial load is intentionally tied to readOnly, not to the helpers.
   }, [readOnly]);
 
   useEffect(() => {
@@ -50,9 +75,16 @@ export function ConnectionsSyncPanel({
           const result = await command("plaid_link_status", {});
           setLink(result.link);
           if (result.link.state === "linked") {
-            setPlaid((current) => (current ? { ...current, configured: true } : current));
+            await loadPlaid();
             await load();
             onSyncFinished();
+          } else if (result.link.state === "duplicate") {
+            setMessage(
+              result.link.message ??
+                "This bank is already connected. Use Update or Reconnect instead of linking it again.",
+            );
+            setError(null);
+            await load();
           } else if (result.link.state === "error" || result.link.state === "expired") {
             setError(result.link.message ?? "Plaid link failed.");
           }
@@ -67,14 +99,19 @@ export function ConnectionsSyncPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link?.state, readOnly]);
 
+  const environmentStatus = plaid?.[environment] ?? null;
+  const configured = environmentStatus?.configured ?? false;
+  const label = environmentLabel(environment);
+  const linkActive = link?.state === "waiting" || link?.state === "starting";
+
   async function configurePlaid() {
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await command("plaid_setup", {});
+      const result = await command("plaid_setup", { environment });
       setPlaid(result.plaid);
-      setMessage("Sandbox credentials saved to the macOS Keychain.");
+      setMessage(`${label} credentials saved to the macOS Keychain.`);
       await load();
     } catch (caught) {
       setError(friendlyError(caught));
@@ -88,8 +125,9 @@ export function ConnectionsSyncPanel({
     setError(null);
     setMessage(null);
     try {
-      await command("plaid_test", {});
-      setMessage("Plaid accepted the Sandbox credentials.");
+      const result = await command("plaid_test", { environment });
+      setPlaid(result.plaid);
+      setMessage(`Plaid accepted the ${label} credentials.`);
     } catch (caught) {
       setError(friendlyError(caught));
     } finally {
@@ -120,12 +158,13 @@ export function ConnectionsSyncPanel({
     }
   }
 
-  async function startLink() {
+  async function startLink(target: PlaidEnvironment = environment) {
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await command("plaid_link_start", {});
+      const result = await command("plaid_link_start", { environment: target });
+      setEnvironment(target);
       setLink(result.link);
       if (result.link.message) setMessage(result.link.message);
     } catch (caught) {
@@ -142,7 +181,7 @@ export function ConnectionsSyncPanel({
     try {
       const result = await command("plaid_reconnect", { connectionId });
       setLink(result.link);
-      setMessage(result.link.message ?? "Reconnect the Sandbox Item in your browser.");
+      setMessage(result.link.message ?? "Update the Plaid Item in your browser.");
     } catch (caught) {
       setError(friendlyError(caught));
     } finally {
@@ -200,22 +239,29 @@ export function ConnectionsSyncPanel({
 
   const connections = status?.connections ?? [];
   const runs = status?.recentRuns ?? [];
+  const environmentConnections = connections.filter(
+    (connection) => connectionEnvironment(connection.environment) === environment,
+  );
+  const linkedEnvironment = link?.environment
+    ? environmentLabel(link.environment)
+    : environmentLabel(environment);
 
   return (
     <section className="panel panel-wide" aria-labelledby="connections-title">
-      <h2 id="connections-title">Connections &amp; sync</h2>
+      <h2 id="connections-title">Bank connections</h2>
       <p className="inline-notice" role="note">
-        Plaid is Sandbox-only in this build. Live bank coverage is not claimed until a Sandbox Item
-        is linked and synced successfully. The offline, CSV, and demo workflows remain fully usable.
+        Plaid is optional. Sandbox uses test Items; Trial/Production links real institutions and
+        counts against your Plaid plan. Only credit accounts are imported. You can add cards
+        manually or import CSV without a provider.
       </p>
       <p className="fine-print">
-        Sync runs in Rust after unlock, advances each connection's cursor only after the page is
-        committed, and keeps previously reported values when a stream is partially unavailable. The
-        renderer never sees provider tokens. Scheduled windows are 08:00 and 20:00 local time; a
+        Sync runs in Rust after unlock, advances each connection&apos;s cursor only after the page
+        is committed, and keeps previously reported values when a stream is partially unavailable.
+        The renderer never sees provider tokens. Scheduled windows are 08:00 and 20:00 local time; a
         scheduled run is skipped while locked and retried inside the five-minute window.
         {!status?.providerLive
-          ? " Add Sandbox credentials below to enable live linking; CSV import works without a provider."
-          : " Sandbox credentials are configured; Production remains disabled."}
+          ? " Add Plaid credentials below to enable linking; CSV import and manual cards work without a provider."
+          : " Plaid credentials are configured; linked connections sync into this ledger."}
       </p>
       {error ? (
         <p className="inline-error" role="alert">
@@ -230,33 +276,76 @@ export function ConnectionsSyncPanel({
 
       {!readOnly ? (
         <div className="plaid-setup">
-          <h3>Plaid Sandbox</h3>
+          <h3>Plaid connection</h3>
+          <fieldset className="restore-options" disabled={busy || linkActive}>
+            <legend>Environment</legend>
+            <label className="restore-option">
+              <input
+                type="radio"
+                name="plaid-environment"
+                value="sandbox"
+                checked={environment === "sandbox"}
+                onChange={() => setEnvironment("sandbox")}
+              />
+              <span>
+                <strong>Sandbox</strong> — test Items only; no real bank data.
+              </span>
+            </label>
+            <label className="restore-option">
+              <input
+                type="radio"
+                name="plaid-environment"
+                value="production"
+                checked={environment === "production"}
+                onChange={() => setEnvironment("production")}
+              />
+              <span>
+                <strong>Trial / Production</strong> — real institutions via{" "}
+                <code>production.plaid.com</code>.
+              </span>
+            </label>
+          </fieldset>
+          {environment === "production" ? (
+            <p className="inline-notice" role="note">
+              Real bank data will be imported. Plaid&apos;s free Trial includes up to 10 Production
+              Items; paid subscription products can bill while an Item exists, and removing an Item
+              does not restore Trial capacity. Only link institutions you are authorized to access.
+            </p>
+          ) : null}
           <p className="fine-print">
-            Client ID and Sandbox secret are entered in a native sheet and stored only in the macOS
-            Keychain. The renderer never receives them. This build permits Sandbox only; Production
-            linking stays disabled until Sandbox is verified.
+            The {label} client ID and secret are entered in a native sheet and stored only in the
+            macOS Keychain; the renderer never receives them.{" "}
+            {environmentStatus?.message ?? "Add credentials to enable linking."}
           </p>
+          {environmentConnections.length > 0 ? (
+            <p className="inline-notice" role="note">
+              Already connected to a bank in this environment? Use <strong>Update…</strong> or{" "}
+              <strong>Reconnect…</strong> on that connection below. cardigan_money allows one active
+              Plaid Item per institution, so a duplicate link is refused before an access token is
+              requested.
+            </p>
+          ) : null}
           <div className="button-row">
-            <Button variant="secondary" onClick={configurePlaid} disabled={busy}>
-              {plaid?.configured ? "Replace Sandbox credentials…" : "Add Sandbox credentials…"}
+            <Button variant="secondary" onClick={configurePlaid} disabled={busy || linkActive}>
+              {configured ? `Replace ${label} credentials…` : `Add ${label} credentials…`}
             </Button>
-            {plaid?.configured ? (
-              <Button variant="ghost" onClick={testCredentials} disabled={busy}>
+            {configured ? (
+              <Button variant="ghost" onClick={testCredentials} disabled={busy || linkActive}>
                 Test credentials
               </Button>
             ) : null}
-            {plaid?.configured ? (
+            {configured ? (
               <Button
                 variant="primary"
-                onClick={startLink}
-                disabled={
-                  busy || (link !== null && (link.state === "waiting" || link.state === "starting"))
-                }
+                onClick={() => void startLink()}
+                disabled={busy || linkActive}
               >
-                Link a Sandbox institution…
+                {environment === "sandbox"
+                  ? "Link a Sandbox institution…"
+                  : "Link a real institution…"}
               </Button>
             ) : null}
-            {link?.state === "waiting" || link?.state === "starting" ? (
+            {linkActive ? (
               <Button variant="ghost" onClick={cancelLink} disabled={busy}>
                 Cancel link
               </Button>
@@ -264,8 +353,8 @@ export function ConnectionsSyncPanel({
           </div>
           {link?.state === "waiting" ? (
             <p className="inline-notice" role="status">
-              Waiting for the Plaid Sandbox flow in your browser… This window will update when the
-              Item is added.
+              Waiting for the Plaid {linkedEnvironment} flow in your browser… This window will
+              update when the Item is added.
             </p>
           ) : null}
           {link?.state === "linked" ? (
@@ -310,10 +399,12 @@ export function ConnectionsSyncPanel({
         </Button>
       </div>
 
-      {connections.length === 0 ? (
+      {loading && connections.length === 0 ? (
+        <p className="muted">Checking connections…</p>
+      ) : connections.length === 0 ? (
         <p className="muted">
-          No provider connected. Import a CSV in the panel below, or add a provider when live
-          linking is available.
+          No bank connected yet. Add Plaid credentials above, or import a CSV from the CSV import
+          tab. Manual cards need no provider.
         </p>
       ) : (
         <table className="accounts-table">
@@ -322,6 +413,7 @@ export function ConnectionsSyncPanel({
             <tr>
               <th scope="col">Institution</th>
               <th scope="col">Provider</th>
+              <th scope="col">Environment</th>
               <th scope="col">Status</th>
               <th scope="col">Last success</th>
               <th scope="col">Accounts</th>
@@ -333,6 +425,7 @@ export function ConnectionsSyncPanel({
               <tr key={connection.id}>
                 <td>{connection.institutionName ?? "Provider"}</td>
                 <td>{connection.provider}</td>
+                <td>{environmentLabel(connectionEnvironment(connection.environment))}</td>
                 <td>
                   <span
                     className={
@@ -352,26 +445,32 @@ export function ConnectionsSyncPanel({
                 </td>
                 <td>{connection.accountCount}</td>
                 <td>
-                  {connection.provider === "plaid" && connection.status !== "healthy" ? (
+                  {connection.provider === "plaid" ? (
                     connection.hasToken ? (
                       <Button
                         variant="ghost"
                         className="btn-small"
                         onClick={() => void reconnect(connection.id)}
-                        disabled={busy}
+                        disabled={busy || linkActive}
+                        title={
+                          connection.status === "healthy"
+                            ? "Use Plaid update mode to add accounts or refresh this Item. This reuses the existing Item; it does not create another one."
+                            : "Repair this Item in Plaid update mode without creating another Item."
+                        }
                       >
-                        Reconnect…
+                        {connection.status === "healthy" ? "Update…" : "Reconnect…"}
                       </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         className="btn-small"
-                        onClick={() => void startLink()}
+                        onClick={() =>
+                          void startLink(connectionEnvironment(connection.environment))
+                        }
                         disabled={
                           busy ||
-                          !plaid?.configured ||
-                          link?.state === "waiting" ||
-                          link?.state === "starting"
+                          linkActive ||
+                          !plaid?.[connectionEnvironment(connection.environment)].configured
                         }
                         title="This connection came from a restore and has no local token. A new link is required."
                       >

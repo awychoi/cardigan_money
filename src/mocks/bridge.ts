@@ -30,6 +30,9 @@ import {
   type AccountPayload,
   type SecurityEvent,
   type SecuritySummary,
+  type PlaidEnvironment,
+  type PlaidLinkStatus,
+  type PlaidStatus,
   type Settings,
   type SettingsPatch,
   type VaultState,
@@ -58,14 +61,42 @@ function initialState() {
 const mockState = initialState();
 let mockBackups: import("../lib/bridge/contract").BackupItem[] = [];
 const mockSyncRuns: import("../lib/bridge/contract").SyncRunView[] = [];
-let mockPlaidConfigured = false;
-let mockPlaidLink = {
+const mockPlaidConfigured: Record<PlaidEnvironment, boolean> = {
+  sandbox: false,
+  production: false,
+};
+let mockPlaidLink: PlaidLinkStatus = {
   state: "idle",
-  message: null as string | null,
-  connectionId: null as string | null,
-  expiresAt: null as string | null,
+  message: null,
+  connectionId: null,
+  expiresAt: null,
+  environment: null,
 };
 let mockPlaidConnection: import("../lib/bridge/contract").ConnectionView | null = null;
+
+function mockPlaidStatus(): PlaidStatus {
+  function environmentStatus(environment: PlaidEnvironment) {
+    const configured = mockPlaidConfigured[environment];
+    const message =
+      environment === "sandbox"
+        ? configured
+          ? "Sandbox credentials are stored in the macOS Keychain. Links add test Items."
+          : "Add Sandbox credentials to link test institutions."
+        : configured
+          ? "Trial/Production credentials are stored in the macOS Keychain. Links add real Items."
+          : "Add Trial/Production credentials to link real institutions.";
+    return {
+      environment,
+      configured,
+      linkAvailable: configured,
+      message,
+    };
+  }
+  return {
+    sandbox: environmentStatus("sandbox"),
+    production: environmentStatus("production"),
+  };
+}
 
 const defaultSettings: Settings = {
   timezone: "America/New_York",
@@ -479,81 +510,100 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       mockState.mode = "real";
       mockState.events = [];
       mockBackups = [];
+      mockPlaidConfigured.sandbox = false;
+      mockPlaidConfigured.production = false;
+      mockPlaidLink = {
+        state: "idle",
+        message: null,
+        connectionId: null,
+        expiresAt: null,
+        environment: null,
+      };
+      mockPlaidConnection = null;
       resetMockData();
       data = vaultState();
       break;
     case "plaid_status":
       requireUnlocked();
-      data = {
-        plaid: {
-          configured: mockPlaidConfigured,
-          environment: "sandbox",
-          linkAvailable: mockPlaidConfigured,
-          message: mockPlaidConfigured
-            ? "Sandbox credentials are stored in the macOS Keychain."
-            : "Add Plaid Sandbox credentials in the native setup sheet.",
-        },
-      };
+      data = { plaid: mockPlaidStatus() };
       break;
-    case "plaid_setup":
+    case "plaid_setup": {
       requireUnlocked();
-      mockPlaidConfigured = true;
-      data = {
-        plaid: {
-          configured: true,
-          environment: "sandbox",
-          linkAvailable: true,
-          message: "Sandbox credentials are stored in the macOS Keychain.",
-        },
-      };
+      const { environment } = payload as { environment: PlaidEnvironment };
+      mockPlaidConfigured[environment] = true;
+      data = { plaid: mockPlaidStatus() };
       break;
-    case "plaid_test":
+    }
+    case "plaid_test": {
       requireUnlocked();
-      if (!mockPlaidConfigured)
+      const { environment } = payload as { environment: PlaidEnvironment };
+      if (!mockPlaidConfigured[environment])
         throw new BridgeError("provider_not_configured", "No provider credentials.");
-      data = {
-        plaid: {
-          configured: true,
-          environment: "sandbox",
-          linkAvailable: true,
-          message: "Sandbox credentials are stored in the macOS Keychain.",
-        },
-      };
+      data = { plaid: mockPlaidStatus() };
       break;
-    case "plaid_link_start":
+    }
+    case "plaid_link_start": {
       requireUnlocked();
+      const { environment } = payload as { environment: PlaidEnvironment };
+      if (!mockPlaidConfigured[environment])
+        throw new BridgeError("provider_not_configured", "No provider credentials.");
+      const environmentLabel = environment === "sandbox" ? "Sandbox" : "Trial / Production";
       mockPlaidLink = {
         state: "waiting",
-        message: "Complete the Plaid Sandbox flow in your browser.",
+        message: `Complete the Plaid ${environmentLabel} flow in your browser.`,
         connectionId: null,
         expiresAt: "2026-10-24T00:30:00Z",
-      };
-      mockPlaidConnection = {
-        id: "mock-plaid-connection",
-        provider: "plaid",
-        environment: "sandbox",
-        institutionName: "Sandbox Bank",
-        status: "healthy",
-        lastAttemptAt: "2026-10-24T00:00:00Z",
-        lastSuccessAt: "2026-10-24T00:00:00Z",
-        sanitizedError: null,
-        hasCursor: true,
-        accountCount: 1,
-        hasToken: true,
+        environment,
       };
       data = { link: structuredClone(mockPlaidLink) };
       break;
+    }
     case "plaid_link_status":
       requireUnlocked();
       if (mockPlaidLink.state === "waiting") {
-        mockPlaidLink = {
-          ...mockPlaidLink,
-          state: "linked",
-          message: mockPlaidLink.connectionId
-            ? "Sandbox Item reconnected. Syncing again."
-            : "Sandbox Item linked. Syncing transactions and balances.",
-          connectionId: mockPlaidLink.connectionId ?? "mock-plaid-connection",
-        };
+        const environmentLabel =
+          mockPlaidLink.environment === "production" ? "Trial / Production" : "Sandbox";
+        if (mockPlaidLink.connectionId) {
+          if (mockPlaidConnection) mockPlaidConnection.status = "healthy";
+          mockPlaidLink = {
+            ...mockPlaidLink,
+            state: "linked",
+            message: `${environmentLabel} Item updated. Syncing again.`,
+          };
+        } else if (
+          mockPlaidConnection &&
+          mockPlaidConnection.environment === mockPlaidLink.environment
+        ) {
+          mockPlaidLink = {
+            ...mockPlaidLink,
+            state: "duplicate",
+            message: `${mockPlaidConnection.institutionName} is already connected. No Plaid access token was requested, so no duplicate Item was created. Use Update or Reconnect on the existing connection instead.`,
+            connectionId: null,
+          };
+        } else {
+          mockPlaidConnection = {
+            id: "mock-plaid-connection",
+            provider: "plaid",
+            environment: mockPlaidLink.environment ?? "sandbox",
+            institutionName:
+              mockPlaidLink.environment === "production"
+                ? "Production Bank (mock)"
+                : "Sandbox Bank",
+            status: "healthy",
+            lastAttemptAt: "2026-10-24T00:00:00Z",
+            lastSuccessAt: "2026-10-24T00:00:00Z",
+            sanitizedError: null,
+            hasCursor: true,
+            accountCount: 1,
+            hasToken: true,
+          };
+          mockPlaidLink = {
+            ...mockPlaidLink,
+            state: "linked",
+            message: `${environmentLabel} Item linked. Syncing transactions and balances.`,
+            connectionId: "mock-plaid-connection",
+          };
+        }
       }
       data = { link: structuredClone(mockPlaidLink) };
       break;
@@ -564,18 +614,19 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         message: "Plaid link cancelled.",
         connectionId: null,
         expiresAt: null,
+        environment: mockPlaidLink.environment,
       };
       data = { link: structuredClone(mockPlaidLink) };
       break;
     case "plaid_verification_report":
       requireUnlocked();
       data = {
-        environment: "sandbox",
+        environment: mockPlaidConnection?.environment ?? "none",
         connections: mockPlaidConnection
           ? [
               {
                 institutionName: mockPlaidConnection.institutionName,
-                environment: "sandbox",
+                environment: mockPlaidConnection.environment,
                 status: mockPlaidConnection.status,
                 accountCount: mockPlaidConnection.accountCount,
                 providerTransactionCount: 3,
@@ -591,16 +642,21 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         generatedAt: "2026-10-24T00:00:00Z",
       };
       break;
-    case "plaid_reconnect":
+    case "plaid_reconnect": {
       requireUnlocked();
+      const environment: PlaidEnvironment =
+        mockPlaidConnection?.environment === "production" ? "production" : "sandbox";
+      const action = mockPlaidConnection?.status === "healthy" ? "Update" : "Reconnect";
       mockPlaidLink = {
         state: "waiting",
-        message: "Reconnect the Sandbox Item in your browser.",
+        message: `${action} the ${environment === "production" ? "Trial / Production" : "Sandbox"} Item in your browser.`,
         connectionId: (payload as { connectionId: string }).connectionId,
         expiresAt: "2026-10-24T00:30:00Z",
+        environment,
       };
       data = { link: structuredClone(mockPlaidLink) };
       break;
+    }
     case "sync_status":
       requireUnlocked();
       data = {
@@ -613,7 +669,7 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
           lastAttemptAt: mockSyncRuns[0]?.startedAt ?? null,
           lastFinishedAt: mockSyncRuns[0]?.finishedAt ?? null,
         },
-        providerLive: false,
+        providerLive: mockPlaidConfigured.sandbox || mockPlaidConfigured.production,
       };
       break;
     case "sync_now":

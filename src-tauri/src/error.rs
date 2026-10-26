@@ -115,7 +115,7 @@ impl AppError {
             AppError::InvalidInput(_) => "One or more values were invalid.".into(),
             AppError::Blocked(m) => format!("This action is unavailable: {m}"),
             AppError::ProviderNotConfigured => {
-                "No provider credentials are configured. Add Sandbox credentials in Settings first."
+                "No provider credentials are configured for this connection's environment. Add them in Settings first."
                     .into()
             }
             AppError::Provider(message) => message.to_string(),

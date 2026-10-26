@@ -74,12 +74,24 @@ function account(
   };
 }
 
-let accounts: Account[] = structuredClone(ACCOUNT_SEED);
+let accounts: Account[] = seedAccounts();
 let transactions: MockTx[] = [];
 
+/**
+ * Playwright can start with an empty ledger via `?mockAccounts=empty`. This
+ * keeps the default preview populated while letting tests exercise the
+ * genuine "no accounts yet" onboarding path.
+ */
+function seedAccounts(): Account[] {
+  const empty =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("mockAccounts") === "empty";
+  return empty ? [] : structuredClone(ACCOUNT_SEED);
+}
+
 export function resetMockData(): void {
-  accounts = structuredClone(ACCOUNT_SEED);
-  transactions = seedTransactions();
+  accounts = seedAccounts();
+  transactions = accounts.length === 0 ? [] : seedTransactions();
   overrides.clear();
   merchantRules.length = 0;
   manualPayments.clear();

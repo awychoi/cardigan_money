@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openLocked, openSettingsSection, openUnlocked } from "./helpers";
+import { openAccountsTab, openLocked, openSettingsSection, openUnlocked } from "./helpers";
 
 test.describe("secure shell (browser mock)", () => {
   test("starts locked with no password input", async ({ page }) => {
@@ -87,42 +87,95 @@ test.describe("secure shell (browser mock)", () => {
   test("walks the onboarding wizard with no provider and adds an account", async ({ page }) => {
     await page.goto("/?mockOnboarding=1");
     await page.getByRole("button", { name: "Unlock vault" }).click();
-    await expect(page.getByText("Add your first account.")).toBeVisible();
+    await expect(page.getByText("Connect your bank.")).toBeVisible();
+    await expect(page.getByText(/macOS Keychain/)).toBeVisible();
+    await page.getByRole("button", { name: "Add a card manually" }).click();
+    await expect(page.getByText("Add a card manually.")).toBeVisible();
     await page.getByLabel("Issuer").fill("Chase");
     await page.getByLabel("Display name").fill("Wizard Card");
     await page.getByLabel(/Last four/).fill("1234");
     await page.getByRole("button", { name: "Add account" }).click();
+    await expect(page.getByText("Set your reporting timezone.")).toBeVisible();
     await expect(page.getByText(/Added Wizard Card/)).toBeVisible();
-    await page.getByRole("button", { name: "Continue without a provider" }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByText("You are ready.")).toBeVisible();
     await page.getByRole("button", { name: "Finish setup" }).click();
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-    await openSettingsSection(page, "Accounts");
-    await expect(page.getByRole("cell", { name: "Wizard Card", exact: true })).toBeVisible();
+    await openAccountsTab(page, "All accounts");
+    await expect(page.getByText("Wizard Card", { exact: true })).toBeVisible();
     await expect(page.getByText("Chase").first()).toBeVisible();
+  });
+
+  test("keeps the detected timezone visible and selectable during onboarding", async ({ page }) => {
+    await page.goto("/?mockOnboarding=1");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await page.getByRole("button", { name: "Continue without a bank" }).click();
+    await expect(page.getByText("Set your reporting timezone.")).toBeVisible();
+    await expect(page.getByText(/Detected from this Mac/)).toBeVisible();
+    const select = page.getByRole("combobox", { name: "Reporting timezone", exact: true });
+    await expect(select).toBeVisible();
+    await select.selectOption("America/Los_Angeles");
+    await expect(select).toHaveValue("America/Los_Angeles");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByText("You are ready.")).toBeVisible();
+    await expect(
+      page.locator(".facts dd").filter({ hasText: "America/Los_Angeles" }),
+    ).toBeVisible();
+  });
+
+  test("configures Plaid credentials in onboarding and reports their storage", async ({ page }) => {
+    await page.goto("/?mockOnboarding=1");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await page.getByRole("button", { name: /Add Sandbox credentials/ }).click();
+    await expect(page.getByText(/Sandbox credentials saved to the macOS Keychain/)).toBeVisible();
+    await expect(page.getByText("Stored in Keychain")).toBeVisible();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByText(/Sandbox credentials \(Keychain\)/)).toBeVisible();
+    await expect(page.getByText(/no institution is linked yet/)).toBeVisible();
+  });
+
+  test("sends Add account from an empty overview to Settings → Accounts", async ({ page }) => {
+    await page.goto("/?mockOnboarding=1&mockAccounts=empty");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await expect(page.getByText("Connect your bank.")).toBeVisible();
+    await page.getByRole("button", { name: "Skip setup" }).click();
+    await expect(page.getByText("Your cards, in one quiet place.")).toBeVisible();
+    await page.getByRole("button", { name: "Add account" }).click();
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Accounts", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.getByRole("tab", { name: "All accounts", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByRole("button", { name: "Add card manually" })).toBeVisible();
   });
 
   test("manages accounts in settings and archives reversibly", async ({ page }) => {
     await openUnlocked(page);
-    await openSettingsSection(page, "Accounts");
-    await page.getByRole("button", { name: "Add account" }).click();
+    await openAccountsTab(page, "All accounts");
+    await page.getByRole("button", { name: "Add card manually" }).click();
     await page.getByLabel("Issuer").fill("Bilt");
     await page.getByLabel("Display name").fill("Local Test Card");
     await page.getByLabel(/Last four/).fill("4321");
     await page.getByRole("button", { name: "Add account" }).click();
-    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
+    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
     const row = page
       .getByRole("row")
-      .filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
+      .filter({ has: page.getByText("Local Test Card", { exact: true }) });
     await row.getByRole("button", { name: "Archive" }).click();
     await row.getByRole("button", { name: "Archive", exact: true }).click();
-    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toHaveCount(0);
+    await expect(page.getByText("Local Test Card", { exact: true })).toHaveCount(0);
     await page.getByLabel("Show archived accounts").check();
-    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
+    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
     const archivedRow = page
       .getByRole("row")
-      .filter({ has: page.getByRole("cell", { name: "Local Test Card", exact: true }) });
+      .filter({ has: page.getByText("Local Test Card", { exact: true }) });
     await archivedRow.getByRole("button", { name: "Restore" }).click();
-    await expect(page.getByRole("cell", { name: "Local Test Card", exact: true })).toBeVisible();
+    await expect(page.getByText("Local Test Card", { exact: true })).toBeVisible();
   });
 
   test("persists the window close behavior setting", async ({ page }) => {

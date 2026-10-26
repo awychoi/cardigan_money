@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import {
   command,
   type SecurityEvent,
@@ -9,24 +9,36 @@ import {
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { ThemePicker } from "../../components/ThemePicker";
+import { TimezoneSelect } from "../../components/TimezoneSelect";
+import {
+  detectTimeZone,
+  FALLBACK_TIMEZONE,
+  formatTimeZonePreview,
+  timeZoneSummary,
+} from "../../lib/timezone";
 import type { ThemeMode } from "../../theme/schema";
 import { AccountManager } from "../accounts/AccountManager";
 import { MerchantRulesPanel } from "./MerchantRulesPanel";
-import { ManualPaymentPanel } from "./ManualPaymentPanel";
 import { ImportExportPanel } from "./ImportExportPanel";
 import { BackupsPanel } from "./BackupsPanel";
 import { ConnectionsSyncPanel } from "./ConnectionsSyncPanel";
 
-type SectionId =
+export type SettingsSectionId =
   | "appearance"
   | "lock"
   | "accounts"
-  | "connections"
   | "backups"
   | "rules"
-  | "import"
   | "events"
   | "about";
+
+export type AccountsTabId = "accounts" | "connections" | "import";
+
+const ACCOUNTS_TABS: { id: AccountsTabId; label: string }[] = [
+  { id: "accounts", label: "All accounts" },
+  { id: "connections", label: "Bank connections" },
+  { id: "import", label: "CSV import" },
+];
 
 export function SettingsView({
   vault,
@@ -38,6 +50,8 @@ export function SettingsView({
   demo,
   onOpenDemo,
   onResetDemo,
+  initialSection,
+  initialAccountsTab,
 }: {
   vault: VaultState;
   onSettingsChanged: (settings: Settings) => void;
@@ -48,6 +62,8 @@ export function SettingsView({
   demo: boolean;
   onOpenDemo: () => Promise<void>;
   onResetDemo: () => Promise<void>;
+  initialSection?: SettingsSectionId;
+  initialAccountsTab?: AccountsTabId;
 }) {
   const settings = vault.settings;
   const previewMode: ThemeMode =
@@ -55,10 +71,17 @@ export function SettingsView({
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [timezone, setTimezone] = useState(settings?.timezone ?? "America/New_York");
+  const [timezone, setTimezone] = useState(settings?.timezone ?? FALLBACK_TIMEZONE);
   const [autoLock, setAutoLock] = useState(settings?.autoLockMinutes ?? 15);
   const [busy, setBusy] = useState(false);
-  const [section, setSection] = useState<SectionId>("appearance");
+  const [section, setSection] = useState<SettingsSectionId>(initialSection ?? "appearance");
+  const [accountsTab, setAccountsTab] = useState<AccountsTabId>(initialAccountsTab ?? "accounts");
+  const detected = useMemo(() => detectTimeZone(), []);
+  const timezonePreview = formatTimeZonePreview(timezone);
+
+  useEffect(() => {
+    if (settings?.timezone) setTimezone(settings.timezone);
+  }, [settings?.timezone]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,22 +147,42 @@ export function SettingsView({
     }
   }
 
-  const sections: Array<{ id: SectionId; label: string }> = [
+  function handleAccountsTabKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const last = accountsTabs.length - 1;
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? last
+          : event.key === "ArrowLeft"
+            ? (index - 1 + accountsTabs.length) % accountsTabs.length
+            : (index + 1) % accountsTabs.length;
+    const next = accountsTabs[nextIndex];
+    if (!next) return;
+    setAccountsTab(next.id);
+    document.getElementById(`accounts-tab-${next.id}`)?.focus();
+  }
+
+  const sections: Array<{ id: SettingsSectionId; label: string }> = [
     { id: "appearance", label: "Appearance" },
     { id: "lock", label: "Lock & idle" },
     { id: "accounts", label: "Accounts" },
     ...(demo
       ? []
       : ([
-          { id: "connections", label: "Connections & sync" },
           { id: "backups", label: "Backups & recovery" },
           { id: "rules", label: "Merchant rules" },
-          { id: "import", label: "Import & export" },
         ] as const)),
     { id: "events", label: "Security events" },
     { id: "about", label: "About" },
   ];
   const active = sections.some((item) => item.id === section) ? section : "appearance";
+  const accountsTabs = demo ? ACCOUNTS_TABS.slice(0, 1) : ACCOUNTS_TABS;
+  const activeAccountsTab = accountsTabs.some((tab) => tab.id === accountsTab)
+    ? accountsTab
+    : "accounts";
 
   return (
     <section className="settings" aria-labelledby="settings-title">
@@ -288,16 +331,42 @@ export function SettingsView({
               <div className="setting-row">
                 <div>
                   <div className="setting-label">Reporting timezone</div>
-                  <p className="fine-print">Calendar months are evaluated in this timezone.</p>
+                  <p className="fine-print">
+                    Calendar months are evaluated in this timezone. Choose the place your statements
+                    are based.
+                  </p>
                 </div>
-                <input
-                  aria-label="Reporting timezone"
+                <TimezoneSelect
                   value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                  spellCheck={false}
+                  onChange={setTimezone}
                   disabled={busy}
-                  className="text-input"
+                  className="timezone-select-wide"
                 />
+              </div>
+              <div className="setting-row setting-row-stack">
+                <p className="fine-print">
+                  {timezonePreview ? `Current time there: ${timezonePreview}. ` : ""}
+                  {detected.detected ? (
+                    <>
+                      This Mac reports <strong>{timeZoneSummary(detected.zone)}</strong>.
+                    </>
+                  ) : (
+                    <>
+                      We could not detect this Mac&apos;s timezone, so the default is{" "}
+                      <strong>{timeZoneSummary(FALLBACK_TIMEZONE)}</strong>.
+                    </>
+                  )}
+                </p>
+                {detected.zone !== timezone ? (
+                  <Button
+                    variant="ghost"
+                    className="btn-small"
+                    onClick={() => setTimezone(detected.zone)}
+                    disabled={busy}
+                  >
+                    Use detected timezone
+                  </Button>
+                ) : null}
               </div>
               <div className="setting-row">
                 <Button
@@ -329,14 +398,58 @@ export function SettingsView({
           ) : null}
 
           {active === "accounts" ? (
-            <>
-              <AccountManager onChanged={onAccountsChanged} readOnly={demo} />
-              {!demo ? <ManualPaymentPanel onChanged={onDataChanged} /> : null}
-            </>
-          ) : null}
-
-          {active === "connections" && !demo ? (
-            <ConnectionsSyncPanel onSyncFinished={onDataChanged} readOnly={false} />
+            <section className="accounts-hub" aria-labelledby="accounts-hub-title">
+              <div className="accounts-hub-head">
+                <div>
+                  <h2 id="accounts-hub-title">Accounts &amp; data</h2>
+                  <p className="fine-print">
+                    Cards, bank connections, and CSV imports live together here. Every card is
+                    labeled with where its data came from.
+                  </p>
+                </div>
+              </div>
+              <div className="settings-tabs" role="tablist" aria-label="Accounts and data">
+                {accountsTabs.map((tab, index) => (
+                  <button
+                    key={tab.id}
+                    id={`accounts-tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeAccountsTab === tab.id}
+                    aria-controls={`accounts-panel-${tab.id}`}
+                    tabIndex={activeAccountsTab === tab.id ? 0 : -1}
+                    className={`settings-tab${
+                      activeAccountsTab === tab.id ? " settings-tab-active" : ""
+                    }`}
+                    onClick={() => setAccountsTab(tab.id)}
+                    onKeyDown={(event) => handleAccountsTabKey(event, index)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <div
+                id={`accounts-panel-${activeAccountsTab}`}
+                role="tabpanel"
+                aria-labelledby={`accounts-tab-${activeAccountsTab}`}
+                className="accounts-tab-panel"
+              >
+                {activeAccountsTab === "accounts" ? (
+                  <AccountManager onChanged={onAccountsChanged} readOnly={demo} />
+                ) : null}
+                {activeAccountsTab === "connections" && !demo ? (
+                  <ConnectionsSyncPanel onSyncFinished={onDataChanged} readOnly={false} />
+                ) : null}
+                {activeAccountsTab === "import" && !demo ? (
+                  <ImportExportPanel onChanged={onDataChanged} />
+                ) : null}
+              </div>
+              {demo ? (
+                <p className="fine-print">
+                  Bank connections and CSV import are unavailable in demo mode.
+                </p>
+              ) : null}
+            </section>
           ) : null}
 
           {active === "backups" && !demo ? (
@@ -349,8 +462,6 @@ export function SettingsView({
           ) : null}
 
           {active === "rules" && !demo ? <MerchantRulesPanel onChanged={onDataChanged} /> : null}
-
-          {active === "import" && !demo ? <ImportExportPanel onChanged={onDataChanged} /> : null}
 
           {active === "events" ? (
             <section className="panel panel-wide" aria-labelledby="events-title">

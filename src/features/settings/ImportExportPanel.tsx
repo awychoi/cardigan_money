@@ -44,6 +44,7 @@ function optionIndex(value: string): number | null {
 export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState("");
+  const [loading, setLoading] = useState(true);
   const [job, setJob] = useState<ImportFileView | null>(null);
   const [mapping, setMapping] = useState<MappingForm>({ ...EMPTY_MAPPING });
   const [preview, setPreview] = useState<ValidationPreview | null>(null);
@@ -72,6 +73,8 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
         await loadBatches();
       } catch (caught) {
         setError(friendlyError(caught));
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -228,7 +231,8 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
       <p className="fine-print">
         Files are read locally by Rust. The renderer receives an opaque job id, counts, and preview
         rows — never a file path. Limits: 20 MiB, 100,000 rows, 40 columns, 4,096 characters per
-        field. Ambiguous duplicates are shown for review, never deleted automatically.
+        field. Ambiguous duplicates are shown for review, never deleted automatically. Exports are
+        started from the Transactions toolbar; this tab only imports.
       </p>
       {error ? (
         <p className="inline-error" role="alert">
@@ -241,7 +245,14 @@ export function ImportExportPanel({ onChanged }: { onChanged: () => void }) {
         </p>
       ) : null}
 
-      {!job ? (
+      {loading && accounts.length === 0 ? (
+        <p className="muted">Loading cards…</p>
+      ) : accounts.length === 0 ? (
+        <p className="muted">
+          No cards yet. Add a card manually on the All accounts tab, or connect a bank, then return
+          here to import a CSV into it.
+        </p>
+      ) : !job ? (
         <div className="import-start">
           <label>
             <span className="field-label">Target account</span>

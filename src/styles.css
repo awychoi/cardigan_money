@@ -75,6 +75,10 @@
   --gap: 14px;
   --row-y: 8px;
 
+  /* controls */
+  --control-height: 32px;
+  --control-padding-x: 9px;
+
   /* motion */
   --motion-fast: 120ms;
   --motion-base: 160ms;
@@ -175,6 +179,18 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+/*
+ * One control height for text fields and selects everywhere. Local form styles
+ * keep their own width, border, and font rules; only the box height and
+ * horizontal padding are shared so fields line up across panels.
+ */
+input:not([type="checkbox"]):not([type="radio"]),
+select {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
 }
 
 :focus-visible {
@@ -427,7 +443,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 30px;
+  min-height: var(--control-height);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -621,6 +637,51 @@ textarea {
   gap: var(--gap);
   min-width: 0;
 }
+.accounts-hub {
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+.accounts-hub-head h2 {
+  font-size: 16px;
+  margin: 0 0 3px;
+}
+.accounts-hub-head p {
+  margin: 0;
+}
+.settings-tabs {
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+}
+.settings-tab {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: calc(12.5px * var(--type-scale));
+  padding: 7px 12px;
+}
+.settings-tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.settings-tab-active {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+}
+.accounts-tab-panel {
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
 .settings-subhead {
   font-size: calc(13px * var(--type-scale));
   margin: 6px 0 2px;
@@ -656,6 +717,22 @@ textarea {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+}
+.setting-row-stack {
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.setting-row-stack p {
+  margin: 0;
+}
+.timezone-select {
+  min-width: 300px;
+  max-width: 100%;
+}
+.timezone-select-wide {
+  min-width: 340px;
+  max-width: 100%;
 }
 .setting-label {
   font-weight: 550;
@@ -762,7 +839,7 @@ select {
   padding: 32px 24px;
 }
 .wizard-card {
-  width: min(680px, 100%);
+  width: min(760px, 100%);
   background: var(--surface);
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-card);
@@ -776,10 +853,95 @@ select {
   justify-content: space-between;
   align-items: center;
 }
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wizard-step {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  display: flex;
+  font-size: 11.5px;
+  gap: 7px;
+  padding: 5px 9px 5px 5px;
+}
+.wizard-step-number {
+  align-items: center;
+  border: 1px solid var(--border-control);
+  border-radius: 50%;
+  display: grid;
+  font-size: 10px;
+  height: 20px;
+  place-items: center;
+  width: 20px;
+}
+.wizard-step-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--text);
+  font-weight: 600;
+}
+.wizard-step-active .wizard-step-number {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.wizard-step-past {
+  color: var(--text-2);
+}
+.wizard-step-past .wizard-step-number {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.wizard-step-optional {
+  color: var(--muted);
+  font-weight: 400;
+}
 .wizard-progress {
   color: var(--muted);
   font-size: 12px;
   margin: 0;
+}
+.wizard-callout {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  display: grid;
+  font-size: 12px;
+  gap: 4px;
+  padding: 10px 12px;
+}
+.wizard-callout strong {
+  font-size: 12.5px;
+}
+.wizard-callout p {
+  color: var(--text-2);
+  margin: 0;
+}
+.wizard-next-list {
+  color: var(--text-2);
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+.wizard-field {
+  display: grid;
+  gap: 5px;
+  max-width: 520px;
+}
+.wizard-field select {
+  width: 100%;
+}
+.wizard-credential-row {
+  align-items: center;
 }
 .wizard-card h1 {
   font-size: 24px;
@@ -800,7 +962,7 @@ select {
   gap: 4px;
   font-size: 12px;
 }
-.form-grid input,
+.form-grid input:not([type="checkbox"]):not([type="radio"]),
 .form-grid select {
   background: var(--bg);
   border: var(--border-width) solid var(--border-control);
@@ -835,6 +997,19 @@ select {
 }
 .panel-heading h2 {
   margin: 0 0 2px;
+}
+.account-name {
+  display: block;
+  font-weight: 550;
+}
+.account-meta {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.account-actions {
+  flex-wrap: wrap;
 }
 .accounts-table {
   width: 100%;
@@ -1204,7 +1379,7 @@ select {
   gap: 3px;
   font-size: 12px;
 }
-.edit-form input,
+.edit-form input:not([type="checkbox"]):not([type="radio"]),
 .edit-form select,
 .edit-form textarea {
   background: var(--bg);
@@ -1279,13 +1454,23 @@ select {
   gap: 3px;
   font-size: 12px;
 }
-.rule-form input,
+.rule-form input:not([type="checkbox"]):not([type="radio"]),
 .rule-form select {
   background: var(--bg);
   border: var(--border-width) solid var(--border-control);
   border-radius: 7px;
   padding: 6px 8px;
   min-height: 30px;
+}
+.rule-form-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  grid-column: 1 / -1;
+}
+.rule-form-actions .checkbox-row {
+  min-height: var(--control-height);
 }
 .import-start {
   display: flex;

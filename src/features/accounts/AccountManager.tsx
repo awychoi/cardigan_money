@@ -3,8 +3,23 @@ import { command, type Account, type AccountPayload } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { AccountForm } from "./AccountForm";
+import { PaymentDetailsForm } from "./PaymentDetailsForm";
 
-type Mode = { kind: "list" } | { kind: "create" } | { kind: "edit"; account: Account };
+type Mode =
+  | { kind: "list" }
+  | { kind: "create" }
+  | { kind: "edit"; account: Account }
+  | { kind: "payment"; account: Account };
+
+function accountMeta(account: Account): string {
+  return [
+    account.issuer,
+    account.lastFour ? `•••• ${account.lastFour}` : null,
+    account.accountType.replaceAll("_", " "),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" · ");
+}
 
 export function AccountManager({
   onChanged,
@@ -16,6 +31,7 @@ export function AccountManager({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -28,6 +44,8 @@ export function AccountManager({
       setError(null);
     } catch (caught) {
       setError(friendlyError(caught));
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -42,10 +60,10 @@ export function AccountManager({
     try {
       if (mode.kind === "edit") {
         await command("account_update", { id: mode.account.id, account: payload });
-        setMessage("Account updated.");
+        setMessage("Card updated.");
       } else {
         await command("account_create", payload);
-        setMessage("Account added.");
+        setMessage("Card added. You can add its payment details below.");
       }
       setMode({ kind: "list" });
       await load(includeArchived);
@@ -62,7 +80,7 @@ export function AccountManager({
     setError(null);
     try {
       await command("account_archive", { id: account.id, archived });
-      setMessage(archived ? "Account archived." : "Account restored.");
+      setMessage(archived ? "Card archived." : "Card restored.");
       setArchiving(null);
       await load(includeArchived);
       onChanged?.();
@@ -73,18 +91,33 @@ export function AccountManager({
     }
   }
 
+  const heading =
+    mode.kind === "create"
+      ? "Add a card"
+      : mode.kind === "edit"
+        ? "Edit card"
+        : mode.kind === "payment"
+          ? "Payment details"
+          : "All accounts";
+  const intro =
+    mode.kind === "create"
+      ? "Manual entry needs no bank connection. You can connect a bank or import a CSV from the tabs above."
+      : mode.kind === "edit"
+        ? "Update this card’s details. Historical transactions keep their records."
+        : mode.kind === "payment"
+          ? `Optional statement and due-date facts for ${mode.account.displayName}. They never overwrite provider data and survive syncs.`
+          : "Every card in one list, labeled by source. Add a card manually here, connect a bank, or import a CSV from the tabs above.";
+
   return (
     <section className="panel panel-wide" aria-labelledby="accounts-title">
       <div className="panel-heading">
         <div>
-          <h2 id="accounts-title">Accounts</h2>
-          <p className="fine-print">
-            Manual accounts need no bank connection. Archiving keeps historical transactions.
-          </p>
+          <h2 id="accounts-title">{heading}</h2>
+          <p className="fine-print">{intro}</p>
         </div>
         {mode.kind === "list" && !readOnly ? (
           <Button variant="secondary" onClick={() => setMode({ kind: "create" })}>
-            Add account
+            Add card manually
           </Button>
         ) : null}
       </div>
@@ -122,19 +155,27 @@ export function AccountManager({
           onSubmit={submit}
           onCancel={() => setMode({ kind: "list" })}
         />
+      ) : mode.kind === "payment" ? (
+        <PaymentDetailsForm
+          accountId={mode.account.id}
+          onChanged={() => onChanged?.()}
+          onClose={() => setMode({ kind: "list" })}
+        />
       ) : (
         <>
-          {accounts.length === 0 ? (
-            <p className="muted">No accounts yet. Add one manually or import a CSV later.</p>
+          {loading && accounts.length === 0 ? (
+            <p className="muted">Loading cards…</p>
+          ) : accounts.length === 0 ? (
+            <p className="muted">
+              No cards yet. Add one manually, connect a bank under Bank connections, or import a CSV
+              file.
+            </p>
           ) : (
             <table className="accounts-table">
               <caption className="sr-only">Your accounts</caption>
               <thead>
                 <tr>
-                  <th scope="col">Issuer</th>
-                  <th scope="col">Name</th>
-                  <th scope="col">Last four</th>
-                  <th scope="col">Type</th>
+                  <th scope="col">Account</th>
                   <th scope="col">Source</th>
                   <th scope="col">Actions</th>
                 </tr>
@@ -142,10 +183,10 @@ export function AccountManager({
               <tbody>
                 {accounts.map((account) => (
                   <tr key={account.id} className={account.archived ? "row-archived" : undefined}>
-                    <td>{account.issuer}</td>
-                    <td>{account.displayName}</td>
-                    <td>{account.lastFour ?? "—"}</td>
-                    <td>{account.accountType.replaceAll("_", " ")}</td>
+                    <td>
+                      <span className="account-name">{account.displayName}</span>
+                      <span className="account-meta">{accountMeta(account)}</span>
+                    </td>
                     <td>
                       <span className="status-pill status-info">{account.sourceKind}</span>
                     </td>
@@ -172,15 +213,24 @@ export function AccountManager({
                           </Button>
                         </span>
                       ) : (
-                        <span className="button-row">
+                        <span className="button-row account-actions">
                           {!account.archived ? (
-                            <Button
-                              variant="ghost"
-                              className="btn-small"
-                              onClick={() => setMode({ kind: "edit", account })}
-                            >
-                              Edit
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                className="btn-small"
+                                onClick={() => setMode({ kind: "edit", account })}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="btn-small"
+                                onClick={() => setMode({ kind: "payment", account })}
+                              >
+                                Payment details
+                              </Button>
+                            </>
                           ) : null}
                           <Button
                             variant="ghost"

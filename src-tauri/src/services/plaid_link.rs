@@ -7,13 +7,15 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
+use rusqlite::OptionalExtension;
 use serde::Serialize;
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::error::{AppError, AppResult};
 use crate::providers::plaid::{
-    load_access_token, load_sandbox_credentials, store_access_token, PlaidClient, PlaidEnvironment,
+    load_access_token, load_credentials, store_access_token, PlaidClient, PlaidEnvironment,
+    NEW_LINK_CREDENTIAL_PREFIX,
 };
 use crate::security::crypto::SecretString;
 use crate::security::network_url::validate_plaid_hosted_url;
@@ -31,6 +33,7 @@ pub struct PlaidLinkRuntime {
     pub active: bool,
     pub cancel: Option<Arc<AtomicBool>>,
     pub mode: String,
+    pub environment: Option<PlaidEnvironment>,
     pub reconnect_connection_id: Option<String>,
 }
 
@@ -41,6 +44,7 @@ pub struct PlaidLinkStatus {
     pub message: Option<String>,
     pub connection_id: Option<String>,
     pub expires_at: Option<String>,
+    pub environment: Option<PlaidEnvironment>,
 }
 
 impl Default for PlaidLinkStatus {
@@ -50,43 +54,71 @@ impl Default for PlaidLinkStatus {
             message: None,
             connection_id: None,
             expires_at: None,
+            environment: None,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PlaidStatus {
+pub struct PlaidEnvironmentStatus {
+    pub environment: PlaidEnvironment,
     pub configured: bool,
-    pub environment: String,
     pub link_available: bool,
     pub message: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaidStatus {
+    pub sandbox: PlaidEnvironmentStatus,
+    pub production: PlaidEnvironmentStatus,
+}
+
+fn environment_status(
+    state: &AppState,
+    environment: PlaidEnvironment,
+) -> AppResult<PlaidEnvironmentStatus> {
+    let configured = load_credentials(state.credentials.as_ref(), environment)?.is_some();
+    let message = match (environment, configured) {
+        (PlaidEnvironment::Sandbox, true) => {
+            "Sandbox credentials are stored in the macOS Keychain. Links add test Items."
+        }
+        (PlaidEnvironment::Sandbox, false) => "Add Sandbox credentials to link test institutions.",
+        (PlaidEnvironment::Production, true) => {
+            "Trial/Production credentials are stored in the macOS Keychain. Links add real Items."
+        }
+        (PlaidEnvironment::Production, false) => {
+            "Add Trial/Production credentials to link real institutions."
+        }
+    };
+    Ok(PlaidEnvironmentStatus {
+        environment,
+        configured,
+        link_available: configured,
+        message: Some(message.into()),
+    })
+}
+
 pub fn status(state: &AppState) -> AppResult<PlaidStatus> {
     state.require_real("configure Plaid in demo mode")?;
-    let configured = load_sandbox_credentials(state.credentials.as_ref())?.is_some();
     Ok(PlaidStatus {
-        configured,
-        environment: "sandbox".into(),
-        link_available: configured,
-        message: if configured {
-            Some("Sandbox credentials are stored in the macOS Keychain.".into())
-        } else {
-            Some("Add Plaid Sandbox credentials in the native setup sheet.".into())
-        },
+        sandbox: environment_status(state, PlaidEnvironment::Sandbox)?,
+        production: environment_status(state, PlaidEnvironment::Production)?,
     })
 }
 
 pub fn save_credentials(
     state: &AppState,
+    environment: PlaidEnvironment,
     client_id: SecretString,
     secret: SecretString,
 ) -> AppResult<PlaidStatus> {
     state.require_real("configure Plaid in demo mode")?;
     state.with_db(|_conn, _header, _settings| Ok(()))?;
-    crate::providers::plaid::save_sandbox_credentials(
+    crate::providers::plaid::save_credentials(
         state.credentials.as_ref(),
+        environment,
         client_id,
         secret,
     )?;
@@ -95,7 +127,10 @@ pub fn save_credentials(
             conn,
             "credential_added",
             "success",
-            Some(serde_json::json!({ "provider": "plaid", "environment": "sandbox" })),
+            Some(serde_json::json!({
+                "provider": "plaid",
+                "environment": environment.as_str()
+            })),
         );
         Ok(())
     })?;
@@ -113,6 +148,7 @@ fn link_status(state: &AppState) -> AppResult<PlaidLinkStatus> {
         message: runtime.message.clone(),
         connection_id: runtime.connection_id.clone(),
         expires_at: runtime.expires_at.clone(),
+        environment: runtime.environment,
     })
 }
 
@@ -126,7 +162,10 @@ fn set_status(
         runtime.status = status.to_string();
         runtime.message = message;
         runtime.connection_id = connection_id;
-        if status == "linked" || status == "error" || status == "cancelled" || status == "expired" {
+        if matches!(
+            status,
+            "linked" | "duplicate" | "error" | "cancelled" | "expired"
+        ) {
             runtime.active = false;
         }
     }
@@ -136,9 +175,64 @@ fn provider_app_error(error: crate::providers::ProviderError) -> AppError {
     AppError::Provider(error.safe_message)
 }
 
+/// Find an active Plaid connection at the same institution and environment.
+///
+/// Plaid recommends checking `item_add_results` **before** exchanging the
+/// public token: if the public token is not exchanged, no duplicate Item is
+/// created and no Trial Item slot is consumed. Restored links that have no
+/// local token (`newlink-…`) are intentionally exempt so the documented
+/// "link again" recovery still works. Disconnected connections are exempt too.
+pub fn active_connection_for_institution(
+    state: &AppState,
+    environment: PlaidEnvironment,
+    institution_id: Option<&str>,
+    institution_name: Option<&str>,
+) -> AppResult<Option<(String, String)>> {
+    if institution_id.is_none() && institution_name.is_none() {
+        return Ok(None);
+    }
+    let no_token_prefix = format!("{NEW_LINK_CREDENTIAL_PREFIX}%");
+    state.with_db(|conn, _header, _settings| {
+        let find = |query: &str, value: &str| -> AppResult<Option<(String, String)>> {
+            conn.query_row(
+                query,
+                rusqlite::params![environment.as_str(), value, no_token_prefix.as_str()],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .optional()
+            .map_err(AppError::from)
+        };
+        if let Some(id) = institution_id {
+            if let Some(found) = find(
+                "SELECT id, COALESCE(institution_name, 'this bank') FROM connections \
+                 WHERE provider = 'plaid' AND environment = ?1 AND status <> 'disconnected' \
+                   AND credential_ref NOT LIKE ?3 AND institution_id = ?2 \
+                 ORDER BY created_at ASC LIMIT 1",
+                id,
+            )? {
+                return Ok(Some(found));
+            }
+        }
+        if let Some(name) = institution_name {
+            if let Some(found) = find(
+                "SELECT id, COALESCE(institution_name, 'this bank') FROM connections \
+                 WHERE provider = 'plaid' AND environment = ?1 AND status <> 'disconnected' \
+                   AND credential_ref NOT LIKE ?3 AND institution_id IS NULL \
+                   AND lower(institution_name) = lower(?2) \
+                 ORDER BY created_at ASC LIMIT 1",
+                name,
+            )? {
+                return Ok(Some(found));
+            }
+        }
+        Ok(None)
+    })
+}
+
 pub fn start_link<R: tauri::Runtime>(
     state: &AppState,
     app: &tauri::AppHandle<R>,
+    environment: PlaidEnvironment,
 ) -> AppResult<PlaidLinkStatus> {
     state.require_real("link Plaid in demo mode")?;
     let vault_id = state.with_db(|_conn, header, _settings| {
@@ -146,7 +240,7 @@ pub fn start_link<R: tauri::Runtime>(
             .map(|header| header.vault_id_hex())
             .ok_or(AppError::Locked)
     })?;
-    let credentials = load_sandbox_credentials(state.credentials.as_ref())?
+    let credentials = load_credentials(state.credentials.as_ref(), environment)?
         .ok_or(AppError::ProviderNotConfigured)?;
     {
         let mut runtime = state.plaid_link.lock().map_err(|_| AppError::Internal)?;
@@ -160,6 +254,7 @@ pub fn start_link<R: tauri::Runtime>(
         runtime.active = true;
         runtime.cancel = Some(Arc::new(AtomicBool::new(false)));
         runtime.mode = "link".into();
+        runtime.environment = Some(environment);
         runtime.reconnect_connection_id = None;
     }
 
@@ -196,7 +291,10 @@ pub fn start_link<R: tauri::Runtime>(
         let mut runtime = state.plaid_link.lock().map_err(|_| AppError::Internal)?;
         runtime.status = "waiting".into();
         runtime.expires_at = Some(expires_at.clone());
-        runtime.message = Some("Complete the Plaid Sandbox flow in your browser.".into());
+        runtime.message = Some(format!(
+            "Complete the Plaid {} flow in your browser.",
+            environment.label()
+        ));
     }
     // The URL is a short-lived bearer: open it once through the opener and do
     // not log, persist, return, or include it in any error.
@@ -323,6 +421,45 @@ fn finish_link<R: tauri::Runtime>(
     let Some(state) = app.try_state::<AppState>() else {
         return;
     };
+    let environment = client.environment();
+    let existing = match active_connection_for_institution(
+        &state,
+        environment,
+        item.institution_id.as_deref(),
+        item.institution_name.as_deref(),
+    ) {
+        Ok(existing) => existing,
+        Err(error) => {
+            set_status(&state, "error", Some(AppError::safe_message(&error)), None);
+            return;
+        }
+    };
+    if let Some((existing_id, existing_name)) = existing {
+        let _ = state.with_db(|conn, _h, _s| {
+            let _ = record_event(
+                conn,
+                "plaid_duplicate_blocked",
+                "info",
+                Some(serde_json::json!({
+                    "provider": "plaid",
+                    "environment": environment.as_str(),
+                    "existing_connection_id": existing_id,
+                })),
+            );
+            Ok(())
+        });
+        // Do not exchange the public token. Plaid's duplicate-Item guidance is
+        // explicit: an access token request is what creates the duplicate Item.
+        set_status(
+            &state,
+            "duplicate",
+            Some(format!(
+                "{existing_name} is already connected. No Plaid access token was requested, so no duplicate Item was created. Use Update or Reconnect on the existing connection instead."
+            )),
+            None,
+        );
+        return;
+    }
     let exchange = match client.exchange_public_token(&item.public_token) {
         Ok(exchange) => exchange,
         Err(error) => {
@@ -342,9 +479,10 @@ fn finish_link<R: tauri::Runtime>(
         conn.execute(
             "INSERT INTO connections (id, provider, environment, institution_id, institution_name, \
                 credential_ref, status, created_at, updated_at) \
-             VALUES (?1, 'plaid', 'sandbox', ?2, ?3, ?4, 'healthy', ?5, ?5)",
+             VALUES (?1, 'plaid', ?2, ?3, ?4, ?5, 'healthy', ?6, ?6)",
             rusqlite::params![
                 connection_id,
+                environment.as_str(),
                 item.institution_id,
                 item.institution_name,
                 credential_ref,
@@ -355,7 +493,10 @@ fn finish_link<R: tauri::Runtime>(
             conn,
             "credential_added",
             "success",
-            Some(serde_json::json!({ "provider": "plaid", "environment": "sandbox" })),
+            Some(serde_json::json!({
+                "provider": "plaid",
+                "environment": environment.as_str()
+            })),
         );
         Ok(())
     });
@@ -371,10 +512,13 @@ fn finish_link<R: tauri::Runtime>(
     set_status(
         &state,
         "linked",
-        Some("Sandbox Item linked. Syncing transactions and balances.".into()),
+        Some(format!(
+            "{} Item linked. Syncing transactions and balances.",
+            environment.label()
+        )),
         Some(connection_id.clone()),
     );
-    // Initial sync is attempted; a failure is visible in Connections & sync and
+    // Initial sync is attempted; a failure is visible in Bank connections and
     // does not undo the link.
     let _ = crate::services::sync::sync_connection_now(&state, &connection_id, "manual");
 }
@@ -396,15 +540,19 @@ pub fn start_reconnect<R: tauri::Runtime>(
     if status == "disconnected" {
         return Err(AppError::Blocked("this connection is disconnected"));
     }
-    if environment != "sandbox" {
-        return Err(AppError::Blocked("Production Plaid is disabled"));
-    }
+    let action = if status == "healthy" {
+        "Update"
+    } else {
+        "Reconnect"
+    };
+    let environment = PlaidEnvironment::parse(&environment)
+        .ok_or(AppError::Blocked("unsupported Plaid environment"))?;
     let vault_id = state.with_db(|_conn, header, _s| {
         header
             .map(|header| header.vault_id_hex())
             .ok_or(AppError::Locked)
     })?;
-    let credentials = load_sandbox_credentials(state.credentials.as_ref())?
+    let credentials = load_credentials(state.credentials.as_ref(), environment)?
         .ok_or(AppError::ProviderNotConfigured)?;
     let token = load_access_token(state.credentials.as_ref(), &credential_ref)?
         .ok_or(AppError::ProviderNotConfigured)?;
@@ -420,6 +568,7 @@ pub fn start_reconnect<R: tauri::Runtime>(
         runtime.active = true;
         runtime.cancel = Some(Arc::new(AtomicBool::new(false)));
         runtime.mode = "reconnect".into();
+        runtime.environment = Some(environment);
         runtime.reconnect_connection_id = Some(connection_id.to_string());
     }
     let client =
@@ -460,7 +609,10 @@ pub fn start_reconnect<R: tauri::Runtime>(
         let mut runtime = state.plaid_link.lock().map_err(|_| AppError::Internal)?;
         runtime.status = "waiting".into();
         runtime.expires_at = Some(expires_at.clone());
-        runtime.message = Some("Reconnect the Sandbox Item in your browser.".into());
+        runtime.message = Some(format!(
+            "{action} the {} Item in your browser.",
+            environment.label()
+        ));
     }
     app.opener().open_url(url, None::<&str>).map_err(|_| {
         set_status(
@@ -533,7 +685,10 @@ fn finish_reconnect<R: tauri::Runtime>(
     set_status(
         &state,
         "linked",
-        Some("Sandbox Item reconnected. Syncing again.".into()),
+        Some(format!(
+            "{} Item updated. Syncing again.",
+            client.environment().label()
+        )),
         Some(connection_id.to_string()),
     );
     let _ = crate::services::sync::sync_connection_now(&state, connection_id, "manual");
@@ -554,9 +709,9 @@ pub fn cancel(state: &AppState) -> AppResult<PlaidLinkStatus> {
     link_status(state)
 }
 
-pub fn test_credentials(state: &AppState) -> AppResult<PlaidStatus> {
+pub fn test_credentials(state: &AppState, environment: PlaidEnvironment) -> AppResult<PlaidStatus> {
     state.require_real("test Plaid credentials in demo mode")?;
-    let credentials = load_sandbox_credentials(state.credentials.as_ref())?
+    let credentials = load_credentials(state.credentials.as_ref(), environment)?
         .ok_or(AppError::ProviderNotConfigured)?;
     let client =
         PlaidClient::new(credentials, None).map_err(|_| AppError::ProviderNotConfigured)?;
@@ -569,10 +724,6 @@ pub fn test_credentials(state: &AppState) -> AppResult<PlaidStatus> {
 pub fn get_status(state: &AppState) -> AppResult<PlaidLinkStatus> {
     state.require_real("link Plaid in demo mode")?;
     link_status(state)
-}
-
-pub fn environment() -> PlaidEnvironment {
-    PlaidEnvironment::Sandbox
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -635,12 +786,60 @@ pub fn verification_report(state: &AppState) -> AppResult<PlaidVerificationRepor
         .first()
         .and_then(|run| run.steps.iter().find(|step| step.stream == "liabilities"))
         .map(|step| step.status.clone());
+    let environment = report_environment(&connections);
     Ok(PlaidVerificationReport {
-        environment: "sandbox".into(),
+        environment,
         connections,
         latest_run_status,
         latest_liabilities_status,
         recent_runs,
         generated_at: now_rfc3339(),
     })
+}
+
+fn report_environment(connections: &[PlaidVerificationConnection]) -> String {
+    let has_sandbox = connections
+        .iter()
+        .any(|connection| connection.environment == PlaidEnvironment::Sandbox.as_str());
+    let has_production = connections
+        .iter()
+        .any(|connection| connection.environment == PlaidEnvironment::Production.as_str());
+    match (has_sandbox, has_production) {
+        (true, true) => "mixed".into(),
+        (false, true) => "production".into(),
+        (true, false) => "sandbox".into(),
+        (false, false) => "none".into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn connection(environment: &str) -> PlaidVerificationConnection {
+        PlaidVerificationConnection {
+            institution_name: Some("Bank".into()),
+            environment: environment.into(),
+            status: "healthy".into(),
+            account_count: 1,
+            provider_transaction_count: 1,
+            pending_transaction_count: 0,
+            last_success_at: None,
+            cursor_present: true,
+        }
+    }
+
+    #[test]
+    fn verification_report_environment_reflects_connections() {
+        assert_eq!(report_environment(&[]), "none");
+        assert_eq!(report_environment(&[connection("sandbox")]), "sandbox");
+        assert_eq!(
+            report_environment(&[connection("production")]),
+            "production"
+        );
+        assert_eq!(
+            report_environment(&[connection("sandbox"), connection("production")]),
+            "mixed"
+        );
+    }
 }

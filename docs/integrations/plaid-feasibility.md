@@ -2,7 +2,7 @@
 
 **Scope:** local macOS desktop app (Tauri, no server, no inbound listener) linking Plaid Items for Transactions and balance data, with optional Liabilities.
 
-**Status: research only — nothing was tested.** No API call was made, no Link session opened, no credentials exist. Everything below comes from reading Plaid's public docs on **2026-10-23** (retrieval date). Limits, flows, and defaults are as documented on that date and may change. Inference is labelled **Inferred**; unresolved gaps are labelled **Unverified**.
+**Status: research captured 2026-10-23; implementation has since moved on.** Sandbox linking was verified on 2026-10-24. Trial/Production linking is now wired with separate credentials and `production.plaid.com`, but no real Production Item has been linked. Everything below comes from reading Plaid's public docs on **2026-10-23** (retrieval date). Limits, flows, and defaults are as documented on that date and may change. Inference is labelled **Inferred**; unresolved gaps are labelled **Unverified**.
 
 ## Summary
 
@@ -15,7 +15,7 @@
 | Hosted Link with no server? | Yes to start; the `public_token` must be polled from `/link/token/get` | Verified |
 | Webhook required? | No — but without one, polling is the only delivery path | Verified |
 | Liabilities everywhere? | No — US plus limited Canada, specific account types, per-Item errors | Verified |
-| Shippable today? | No — no credentials, no enrolment, no tested link | Blocker |
+| Shippable today? | Sandbox yes (verified); Trial/Production wired but no real Item tested | Real-Item verification pending |
 
 ## 1. Trial plan, Item limits, product access, pricing caveats
 
@@ -99,7 +99,7 @@ Hard constraints, not preferences:
 
 **Why it does not give the app the token.** A static HTTPS page has no channel to a sandboxed macOS process. Every option fails: a **webhook receiver** needs a server and public endpoint; **manual paste** moves a secret through the clipboard and probably an editor; a **custom-scheme redirect** carrying the token is unsupported as an OAuth redirect and any local app can claim the scheme. The page solves the *OAuth return leg* only, never *token delivery*.
 
-**Is it even needed?** On desktop, Plaid documents OAuth as a **pop-up flow** in all environments "unless the page is accessed through a mobile webview" ([OAuth guide](https://plaid.com/docs/link/oauth/#redirect-uris-and-desktop--mobile-web)). Since Hosted Link is an ordinary Plaid page in the default browser, the OAuth round-trip is handled inside it and no `redirect_uri` should be required. **Inferred**, not stated for Hosted Link on desktop — confirm against an OAuth Sandbox institution.
+**Is it even needed?** Plaid's current OAuth guide states that OAuth flows work on web without a redirect URI: "OAuth flows will function properly on web even if you don't set up a redirect URI. Desktop web and mobile web integrations will always try to open the OAuth bank's website in a new pop-up window if possible" ([OAuth guide](https://plaid.com/docs/link/oauth/#redirect-uris-and-desktop--mobile-web)). Hosted Link is an ordinary Plaid page opened in the default browser, so this applies. The app intentionally sets no `redirect_uri`; OAuth is handled by Plaid's pop-up flow, and the app obtains the public token by polling `/link/token/get`. This was confirmed against the docs on 2026-10-25 but not exercised with a real OAuth institution in this build.
 
 **Conclusion: not practical.** It adds hosting, a domain, TLS and a JS page, and still strands the `public_token`. Do not build it unless a server appears for other reasons.
 
@@ -148,7 +148,7 @@ Hard constraints, not preferences:
 | **No production loopback** | Cannot catch a redirect on `127.0.0.1` in Production | Nothing in scope |
 | **No macOS SDK** | Link cannot be embedded; a browser is required | Nothing in scope |
 
-**Live linking remains UNVERIFIED.** Until the owner completes enrolment and a Sandbox link runs end-to-end, "this app can link a Plaid Item" is a documentation-based expectation, not a fact. Gate one is a Sandbox link; gate two is one real Trial Item.
+**A real Trial/Production Item remains UNVERIFIED.** Gate one (a Sandbox link running end-to-end) passed on 2026-10-24. Gate two is one real Trial Item: until the owner completes that link and records it, "this app can link a real bank account" is a documented, wired expectation rather than verified coverage.
 
 ## Data flow
 
@@ -169,8 +169,10 @@ Hard constraints, not preferences:
 
 All retrieved **2026-10-23**: [Hosted Link](https://plaid.com/docs/link/hosted-link/) · [/link/token/create & /get](https://plaid.com/docs/api/link/) · [Link overview](https://plaid.com/docs/link/) · [OAuth guide](https://plaid.com/docs/link/oauth/) · [Update mode](https://plaid.com/docs/link/update-mode/) · [Invalid tokens](https://plaid.com/docs/link/handle-invalid-link-token/) · [Webview SDK](https://plaid.com/docs/link/webview/) · [Billing](https://plaid.com/docs/account/billing/) · [Transactions](https://plaid.com/docs/transactions/) · [Balance](https://plaid.com/docs/balance/) · [Liabilities](https://plaid.com/docs/liabilities/) · [Item errors](https://plaid.com/docs/errors/item/) · [Support: plans](https://support.plaid.com/hc/en-us/articles/16110502116887-What-are-Plaid-s-prices-and-pricing-plans-and-how-do-they-differ) · [Support: environments](https://support.plaid.com/hc/en-us/articles/16110110883479-How-are-Sandbox-Production-Trial-plan-and-Limited-Production-different).
 
-**Known uncertainties.** (1) Whether `/link/token/get` serves data after the Hosted Link token expires but inside the six-hour window. (2) Whether a desktop Hosted Link session with no `redirect_uri` completes OAuth institutions via the pop-up flow — strongly implied, not stated. (3) Whether `completion_redirect_uri` accepts a custom scheme on macOS with `is_mobile_app: false`. (4) Actual pricing, which is not public. (5) Whether a brand-new account has usable Sandbox credentials before Trial approval. (6) Plaid's docs are undated, so "current" means "as served on 2026-10-23".
+**Known uncertainties.** (1) Whether `/link/token/get` serves data after the Hosted Link token expires but inside the six-hour window. (2) Whether `completion_redirect_uri` accepts a custom scheme on macOS with `is_mobile_app: false`. (3) Actual pricing, which is not public. (4) Whether a brand-new account has usable Sandbox credentials before Trial approval. (5) Plaid's docs are undated, so "current" means "as served on 2026-10-23" unless a later retrieval is noted. The desktop OAuth-without-redirect question was resolved by the current OAuth guide on 2026-10-25; it remains unexercised with a real Item.
 
-## Current status (2026-10-24)
+## Current status (2026-10-25)
 
-The Sandbox adapter and Hosted Link flow are **implemented and Sandbox-verified** (2026-10-24): Charles Schwab Sandbox, 2 credit-card accounts, 18 transactions, balances, persisted cursor across restart, no duplicates. Liabilities returned `available_but_null` honestly. Production remains disabled; no real institution coverage is claimed. See `docs/integrations/plaid-guide.md` and `docs/integrations/plaid-verification-2026-10-24.md`. No link URL, link token, public token, access token, or client secret is exposed to the renderer.
+The Sandbox adapter and Hosted Link flow are **implemented and Sandbox-verified** (2026-10-24): Charles Schwab Sandbox, 2 credit-card accounts, 18 transactions, balances, persisted cursor across restart, no duplicates. Liabilities returned `available_but_null` honestly.
+
+Trial/Production linking is **implemented and enabled** but **not verified with a real Item**: the app stores separate Sandbox and Production credentials, uses `production.plaid.com` for Trial/Production Items, records each connection's environment, and uses that environment for sync, reconnect, disconnect/revoke, and restore cleanup. The owner must supply Production credentials, accept Trial limits/billing, and complete a real link before real-bank coverage is claimed. See `docs/integrations/plaid-guide.md` and `docs/integrations/plaid-verification-2026-10-24.md`. No link URL, link token, public token, access token, or client secret is exposed to the renderer.

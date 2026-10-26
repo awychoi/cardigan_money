@@ -19,8 +19,22 @@ extern "C" {
     static kSecAttrAccessible: core_foundation_sys::string::CFStringRef;
     static kSecMatchLimitOne: core_foundation_sys::string::CFStringRef;
 }
-pub const ACCOUNT_CLIENT_ID: &str = "plaid-client-id-sandbox";
-pub const ACCOUNT_SECRET: &str = "plaid-secret-sandbox";
+/// Plaid client credentials are stored per environment. Sandbox and
+/// Production (including Trial) use different secrets and different hosts, so
+/// they must never share a Keychain slot.
+pub const ACCOUNT_CLIENT_ID_SANDBOX: &str = "plaid-client-id-sandbox";
+pub const ACCOUNT_SECRET_SANDBOX: &str = "plaid-secret-sandbox";
+pub const ACCOUNT_CLIENT_ID_PRODUCTION: &str = "plaid-client-id-production";
+pub const ACCOUNT_SECRET_PRODUCTION: &str = "plaid-secret-production";
+
+/// Every app-managed Plaid client credential. Used by crypto-erase, which must
+/// not leave either environment's secret behind.
+pub const PLAID_CLIENT_ACCOUNTS: &[&str] = &[
+    ACCOUNT_CLIENT_ID_SANDBOX,
+    ACCOUNT_SECRET_SANDBOX,
+    ACCOUNT_CLIENT_ID_PRODUCTION,
+    ACCOUNT_SECRET_PRODUCTION,
+];
 
 pub trait CredentialStore: Send + Sync {
     fn set(&self, account: &str, secret: &SecretString) -> AppResult<()>;
@@ -305,13 +319,13 @@ mod tests {
     fn memory_store_round_trips_and_deletes() {
         let store = MemoryStore::default();
         let secret = SecretString::new("sandbox-secret-value".into());
-        store.set(ACCOUNT_SECRET, &secret).unwrap();
+        store.set(ACCOUNT_SECRET_SANDBOX, &secret).unwrap();
         assert_eq!(
-            store.get(ACCOUNT_SECRET).unwrap().unwrap().expose(),
+            store.get(ACCOUNT_SECRET_SANDBOX).unwrap().unwrap().expose(),
             "sandbox-secret-value"
         );
-        store.delete(ACCOUNT_SECRET).unwrap();
-        assert!(store.get(ACCOUNT_SECRET).unwrap().is_none());
+        store.delete(ACCOUNT_SECRET_SANDBOX).unwrap();
+        assert!(store.get(ACCOUNT_SECRET_SANDBOX).unwrap().is_none());
     }
 
     #[test]
@@ -320,8 +334,10 @@ mod tests {
         for account in [
             "plaid-access-token-one",
             "plaid-access-token-two",
-            ACCOUNT_CLIENT_ID,
-            ACCOUNT_SECRET,
+            ACCOUNT_CLIENT_ID_SANDBOX,
+            ACCOUNT_SECRET_SANDBOX,
+            ACCOUNT_CLIENT_ID_PRODUCTION,
+            ACCOUNT_SECRET_PRODUCTION,
         ] {
             store
                 .set(account, &SecretString::new(format!("value-{account}")))
@@ -329,6 +345,7 @@ mod tests {
         }
         assert_eq!(store.delete_prefix("plaid-access-token-").unwrap(), 2);
         assert!(store.get("plaid-access-token-one").unwrap().is_none());
-        assert!(store.get(ACCOUNT_SECRET).unwrap().is_some());
+        assert!(store.get(ACCOUNT_SECRET_SANDBOX).unwrap().is_some());
+        assert!(store.get(ACCOUNT_SECRET_PRODUCTION).unwrap().is_some());
     }
 }

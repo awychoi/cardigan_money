@@ -9,6 +9,23 @@ the [Knit Graph hero](hero/h2-knit-graph.svg). The repository README uses the Kn
 The rest of this page is the exploration that led there; the colorway comparisons remain as the
 design record.
 
+## README banner candidates — 26 Oct 2026
+
+Three drafts put the mark and **cardigan_money** wordmark first and demote the chart to a small
+motif. They are not installed yet; the current README still uses the Knit Graph hero above.
+
+![Three README banner candidates](preview/readme-banner-options.png)
+
+1. **Name first** — mark + 68 px wordmark on the left, a compact chart strip on the right.
+   [SVG](hero/options/r1-name-first.svg) · [PNG](preview/r1-name-first.png)
+2. **Center stage** — centered mark and 78 px wordmark, with a tiny nine-bar stitch chart.
+   [SVG](hero/options/r2-center-stage.svg) · [PNG](preview/r2-center-stage.png)
+3. **Paper label** — warm-paper version with the chart contained in a compact ledger panel.
+   [SVG](hero/options/r3-paper-label.svg) · [PNG](preview/r3-paper-label.png)
+
+All three are 1600 × 480 and render at 2× for the preview PNGs. The wordmark keeps the brand's
+monospace treatment and mint underscore.
+
 ## Round three · the woven exploration
 
 **Hero 2, Knit Graph, is chosen.** Round three keeps **C · Button coin** and **D · cm, woven**, but
@@ -232,10 +249,15 @@ the light or warm heroes later.
 | [`preview/h2-knit-graph.png`](preview/h2-knit-graph.png) | chosen hero · 2× preview |
 | [`preview/h1-quiet-ledger.png`](preview/h1-quiet-ledger.png) | alternate hero · 2× preview |
 | [`preview/h3-wallet.png`](preview/h3-wallet.png) | alternate hero · 2× preview |
+| [`hero/options/r1-name-first.svg`](hero/options/r1-name-first.svg) | 2026-10 README candidate · Name first |
+| [`hero/options/r2-center-stage.svg`](hero/options/r2-center-stage.svg) | 2026-10 README candidate · Center stage |
+| [`hero/options/r3-paper-label.svg`](hero/options/r3-paper-label.svg) | 2026-10 README candidate · Paper label |
+| [`preview/readme-banner-options.png`](preview/readme-banner-options.png) | the three candidates on one board |
 | [`index.html`](index.html) | local gallery of the main icon and hero directions |
 | [`render.mjs`](render.mjs) | preview regeneration script |
 | [`build-woven.mjs`](build-woven.mjs) | builds the eight woven C/D SVGs and the round-three board |
 | [`build-green.mjs`](build-green.mjs) | builds the three green-tile C SVGs and their board |
+| [`build-readme-banners.mjs`](build-readme-banners.mjs) | builds the three 2026-10 README banner candidates |
 | [`capture-theme-demo.mjs`](capture-theme-demo.mjs) | captures the theme/mode demo from the running mock app |
 
 ### Regenerate the previews
@@ -251,6 +273,13 @@ node docs/design/brand/build-woven.mjs
 node docs/design/brand/build-green.mjs
 ```
 
+The README banner candidates are generated with:
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.cache/ms-playwright" \
+  node docs/design/brand/build-readme-banners.mjs
+```
+
 The theme-demo board is captured from the running mock app:
 
 ```bash
@@ -259,7 +288,7 @@ CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   node docs/design/brand/capture-theme-demo.mjs
 ```
 
-Both scripts use the Playwright Chromium installed with the repo. If the local browser version
+These scripts use the Playwright Chromium installed with the repo. If the local browser version
 does not match the library, point `CHROMIUM_PATH` at a Chromium/Chrome binary:
 
 ```bash

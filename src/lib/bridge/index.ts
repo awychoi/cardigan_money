@@ -114,6 +114,8 @@ export type {
   SyncRunView,
   SyncStatus,
   SyncSummary,
+  PlaidEnvironment,
+  PlaidEnvironmentStatus,
   PlaidStatus,
   PlaidLinkStatus,
   PlaidVerificationReport,

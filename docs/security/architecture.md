@@ -168,7 +168,7 @@ Self-contained authenticated snapshot: 256-byte header + SQLCipher database byte
 
 ## 8. Keychain
 
-- Service `com.awychoi.cardiganmoney.plaid`; one generic-password item per connection credential reference; a separate item for the Plaid client ID/secret.
+- Service `com.awychoi.cardiganmoney.plaid`; one generic-password item per connection credential reference; separate client ID/secret items for **Sandbox** and **Trial/Production** so environments cannot mix credentials.
 - Attributes: `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, `kSecAttrSynchronizable=false`, data-protection Keychain (`kSecUseDataProtectionKeychain=true`).
 - Labels contain only the local connection UUID — no account numbers.
 - Tokens are loaded only for the duration of a Rust request and zeroized after use. They are never included in backups, exports, logs, errors, or renderer state.

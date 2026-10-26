@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSettingsSection, openUnlocked } from "./helpers";
+import { openAccountsTab, openSettingsSection, openUnlocked } from "./helpers";
 
 test.describe("edits, rules, metadata, and CSV workflow (browser mock)", () => {
   test("edits a transaction override and clears it without changing the source", async ({
@@ -23,15 +23,18 @@ test.describe("edits, rules, metadata, and CSV workflow (browser mock)", () => {
 
   test("saves dated manual payment metadata and shows its source", async ({ page }) => {
     await openUnlocked(page);
-    await openSettingsSection(page, "Accounts");
-    const accountSelect = page.getByLabel("Manual metadata account");
-    await expect(accountSelect).toBeVisible();
+    await openAccountsTab(page, "All accounts");
+    const row = page
+      .getByRole("row")
+      .filter({ has: page.getByText("Sapphire Reserve (demo)", { exact: true }) });
+    await row.getByRole("button", { name: "Payment details" }).click();
+    await expect(page.getByRole("heading", { name: "Payment details" })).toBeVisible();
     await page.getByLabel("Statement balance").fill("120.00");
     await page.getByLabel("Minimum due").fill("25.00");
     await page.getByLabel("Next due date").fill("2026-10-29");
     await page.getByLabel("Valid through").fill("2026-11-15");
-    await page.getByRole("button", { name: "Save manual metadata" }).click();
-    await expect(page.getByText(/Manual payment metadata saved/)).toBeVisible();
+    await page.getByRole("button", { name: "Save payment details" }).click();
+    await expect(page.getByText(/Payment details saved/)).toBeVisible();
     await page.getByRole("button", { name: "Cards", exact: true }).click();
     await expect(page.getByText(/Due source: manual/).first()).toBeVisible();
   });
@@ -51,7 +54,7 @@ test.describe("edits, rules, metadata, and CSV workflow (browser mock)", () => {
 
   test("validates, imports, and rolls back a CSV batch", async ({ page }) => {
     await openUnlocked(page);
-    await openSettingsSection(page, "Import & export");
+    await openAccountsTab(page, "CSV import");
     await page.getByRole("button", { name: "Choose CSV file…" }).click();
     await expect(page.getByText(/5 columns/)).toBeVisible();
     await page.getByLabel("Date column").selectOption("0");
@@ -88,7 +91,7 @@ test.describe("edits, rules, metadata, and CSV workflow (browser mock)", () => {
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await page.getByRole("button", { name: "Transactions", exact: true }).click();
     await expect(page.getByRole("button", { name: "Export CSV…" })).toHaveCount(0);
-    await openSettingsSection(page, "Accounts");
+    await openAccountsTab(page, "All accounts");
     await expect(page.getByText(/Demo accounts are read-only/)).toBeVisible();
     await page.getByRole("button", { name: "Lock & idle", exact: true }).click();
     await expect(page.getByText(/Passphrase change is unavailable in demo mode/)).toBeVisible();

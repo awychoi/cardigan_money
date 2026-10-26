@@ -12,7 +12,11 @@ import { OverviewView } from "../features/dashboard/OverviewView";
 import { OverviewSkeleton } from "../features/dashboard/OverviewSkeleton";
 import { CardsView } from "../features/dashboard/CardsView";
 import { LedgerView } from "../features/dashboard/LedgerView";
-import { SettingsView } from "../features/settings/SettingsView";
+import {
+  SettingsView,
+  type AccountsTabId,
+  type SettingsSectionId,
+} from "../features/settings/SettingsView";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/Button";
 import { formatMonthRange, monthLabel } from "../lib/formatting";
@@ -84,6 +88,10 @@ export function AppShell({
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [settingsTarget, setSettingsTarget] = useState<{
+    section: SettingsSectionId;
+    accountsTab?: AccountsTabId;
+  } | null>(null);
   const demo = vault.mode === "demo";
   const sidebar = theme.options.navigation === "sidebar";
 
@@ -130,8 +138,13 @@ export function AppShell({
     setView("transactions");
   }
 
-  function addAccount() {
+  function openSettings(section: SettingsSectionId, accountsTab?: AccountsTabId) {
+    setSettingsTarget({ section, ...(accountsTab ? { accountsTab } : {}) });
     setView("settings");
+  }
+
+  function addAccount() {
+    openSettings("accounts", "accounts");
   }
 
   const connections = syncStatus?.connections ?? [];
@@ -195,7 +208,10 @@ export function AppShell({
               : `nav-item${view === item.id ? " nav-item-active" : ""}`
           }
           aria-current={view === item.id ? "page" : undefined}
-          onClick={() => setView(item.id)}
+          onClick={() => {
+            if (item.id === "settings") setSettingsTarget(null);
+            setView(item.id);
+          }}
         >
           {sidebar ? (
             <svg
@@ -400,7 +416,7 @@ export function AppShell({
                 theme={theme}
                 onAddAccount={addAccount}
                 onOpenCards={() => setView("cards")}
-                onOpenSettings={() => setView("settings")}
+                onOpenSettings={() => openSettings("accounts", "connections")}
                 onOpenTransactions={() => setView("transactions")}
               />
             ) : view === "cards" ? (
@@ -427,6 +443,8 @@ export function AppShell({
                 demo={demo}
                 onOpenDemo={onOpenDemo}
                 onResetDemo={onResetDemo}
+                initialSection={settingsTarget?.section}
+                initialAccountsTab={settingsTarget?.accountsTab}
               />
             )
           ) : (

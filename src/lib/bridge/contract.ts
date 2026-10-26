@@ -761,12 +761,20 @@ export type SyncRuntime = z.infer<typeof zSyncRuntime>;
 export type SyncStatus = z.infer<typeof zSyncStatus>;
 export type SyncSummary = z.infer<typeof zSyncSummary>;
 
-export const zPlaidStatus = z
+export const zPlaidEnvironment = z.enum(["sandbox", "production"]);
+export const zPlaidEnvironmentRequest = z.object({ environment: zPlaidEnvironment }).strict();
+export const zPlaidEnvironmentStatus = z
   .object({
+    environment: zPlaidEnvironment,
     configured: z.boolean(),
-    environment: z.string(),
     linkAvailable: z.boolean(),
     message: z.string().nullable(),
+  })
+  .strict();
+export const zPlaidStatus = z
+  .object({
+    sandbox: zPlaidEnvironmentStatus,
+    production: zPlaidEnvironmentStatus,
   })
   .strict();
 export const zPlaidLinkStatus = z
@@ -775,8 +783,11 @@ export const zPlaidLinkStatus = z
     message: z.string().nullable(),
     connectionId: z.string().nullable(),
     expiresAt: z.string().nullable(),
+    environment: zPlaidEnvironment.nullable(),
   })
   .strict();
+export type PlaidEnvironment = z.infer<typeof zPlaidEnvironment>;
+export type PlaidEnvironmentStatus = z.infer<typeof zPlaidEnvironmentStatus>;
 export type PlaidStatus = z.infer<typeof zPlaidStatus>;
 export type PlaidLinkStatus = z.infer<typeof zPlaidLinkStatus>;
 
@@ -896,9 +907,12 @@ export interface CommandDefs {
     response: { deleted: boolean };
   };
   plaid_status: { request: Record<string, never>; response: { plaid: PlaidStatus } };
-  plaid_setup: { request: Record<string, never>; response: { plaid: PlaidStatus } };
-  plaid_test: { request: Record<string, never>; response: { plaid: PlaidStatus } };
-  plaid_link_start: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
+  plaid_setup: { request: { environment: PlaidEnvironment }; response: { plaid: PlaidStatus } };
+  plaid_test: { request: { environment: PlaidEnvironment }; response: { plaid: PlaidStatus } };
+  plaid_link_start: {
+    request: { environment: PlaidEnvironment };
+    response: { link: PlaidLinkStatus };
+  };
   plaid_link_status: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
   plaid_link_cancel: { request: Record<string, never>; response: { link: PlaidLinkStatus } };
   plaid_reconnect: {
@@ -996,9 +1010,9 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   sync_runs_list: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
   connection_disconnect: z.object({ connectionId: z.string().min(1).max(64) }).strict(),
   plaid_status: zEmpty,
-  plaid_setup: zEmpty,
-  plaid_test: zEmpty,
-  plaid_link_start: zEmpty,
+  plaid_setup: zPlaidEnvironmentRequest,
+  plaid_test: zPlaidEnvironmentRequest,
+  plaid_link_start: zPlaidEnvironmentRequest,
   plaid_link_status: zEmpty,
   plaid_link_cancel: zEmpty,
   plaid_reconnect: z.object({ connectionId: z.string().min(1).max(64) }).strict(),
