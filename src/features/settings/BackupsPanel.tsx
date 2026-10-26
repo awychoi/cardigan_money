@@ -24,6 +24,20 @@ function restoreMessage(result: RestoreResult): string {
   if (result.vaultIdChanged) {
     notes.push("The restored vault uses the backup's vault identity.");
   }
+  if (result.reusedConnections > 0) {
+    notes.push(
+      `${result.reusedConnections} bank connection${
+        result.reusedConnections === 1 ? "" : "s"
+      } reused with its existing Plaid Item and will resync.`,
+    );
+  }
+  if (result.newLinkConnections > 0) {
+    notes.push(
+      `${result.newLinkConnections} bank connection${
+        result.newLinkConnections === 1 ? "" : "s"
+      } needs a new Plaid link.`,
+    );
+  }
   if (result.adoptedBackupKey) {
     notes.push("The backup passphrase is now the vault passphrase.");
   }

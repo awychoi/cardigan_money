@@ -498,6 +498,8 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
         vaultKeyChanged: false,
         preRestoreProtection: request.destructive ? "none" : existing ? "current" : "none",
         unlocked: mockState.unlocked,
+        reusedConnections: 0,
+        newLinkConnections: 0,
       };
       break;
     }

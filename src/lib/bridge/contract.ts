@@ -627,6 +627,7 @@ export const zPlaidTokenChoice = z.enum([
   "delete-local",
   "delete-and-revoke",
   "keep",
+  "reuse-local",
   "delete-all",
   "leave-all",
 ]);
@@ -665,6 +666,8 @@ export const zRestoreResult = z
     vaultKeyChanged: z.boolean(),
     preRestoreProtection: z.enum(["current", "previous", "none"]),
     unlocked: z.boolean(),
+    reusedConnections: z.number().int(),
+    newLinkConnections: z.number().int(),
   })
   .strict();
 

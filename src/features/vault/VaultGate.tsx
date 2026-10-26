@@ -70,7 +70,13 @@ export function VaultGate({
       const vault = await command("vault_status", {});
       onOpened(vault);
       if (vault.unlocked) {
-        setNotice("Backup restored. The vault is unlocked.");
+        setNotice(
+          result.reusedConnections > 0
+            ? `Backup restored. ${result.reusedConnections} Plaid Item${
+                result.reusedConnections === 1 ? "" : "s"
+              } reused; syncing now.`
+            : "Backup restored. The vault is unlocked.",
+        );
       } else if (result.vaultKeyChanged) {
         setNotice("Backup restored. Unlock with the new vault passphrase.");
       } else if (result.adoptedBackupKey) {

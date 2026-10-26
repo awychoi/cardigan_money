@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   command,
+  type ConnectionView,
   type PlaidEnvironment,
   type PlaidLinkStatus,
   type PlaidStatus,
@@ -15,6 +16,27 @@ function environmentLabel(environment: PlaidEnvironment | null): string {
 
 function connectionEnvironment(value: string): PlaidEnvironment {
   return value === "production" ? "production" : "sandbox";
+}
+
+function connectionStatusView(connection: ConnectionView): {
+  label: string;
+  className: string;
+} {
+  if (connection.status === "reconnect_required") {
+    return { label: "reconnect required", className: "status-pill status-danger" };
+  }
+  // A restored connection that kept its Item is healthy but has no cursor yet.
+  // It resyncs automatically with the same Plaid Item.
+  if (connection.status === "healthy" && !connection.hasCursor) {
+    return { label: "resync pending", className: "status-pill status-warn" };
+  }
+  if (connection.status === "healthy") {
+    return { label: "healthy", className: "status-pill status-ok" };
+  }
+  return {
+    label: connection.status.replaceAll("_", " "),
+    className: "status-pill status-warn",
+  };
 }
 
 export function ConnectionsSyncPanel({
@@ -414,71 +436,80 @@ export function ConnectionsSyncPanel({
             </tr>
           </thead>
           <tbody>
-            {connections.map((connection) => (
-              <tr key={connection.id}>
-                <td>{connection.institutionName ?? "Provider"}</td>
-                <td>{connection.provider}</td>
-                <td>{environmentLabel(connectionEnvironment(connection.environment))}</td>
-                <td>
-                  <span
-                    className={
-                      connection.status === "healthy"
-                        ? "status-pill status-ok"
-                        : connection.status === "reconnect_required"
-                          ? "status-pill status-danger"
-                          : "status-pill status-warn"
-                    }
-                    title={connection.sanitizedError ?? undefined}
-                  >
-                    {connection.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-                <td>
-                  {connection.lastSuccessAt ? connection.lastSuccessAt.slice(0, 10) : "Never"}
-                </td>
-                <td>{connection.accountCount}</td>
-                <td>
-                  {connection.provider === "plaid" ? (
-                    connection.hasToken ? (
-                      <Button
-                        variant="ghost"
-                        className="btn-small"
-                        onClick={() => void reconnect(connection.id)}
-                        disabled={busy || linkActive}
-                        title={
-                          connection.status === "healthy"
-                            ? "Use Plaid update mode to add accounts or refresh this Item. This reuses the existing Item; it does not create another one."
-                            : "Repair this Item in Plaid update mode without creating another Item."
-                        }
-                      >
-                        {connection.status === "healthy" ? "Update…" : "Reconnect…"}
-                      </Button>
+            {connections.map((connection) => {
+              const statusView = connectionStatusView(connection);
+              return (
+                <tr key={connection.id}>
+                  <td>{connection.institutionName ?? "Provider"}</td>
+                  <td>{connection.provider}</td>
+                  <td>{environmentLabel(connectionEnvironment(connection.environment))}</td>
+                  <td>
+                    <span
+                      className={statusView.className}
+                      title={connection.sanitizedError ?? undefined}
+                    >
+                      {statusView.label}
+                    </span>
+                  </td>
+                  <td>
+                    {connection.lastSuccessAt ? connection.lastSuccessAt.slice(0, 10) : "Never"}
+                  </td>
+                  <td>{connection.accountCount}</td>
+                  <td>
+                    {connection.provider === "plaid" ? (
+                      connection.hasToken ? (
+                        <Button
+                          variant="ghost"
+                          className="btn-small"
+                          onClick={() => void reconnect(connection.id)}
+                          disabled={busy || linkActive}
+                          title={
+                            connection.status === "healthy"
+                              ? "Use Plaid update mode to add accounts or refresh this Item. This reuses the existing Item; it does not create another one."
+                              : "Repair this Item in Plaid update mode without creating another Item."
+                          }
+                        >
+                          {connection.status === "healthy" ? "Update…" : "Reconnect…"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          className="btn-small"
+                          onClick={() =>
+                            void startLink(connectionEnvironment(connection.environment))
+                          }
+                          disabled={
+                            busy ||
+                            linkActive ||
+                            !plaid?.[connectionEnvironment(connection.environment)].configured
+                          }
+                          title="This connection came from a restore and has no local token. A new link is required."
+                        >
+                          Link again…
+                        </Button>
+                      )
                     ) : (
-                      <Button
-                        variant="ghost"
-                        className="btn-small"
-                        onClick={() =>
-                          void startLink(connectionEnvironment(connection.environment))
-                        }
-                        disabled={
-                          busy ||
-                          linkActive ||
-                          !plaid?.[connectionEnvironment(connection.environment)].configured
-                        }
-                        title="This connection came from a restore and has no local token. A new link is required."
-                      >
-                        Link again…
-                      </Button>
-                    )
-                  ) : (
-                    <span className="fine-print">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                      <span className="fine-print">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
+
+      {connections.some(
+        (connection) =>
+          connection.provider === "plaid" &&
+          connection.status === "healthy" &&
+          !connection.hasCursor,
+      ) ? (
+        <p className="fine-print">
+          Restored connections resync with the Plaid Item already stored in the Keychain; no new
+          Item is created.
+        </p>
+      ) : null}
 
       {connections.some(
         (connection) =>
@@ -487,8 +518,8 @@ export function ConnectionsSyncPanel({
           !connection.hasToken,
       ) ? (
         <p className="fine-print">
-          A restored connection starts as reconnect required. “Link again…” creates a fresh Item;
-          the restored one stays until you disconnect it.
+          “Link again…” creates a fresh Plaid Item because no local token exists; the restored
+          connection stays until you disconnect it.
         </p>
       ) : null}
 

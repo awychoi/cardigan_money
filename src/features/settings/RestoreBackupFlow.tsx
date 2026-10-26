@@ -30,6 +30,10 @@ const SCOPES: { id: RestoreScope; label: string; detail: string }[] = [
 ];
 
 const CROSS_VAULT_CHOICES: { id: PlaidTokenChoice; label: string }[] = [
+  {
+    id: "reuse-local",
+    label: "Reuse the Plaid Items still stored in this Mac's Keychain (no new Items).",
+  },
   { id: "delete-local", label: "Delete the old vault's local tokens." },
   {
     id: "delete-and-revoke",
@@ -39,6 +43,10 @@ const CROSS_VAULT_CHOICES: { id: PlaidTokenChoice; label: string }[] = [
 ];
 
 const DESTRUCTIVE_CHOICES: { id: PlaidTokenChoice; label: string }[] = [
+  {
+    id: "reuse-local",
+    label: "Reuse the Items still stored in this Mac's Keychain.",
+  },
   { id: "delete-all", label: "Delete all app-managed provider tokens." },
   { id: "leave-all", label: "Leave app-managed provider tokens in place." },
 ];
@@ -74,6 +82,11 @@ export function RestoreBackupFlow({
     try {
       const result = await command("backup_restore_prepare", {});
       setPreview(result);
+      // Reuse preserves Plaid Trial Item capacity, so it is the offered
+      // default. Connections without a local token still need a new link.
+      if (result.requiresPlaidChoice) {
+        setPlaidChoice("reuse-local");
+      }
     } catch (caught) {
       const code = (caught as { code?: string }).code;
       if (code === "cancelled") {
@@ -127,7 +140,7 @@ export function RestoreBackupFlow({
     confirmation.trim().toLowerCase() === "replace";
   const privateReady = !preview?.nonPrivate || allowNonPrivate;
   const plaidReady = destructive
-    ? plaidChoice === "delete-all" || plaidChoice === "leave-all"
+    ? plaidChoice === "delete-all" || plaidChoice === "leave-all" || plaidChoice === "reuse-local"
     : !(scope === "full" && preview?.requiresPlaidChoice) || plaidChoice !== null;
   const canApply =
     preview !== null && typedConfirmationReady && privateReady && plaidReady && !busy;
@@ -172,7 +185,8 @@ export function RestoreBackupFlow({
       {preview.freshInstall ? (
         <p>
           Fresh install: the backup&apos;s vault identity and passphrase become the new vault. No
-          pre-restore backup is made.
+          pre-restore backup is made. Connections whose Items are still in this Mac&apos;s Keychain
+          are reused automatically.
         </p>
       ) : null}
       {isCrossVault && !destructive && !preview.freshInstall ? (
@@ -252,6 +266,10 @@ export function RestoreBackupFlow({
       {scope === "full" && preview.requiresPlaidChoice && !destructive ? (
         <fieldset className="restore-options">
           <legend>The current vault&apos;s Plaid Items</legend>
+          <p>
+            Reuse keeps each Item already stored in this Mac&apos;s Keychain. A connection whose
+            token is gone, or a backup restored on another Mac, still needs a new Plaid Item.
+          </p>
           {CROSS_VAULT_CHOICES.map((choice) => (
             <label key={choice.id} className="restore-option">
               <input
