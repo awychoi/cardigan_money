@@ -887,7 +887,9 @@ fn same_vault_full_restore_keeps_keychain_tokens_and_credential_references() {
     assert_eq!(connections.len(), 1);
     assert!(connections[0].has_token);
     assert!(!connections[0].has_cursor);
-    assert!(cardigan_money_lib::services::sync::has_pending_resync(&state));
+    assert!(cardigan_money_lib::services::sync::has_pending_resync(
+        &state
+    ));
 }
 
 #[test]
@@ -939,7 +941,9 @@ fn cross_vault_reuse_local_keeps_item_token_and_reference() {
     let connections = cardigan_money_lib::services::sync::list_connections(&state_b).unwrap();
     assert_eq!(connections.len(), 1);
     assert!(connections[0].has_token);
-    assert!(cardigan_money_lib::services::sync::has_pending_resync(&state_b));
+    assert!(cardigan_money_lib::services::sync::has_pending_resync(
+        &state_b
+    ));
 }
 
 #[test]
@@ -975,12 +979,13 @@ fn cross_vault_reuse_local_without_token_requires_new_link() {
         .unwrap();
     assert_eq!(status, "reconnect_required");
     assert_ne!(credential_ref, source_ref);
-    assert!(credential_ref.starts_with(
-        cardigan_money_lib::providers::plaid::NEW_LINK_CREDENTIAL_PREFIX
-    ));
+    assert!(credential_ref
+        .starts_with(cardigan_money_lib::providers::plaid::NEW_LINK_CREDENTIAL_PREFIX));
     let connections = cardigan_money_lib::services::sync::list_connections(&state_b).unwrap();
     assert!(!connections[0].has_token);
-    assert!(!cardigan_money_lib::services::sync::has_pending_resync(&state_b));
+    assert!(!cardigan_money_lib::services::sync::has_pending_resync(
+        &state_b
+    ));
 }
 
 #[test]
@@ -1009,7 +1014,9 @@ fn same_vault_restore_without_token_requires_new_link() {
     assert_eq!(status, "reconnect_required");
     let connections = cardigan_money_lib::services::sync::list_connections(&state).unwrap();
     assert!(!connections[0].has_token);
-    assert!(!cardigan_money_lib::services::sync::has_pending_resync(&state));
+    assert!(!cardigan_money_lib::services::sync::has_pending_resync(
+        &state
+    ));
 }
 
 #[test]

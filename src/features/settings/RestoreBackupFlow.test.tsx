@@ -61,12 +61,8 @@ describe("RestoreBackupFlow", () => {
     const user = userEvent.setup();
     const onRestored = renderFlow();
 
-    expect(
-      await screen.findByText("Restore a backup from a different vault?"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: /Reuse the Plaid Items still stored/ }),
-    ).toBeChecked();
+    expect(await screen.findByText("Restore a backup from a different vault?")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Reuse the Plaid Items still stored/ })).toBeChecked();
 
     await user.type(screen.getByLabelText("Type replace to confirm"), "replace");
     await user.click(screen.getByRole("button", { name: "Restore this backup…" }));
