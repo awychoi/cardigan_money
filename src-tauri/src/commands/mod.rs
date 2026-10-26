@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Manager, State, WebviewWindow};
 
 use crate::domain::money::parse_currency_amount;
 use crate::error::{AppError, AppResult, ErrorPayload};
@@ -329,6 +329,19 @@ pub struct EventsView {
     pub events: Vec<SecurityEvent>,
 }
 
+/// Run a sync in the background so restore/unlock stay responsive. Errors are
+/// recorded by the sync service, not surfaced to the caller.
+fn spawn_background_sync<R: tauri::Runtime>(app: &AppHandle<R>, trigger: &'static str) {
+    let handle = app.clone();
+    let _ = std::thread::Builder::new()
+        .name("cm-background-sync".into())
+        .spawn(move || {
+            if let Some(state) = handle.try_state::<AppState>() {
+                let _ = sync::sync_now(state.inner(), trigger);
+            }
+        });
+}
+
 /// Execute a validated command. Window/origin authorization happens in the
 /// Tauri wrapper before this function so command logic is unit-testable.
 pub fn execute<R: tauri::Runtime>(
@@ -380,7 +393,13 @@ pub fn execute<R: tauri::Runtime>(
             };
             let mut values = passphrase;
             let secret = values.pop().ok_or(AppError::NativeInput)?;
-            GatewayResponse::ok(vault_service::unlock(state, secret)?)
+            let status = vault_service::unlock(state, secret)?;
+            // A restore performed while locked leaves reusable connections in
+            // resync_required; resume them as soon as the vault opens.
+            if sync::has_pending_resync(state) {
+                spawn_background_sync(app, "restore-resync");
+            }
+            GatewayResponse::ok(status)
         }
         "vault_lock" => {
             let _: EmptyPayload = request.decode_payload()?;
@@ -739,6 +758,11 @@ pub fn execute<R: tauri::Runtime>(
             state.rate_limit("backup_restore_apply", 3, 60)?;
             let options: RestoreOptions = request.decode_payload()?;
             let result: RestoreResult = restore::apply_restore_interactive(state, app, options)?;
+            // A restored connection that kept its Item resumes syncing without
+            // another prompt. Locked restores resume from the unlock path.
+            if result.unlocked && result.reused_connections > 0 {
+                spawn_background_sync(app, "restore");
+            }
             GatewayResponse::ok(result)
         }
         "backup_restore_cancel" => {

@@ -245,6 +245,8 @@ fn cross_vault_full_restore_adopts_identity_and_retires_old_backups() {
     assert_eq!(result.pre_restore_protection, "previous");
     assert!(result.retired_backups >= 1);
     assert!(result.unlocked);
+    assert_eq!(result.reused_connections, 0);
+    assert_eq!(result.new_link_connections, 1);
     assert_eq!(marker(&state_b), Some("\"source\"".to_string()));
     assert_eq!(backups::current_vault_id(&state_b), Some(backup_vault_id));
     // The previous vault's normal containers are retired and excluded from the
@@ -859,6 +861,8 @@ fn same_vault_full_restore_keeps_keychain_tokens_and_credential_references() {
 
     let result = restore(&state, &backup, PASS, None, options(RestoreScope::Full)).unwrap();
     assert!(result.restored);
+    assert_eq!(result.reused_connections, 1);
+    assert_eq!(result.new_link_connections, 0);
     // The same-vault full restore does not delete the token or rewrite the ref.
     assert!(state.credentials.get(&token_account).unwrap().is_some());
     let restored_ref: String = state
@@ -876,10 +880,136 @@ fn same_vault_full_restore_keeps_keychain_tokens_and_credential_references() {
             Ok(conn.query_row("SELECT status FROM connections", [], |row| row.get(0))?)
         })
         .unwrap();
-    assert_eq!(status, "reconnect_required");
+    // The Item and token survive, so the connection is healthy and only needs
+    // its cursor rebuilt by a full resync.
+    assert_eq!(status, "healthy");
     let connections = cardigan_money_lib::services::sync::list_connections(&state).unwrap();
     assert_eq!(connections.len(), 1);
     assert!(connections[0].has_token);
+    assert!(!connections[0].has_cursor);
+    assert!(cardigan_money_lib::services::sync::has_pending_resync(&state));
+}
+
+#[test]
+fn cross_vault_reuse_local_keeps_item_token_and_reference() {
+    let (_tmp_a, state_a) = setup(PASS);
+    let app_a = mock_app();
+    let account = add_account(&state_a, "Source Card");
+    let source_ref = uuid::Uuid::new_v4().to_string();
+    let source_connection = add_plaid_connection(&state_a, &source_ref);
+    add_provider_snapshot(&state_a, &account, &source_connection, 123_456);
+    let backup = make_backup(&state_a, &app_a);
+
+    let (_tmp_b, state_b) = setup(OTHER_PASS);
+    // The token belongs to this Mac's Keychain, not to the vault or backup.
+    let source_token = cardigan_money_lib::providers::plaid::access_token_account(&source_ref);
+    state_b
+        .credentials
+        .set(&source_token, &pass("reused-access-token-value-123"))
+        .unwrap();
+
+    let result = restore(
+        &state_b,
+        &backup,
+        PASS,
+        Some(OTHER_PASS),
+        options_with_plaid(RestoreScope::Full, PlaidTokenChoice::ReuseLocal),
+    )
+    .unwrap();
+    assert!(result.vault_id_changed);
+    assert_eq!(result.reused_connections, 1);
+    assert_eq!(result.new_link_connections, 0);
+    // Reuse keeps the token and the reference so update mode targets the same
+    // Plaid Item instead of creating another one.
+    assert!(state_b.credentials.get(&source_token).unwrap().is_some());
+    let (status, credential_ref, has_cursor): (String, String, i64) = state_b
+        .with_db(|conn, _h, _s| {
+            Ok(conn.query_row(
+                "SELECT status, credential_ref, cursor IS NOT NULL FROM connections \
+                 WHERE institution_name = 'Restore Bank'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )?)
+        })
+        .unwrap();
+    assert_eq!(status, "healthy");
+    assert_eq!(credential_ref, source_ref);
+    // The cursor is dropped: reuse still means a full transaction resync.
+    assert_eq!(has_cursor, 0);
+    let connections = cardigan_money_lib::services::sync::list_connections(&state_b).unwrap();
+    assert_eq!(connections.len(), 1);
+    assert!(connections[0].has_token);
+    assert!(cardigan_money_lib::services::sync::has_pending_resync(&state_b));
+}
+
+#[test]
+fn cross_vault_reuse_local_without_token_requires_new_link() {
+    let (_tmp_a, state_a) = setup(PASS);
+    let app_a = mock_app();
+    let account = add_account(&state_a, "Source Card");
+    let source_ref = uuid::Uuid::new_v4().to_string();
+    let source_connection = add_plaid_connection(&state_a, &source_ref);
+    add_provider_snapshot(&state_a, &account, &source_connection, 123_456);
+    let backup = make_backup(&state_a, &app_a);
+
+    let (_tmp_b, state_b) = setup(OTHER_PASS);
+    // No Keychain token for the restored reference (another Mac, or erased).
+    let result = restore(
+        &state_b,
+        &backup,
+        PASS,
+        Some(OTHER_PASS),
+        options_with_plaid(RestoreScope::Full, PlaidTokenChoice::ReuseLocal),
+    )
+    .unwrap();
+    assert_eq!(result.reused_connections, 0);
+    assert_eq!(result.new_link_connections, 1);
+    let (status, credential_ref): (String, String) = state_b
+        .with_db(|conn, _h, _s| {
+            Ok(conn.query_row(
+                "SELECT status, credential_ref FROM connections WHERE institution_name = 'Restore Bank'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?)
+        })
+        .unwrap();
+    assert_eq!(status, "reconnect_required");
+    assert_ne!(credential_ref, source_ref);
+    assert!(credential_ref.starts_with(
+        cardigan_money_lib::providers::plaid::NEW_LINK_CREDENTIAL_PREFIX
+    ));
+    let connections = cardigan_money_lib::services::sync::list_connections(&state_b).unwrap();
+    assert!(!connections[0].has_token);
+    assert!(!cardigan_money_lib::services::sync::has_pending_resync(&state_b));
+}
+
+#[test]
+fn same_vault_restore_without_token_requires_new_link() {
+    let (_tmp, state) = setup(PASS);
+    let app = mock_app();
+    let credential_ref = uuid::Uuid::new_v4().to_string();
+    add_plaid_connection(&state, &credential_ref);
+    let backup = make_backup(&state, &app);
+
+    let result = restore(&state, &backup, PASS, None, options(RestoreScope::Full)).unwrap();
+    assert_eq!(result.reused_connections, 0);
+    assert_eq!(result.new_link_connections, 1);
+    let (status, restored_ref): (String, String) = state
+        .with_db(|conn, _h, _s| {
+            Ok(conn.query_row(
+                "SELECT status, credential_ref FROM connections",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?)
+        })
+        .unwrap();
+    // Same-vault keeps the reference, but with no token the UI must offer a
+    // new link rather than a reconnect that would fail.
+    assert_eq!(restored_ref, credential_ref);
+    assert_eq!(status, "reconnect_required");
+    let connections = cardigan_money_lib::services::sync::list_connections(&state).unwrap();
+    assert!(!connections[0].has_token);
+    assert!(!cardigan_money_lib::services::sync::has_pending_resync(&state));
 }
 
 #[test]

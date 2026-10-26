@@ -131,6 +131,9 @@ pub enum PlaidTokenChoice {
     DeleteAndRevoke,
     /// Keep the old tokens for rollback.
     Keep,
+    /// Keep local tokens and reuse the matching Items for restored
+    /// connections, so no new Plaid Item is created.
+    ReuseLocal,
     /// Destructive path only: delete every app-managed access token found.
     DeleteAll,
     /// Destructive path only: leave every app-managed access token in place.
@@ -174,6 +177,10 @@ pub struct RestoreResult {
     pub vault_key_changed: bool,
     pub pre_restore_protection: String,
     pub unlocked: bool,
+    /// Restored Plaid connections that kept their Keychain token and Item.
+    pub reused_connections: usize,
+    /// Restored Plaid connections that need a new link (no local token).
+    pub new_link_connections: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -787,36 +794,68 @@ fn reset_scope(conn: &Connection, scope: RestoreScope) -> AppResult<()> {
 
 fn prepare_restored_connections(
     conn: &Connection,
+    state: &AppState,
     scope: RestoreScope,
     replace_identity: bool,
-) -> AppResult<()> {
+    reuse_local_items: bool,
+) -> AppResult<(usize, usize)> {
     if scope.resets_connections() {
-        return Ok(());
+        return Ok((0, 0));
     }
-    let ids = {
-        let mut stmt = conn.prepare("SELECT id FROM connections")?;
+    let rows = {
+        let mut stmt = conn.prepare("SELECT id, provider, credential_ref FROM connections")?;
         let rows = stmt
-            .query_map([], |row| row.get::<_, String>(0))?
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })?
             .collect::<Result<Vec<_>, _>>()?;
         rows
     };
-    if replace_identity {
-        for id in ids {
+    let mut reused = 0usize;
+    let mut new_links = 0usize;
+    for (id, provider, credential_ref) in rows {
+        // Provider tokens live in the Keychain, never in the backup. A token is
+        // reusable only when this Mac still has one for the restored reference.
+        // A Keychain failure fails closed to "no token" instead of blocking the
+        // restore.
+        let has_token = provider == "plaid"
+            && plaid::load_access_token(state.credentials.as_ref(), &credential_ref)
+                .map(|token| token.is_some())
+                .unwrap_or(false);
+        let reuse = has_token && reuse_local_items;
+        if replace_identity && !reuse {
             conn.execute(
                 "UPDATE connections SET credential_ref = ?2 WHERE id = ?1",
                 rusqlite::params![id, plaid::new_link_credential_ref()],
             )?;
         }
+        // A reused connection keeps its Item, reference, and token. It is
+        // healthy and needs no interactive step: the cleared cursor forces a
+        // full resync, which also proves the token still works. Everything else
+        // waits for an interactive reconnect before any live call.
+        let status = if reuse {
+            reused += 1;
+            "healthy"
+        } else {
+            if provider == "plaid" {
+                new_links += 1;
+            }
+            "reconnect_required"
+        };
+        // Every restored connection abandons its cursor and does a full
+        // transaction resync; provider IDs are upserted, so this is safe.
+        conn.execute(
+            "UPDATE connections SET status = ?2, cursor = NULL, \
+             last_attempt_at = NULL, last_success_at = NULL, sanitized_error = NULL \
+             WHERE id = ?1",
+            rusqlite::params![id, status],
+        )?;
     }
-    // Every restored provider connection reconnects before any live call. A
-    // reconnect starts a fresh update-mode session; a full transaction resync
-    // is safe because provider IDs are upserted.
-    conn.execute(
-        "UPDATE connections SET status = 'reconnect_required', cursor = NULL, \
-         last_attempt_at = NULL, last_success_at = NULL, sanitized_error = NULL",
-        [],
-    )?;
-    Ok(())
+    Ok((reused, new_links))
 }
 
 /// Credential reference plus the connection's Plaid environment. Revocation
@@ -846,7 +885,8 @@ fn build_candidate(
     target_dek: &LockedKey,
     scope: RestoreScope,
     replace_identity: bool,
-) -> AppResult<()> {
+    reuse_local_items: bool,
+) -> AppResult<(usize, usize)> {
     let (conn, _cipher) = open_ledger(&prepared.staged_path, &prepared.dek, false)?;
 
     // Migrate the candidate first. Older backups may not have the tables or
@@ -862,7 +902,8 @@ fn build_candidate(
     migrated?;
 
     reset_scope(&conn, scope)?;
-    prepare_restored_connections(&conn, scope, replace_identity)?;
+    let provider_counts =
+        prepare_restored_connections(&conn, state, scope, replace_identity, reuse_local_items)?;
     rekey_ledger(&conn, target_dek)?;
     let cipher = cipher_summary(&conn)?;
     vault_meta::reconcile_identity(&conn, target_header, &cipher, supported_schema_version())?;
@@ -886,7 +927,7 @@ fn build_candidate(
     // The candidate is a single file at this point.
     let _ = std::fs::remove_file(format!("{}-wal", prepared.staged_path.display()));
     let _ = std::fs::remove_file(format!("{}-shm", prepared.staged_path.display()));
-    Ok(())
+    Ok(provider_counts)
 }
 
 struct LiveLocked {
@@ -1188,7 +1229,7 @@ fn apply_plaid_choice(
             delete_refs();
         }
         Some(PlaidTokenChoice::DeleteLocal) => delete_refs(),
-        Some(PlaidTokenChoice::Keep) | None => {}
+        Some(PlaidTokenChoice::Keep | PlaidTokenChoice::ReuseLocal) | None => {}
         _ => {}
     }
 }
@@ -1289,7 +1330,11 @@ fn execute_with_prepared_inner(
         }
         if !matches!(
             options.plaid_choice,
-            Some(PlaidTokenChoice::DeleteAll | PlaidTokenChoice::LeaveAll)
+            Some(
+                PlaidTokenChoice::DeleteAll
+                    | PlaidTokenChoice::LeaveAll
+                    | PlaidTokenChoice::ReuseLocal
+            )
         ) {
             return Err(AppError::InvalidInput("provider token choice"));
         }
@@ -1317,6 +1362,7 @@ fn execute_with_prepared_inner(
                     PlaidTokenChoice::DeleteLocal
                         | PlaidTokenChoice::DeleteAndRevoke
                         | PlaidTokenChoice::Keep
+                        | PlaidTokenChoice::ReuseLocal
                 )
             )
         {
@@ -1333,6 +1379,12 @@ fn execute_with_prepared_inner(
     let keep_identity =
         existing && !options.destructive && (options.scope != RestoreScope::Full || same_vault);
     let replace_identity = !keep_identity;
+    // Same-vault restores always reuse the local Item. A fresh install has no
+    // current tokens to reason about, so it also tries to reuse whatever the
+    // Mac's Keychain still holds. Cross-vault restores reuse only when asked.
+    let reuse_local_items = !replace_identity
+        || matches!(options.plaid_choice, Some(PlaidTokenChoice::ReuseLocal))
+        || (!existing && options.plaid_choice.is_none());
     let vault_id_changed = if keep_identity {
         false
     } else if current_header.is_some() {
@@ -1417,7 +1469,10 @@ fn execute_with_prepared_inner(
         None => current_header.clone().ok_or(AppError::Locked)?,
     };
 
-    {
+    let mut retired = 0usize;
+    let mut new_conn: Option<Connection> = None;
+
+    let (reused_connections, new_link_connections) = {
         let target_dek: &LockedKey = match &new_identity {
             Some((_, dek)) => dek,
             None if was_unlocked => guard.dek.as_ref().ok_or(AppError::Locked)?,
@@ -1430,11 +1485,9 @@ fn execute_with_prepared_inner(
             target_dek,
             options.scope,
             replace_identity,
-        )?;
-    }
-
-    let mut retired = 0usize;
-    let mut new_conn: Option<Connection> = None;
+            reuse_local_items,
+        )?
+    };
 
     if keep_identity {
         if was_unlocked {
@@ -1550,6 +1603,8 @@ fn execute_with_prepared_inner(
         vault_key_changed: false,
         pre_restore_protection: pre_restore_protection.to_string(),
         unlocked: was_unlocked,
+        reused_connections,
+        new_link_connections,
     })
 }
 

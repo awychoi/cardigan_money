@@ -1103,17 +1103,35 @@ pub fn list_connections(state: &AppState) -> AppResult<Vec<ConnectionView>> {
         let rows = stmt
             .query_map([], |row| {
                 let provider: String = row.get(1)?;
+                let status: String = row.get(4)?;
                 let credential_ref: String = row.get(10)?;
-                // A reference reset by a restore has no Keychain token. Avoid a
-                // Keychain read on every status refresh.
-                let has_token = provider != "plaid"
-                    || !credential_ref.starts_with(crate::providers::plaid::NEW_LINK_CREDENTIAL_PREFIX);
+                // A reference reset by a restore has no Keychain token. A
+                // healthy connection is already proven to have one; for every
+                // other state probe the Keychain so the UI can offer "link
+                // again" instead of a reconnect that would fail. Best effort:
+                // a Keychain error makes the token look absent.
+                let has_token = if provider != "plaid" {
+                    true
+                } else if credential_ref
+                    .starts_with(crate::providers::plaid::NEW_LINK_CREDENTIAL_PREFIX)
+                {
+                    false
+                } else if status == "healthy" {
+                    true
+                } else {
+                    crate::providers::plaid::load_access_token(
+                        state.credentials.as_ref(),
+                        &credential_ref,
+                    )
+                    .map(|token| token.is_some())
+                    .unwrap_or(false)
+                };
                 Ok(ConnectionView {
                     id: row.get(0)?,
                     provider,
                     environment: row.get(2)?,
                     institution_name: row.get(3)?,
-                    status: row.get(4)?,
+                    status,
                     last_attempt_at: row.get(5)?,
                     last_success_at: row.get(6)?,
                     sanitized_error: row.get(7)?,
@@ -1125,6 +1143,22 @@ pub fn list_connections(state: &AppState) -> AppResult<Vec<ConnectionView>> {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
     })
+}
+
+/// True when a restore left a healthy connection without a cursor: it can
+/// resync with its existing Item. The unlock path uses this to resume syncing
+/// as soon as the vault opens.
+pub fn has_pending_resync(state: &AppState) -> bool {
+    state
+        .with_db(|conn, _h, _s| {
+            Ok(conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM connections \
+                 WHERE provider = 'plaid' AND status = 'healthy' AND cursor IS NULL)",
+                [],
+                |row| row.get::<_, i64>(0),
+            )? != 0)
+        })
+        .unwrap_or(false)
 }
 
 pub fn recent_runs(state: &AppState, limit: u32) -> AppResult<Vec<SyncRunView>> {
