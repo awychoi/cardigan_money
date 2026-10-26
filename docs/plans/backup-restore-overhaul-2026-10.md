@@ -1,7 +1,29 @@
 # Backup and restore overhaul
 
-Status: implemented 2026-10-24. See the implementation evidence at the end.
+Status: implemented 2026-10-24; revised 2026-10-26 for Plaid Item reuse.
 Date: 2026-10-24.
+
+## Revision 2026-10-26: Plaid Item reuse on restore
+
+The original decisions reset credential references on cross-vault, fresh, and
+destructive restores, which forced a new Plaid Item. A Plaid access token is
+Item-scoped and lives only in this Mac's Keychain, so a restored reference whose
+token is still present can reuse the same Item instead:
+
+- Same-vault and fresh-install restores reuse matching local Items
+  automatically.
+- Cross-vault and destructive restores offer an explicit **reuse local Items**
+  choice. The other choices still rotate references, delete tokens, or revoke
+  Items.
+- A reused connection stays `healthy` with no cursor; the next sync is a full
+  resync using the same Item. A revoked token demotes it to
+  `reconnect_required`.
+- Tokens never travel in a backup, so a restore on another Mac still creates new
+  Items. Reuse exists because Plaid Trial capacity (10 Production Items) is
+  consumed permanently: `/item/remove` does not restore it.
+
+This revision supersedes the "reset references on every cross-vault restore"
+parts of decisions 2 and 10 and of the provider section below.
 
 ## Goal
 
@@ -17,7 +39,9 @@ existing vault.
    passphrase. The backup passphrase only decrypts the backup.
 2. Keep Keychain provider tokens for same-vault full restores so Plaid update
    mode can reuse the existing Item. Delete them for cross-vault and fresh
-   restores, subject to the per-restore Plaid Item choice.
+   restores, subject to the per-restore Plaid Item choice. *(Revised
+   2026-10-26: fresh restores and cross-vault restores that choose reuse keep
+   matching tokens instead.)*
 3. After any restore, live provider balances, available credit, limits, and due
    metadata are hidden until the connection is reconnected. Restored
    transaction history remains visible.
@@ -39,8 +63,8 @@ existing vault.
 9. Cross-vault and fresh restores let the user choose the restore scope:
    full database, financial data plus settings, or financial data only.
 10. On cross-vault restore, ask how to handle the old vault's Plaid Items:
-    delete local tokens, also revoke the old Items remotely, or keep the old
-    tokens for rollback.
+    reuse the Items still on this Mac, delete local tokens, also revoke the old
+    Items remotely, or keep the old tokens for rollback.
 11. In the destructive no-current-passphrase path, ask whether to delete all
     app-managed provider tokens or leave them.
 12. Abort a normal restore if the pre-restore backup of the current vault fails.
@@ -117,25 +141,29 @@ the complete candidate has been validated.
 
 ## Provider connections and tokens
 
-- After every restore, all restored Plaid connections start as
-  `reconnect_required`. Scheduled sync, manual sync, and live provider fields
-  are blocked until the user reconnects.
-- Same-vault full restore keeps the existing Keychain tokens and connection
-  credential references. The user can reconnect with Plaid update mode, which
-  reuses the existing Item and does not consume a new trial token.
-- Cross-vault full restore and fresh restore reset restored connection
-  credential references and require a new link. The per-restore Plaid choice
-  controls the old vault's tokens and Items.
+- Every restore clears the restored connections' cursors and last-success
+  times, so the next sync is a full resync. Live provider fields remain hidden
+  because restored snapshots are marked `restored = 1`; restored transaction
+  history stays visible.
+- A reused connection keeps its `credential_ref` and Keychain token, stays
+  `healthy` with no cursor, and resyncs without a new Plaid Item. Reuse is
+  automatic for same-vault and fresh-install restores and an explicit choice
+  for cross-vault and destructive restores.
+- A connection with no local token rotates to a `newlink-…` reference and starts
+  `reconnect_required`; scheduled sync, manual sync, and live provider calls are
+  blocked until the user links again. Plaid update mode is still available for
+  any connection that does keep a token.
 - Any scope that resets connections deletes the old tokens; there is no
   connection left to reuse them.
-- Hiding account detail means live balances, available credit, limits, and due
-  metadata. It does not hide restored transaction history.
-- The per-restore Plaid choice for cross-vault full restore is:
-  delete local tokens only; delete local tokens and revoke the old Items
-  remotely; or keep the old tokens for rollback.
+- The per-restore Plaid choice for cross-vault full restore is: reuse the Items
+  still on this Mac; delete local tokens only; delete local tokens and revoke
+  the old Items remotely; or keep the old tokens for rollback.
 - The destructive no-current-passphrase path cannot read the old connection
-  references. It asks whether to delete all app-managed provider tokens or
-  leave them.
+  references. It asks whether to reuse the Items still on this Mac, delete all
+  app-managed provider tokens, or leave them.
+- Reused connections are resynced in the background after an unlocked restore,
+  and on unlock after a locked restore. A revoked token demotes the connection
+  to `reconnect_required`.
 
 ## Backup list and file selection
 

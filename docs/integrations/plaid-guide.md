@@ -117,6 +117,27 @@ access token, connection, account mapping, and transactions. No duplicate Item i
 Trial/Production connection uses the Production credentials and host; a Sandbox connection uses
 Sandbox.
 
+## Restore and Item reuse
+
+Provider tokens are never written into a backup. They live in this Mac's Keychain, keyed by the
+ledger's `credential_ref`. Because a Plaid access token is Item-scoped, a restored reference that
+still has a token here can keep using the same Item:
+
+- **Same-vault and fresh-install restores** reuse matching local Items automatically. The
+  connection stays `healthy` with no cursor, and the next sync is a full resync of the same Item.
+- **Cross-vault and destructive restores** offer **reuse local Items** alongside delete-local,
+  delete-and-revoke, and keep-for-rollback. Reuse keeps the reference and token; the other choices
+  rotate references or remove tokens, so those connections need a new link.
+- A connection with no local token (another Mac, cleared Keychain, or a delete/keep choice) rotates
+  to a `newlink-…` reference and shows **Link again…**, which creates a new Item.
+- After an unlocked restore, and on unlock after a locked restore, the app starts a background sync
+  for reused connections. A revoked token fails that sync and demotes the connection to
+  `reconnect_required`; use **Reconnect…** (update mode) or **Link again…** to repair it.
+
+Why this matters: the free Trial allows 10 Production Items, and removing an Item with
+`/item/remove` does **not** restore capacity. A forced re-link is therefore permanent loss. Reuse
+only works on the Mac that holds the token; a backup restored elsewhere always needs new Items.
+
 ## Disconnect
 
 Local disconnect deletes the access token from Keychain and marks the connection disconnected; it

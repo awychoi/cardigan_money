@@ -1,8 +1,8 @@
 # Documentation
 
 This folder is the single home for project documentation. The repository root keeps only
-[README.md](../README.md) and [SECURITY.md](../SECURITY.md); everything else lives in one of the
-groups below.
+[README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), and [SECURITY.md](../SECURITY.md);
+everything else lives in one of the groups below.
 
 ## Start here
 
@@ -12,6 +12,7 @@ groups below.
 | see the completed backup/restore overhaul | [plans/backup-restore-overhaul-2026-10.md](plans/backup-restore-overhaul-2026-10.md) |
 | know what is actually built and verified | [reference/implementation-status.md](reference/implementation-status.md) |
 | know why a technical choice was made | [reference/decisions.md](reference/decisions.md) |
+| understand the system end to end | [ARCHITECTURE.md](../ARCHITECTURE.md) |
 | understand the security posture | [SECURITY.md](../SECURITY.md), [security/architecture.md](security/architecture.md), [security/threat-model.md](security/threat-model.md) |
 | change how the app looks | [design/theming.md](design/theming.md) |
 | see the UI direction | [design/proposal.md](design/proposal.md) |

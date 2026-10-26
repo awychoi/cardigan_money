@@ -73,6 +73,7 @@ UNTRUSTED                         VALIDATED BOUNDARY                  TRUSTED (m
 | Stolen disk/backup | SQLCipher raw-key DB with Argon2id-wrapped DEK; authenticated header; encrypted backups; strong-passphrase policy |
 | Passphrase captured by renderer compromise | Native secure input; passphrase never in renderer, IPC, logs, URL, localStorage, or Keychain |
 | Token/secret leak | Keychain only (`WhenUnlockedThisDeviceOnly`, non-synchronizable); Rust-only network; redaction; secret-sentinel tests |
+| Restored backup binding local provider tokens | Tokens never enter backups; restored references are random UUIDs; cross-vault reuse is an explicit choice and only binds tokens already on this Mac; a missing or revoked token falls back to reconnect or a new link |
 | Plaintext ledger by misconfiguration | Fail-closed `cipher_version`/`cipher_provider`/`cipher_status`, key-first pragma, plaintext-header rejection, plain-SQLite negative test |
 | Renderer exfiltration / XSS | CSP with no HTTPS source, one capability, command allowlist, no remote assets, no HTML injection, blocked navigation/new windows |
 | Malicious import/export | Native dialogs, size/row/field caps, UTF-8-only streaming, duplicate review, formula-injection escaping, 0600 exports, no auto-open |

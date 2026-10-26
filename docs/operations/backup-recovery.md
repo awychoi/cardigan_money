@@ -117,14 +117,29 @@ the selected scope is applied, and it is re-keyed to the target key.
   before the swap leave the live files untouched; failures after it restore the
   old files where possible.
 
-After a restore, every restored provider connection starts as
-`reconnect_required`. Scheduled and manual sync are blocked for it until the
-connection is reconnected. A same-vault restore keeps the Keychain token and the
-table offers **Reconnect…** (Plaid update mode); a cross-vault, fresh, or
-destructive restore has no local token, so the table offers **Link again…** for a
-new Item. Restored provider balances, available credit, limits, and due metadata
-stay hidden (the `restored` flag on balance/payment snapshots) until a fresh
-live fetch produces new values. Restored transaction history remains visible.
+After a restore, every restored provider connection clears its cursor and
+last-success time, so the next sync is a full resync. Restored provider balances,
+available credit, limits, and due metadata stay hidden (the `restored` flag on
+balance/payment snapshots) until a fresh live fetch produces new values.
+Restored transaction history remains visible.
+
+Provider tokens never travel in a backup. A restored connection therefore has
+one of two states:
+
+- **Token still in this Mac's Keychain** — the credential reference and token are
+  kept, the connection stays `healthy` with no cursor, and the next sync reuses
+  the same Plaid Item. Reuse is automatic for same-vault and fresh-install
+  restores and an explicit **reuse local Items** choice for cross-vault and
+  destructive restores. Reused connections resync in the background after an
+  unlocked restore (or on unlock after a locked restore).
+- **No local token** — the reference rotates to `newlink-…` and the connection
+  starts `reconnect_required`. Scheduled and manual sync are blocked, and the
+  table offers **Link again…** to create a new Plaid Item.
+
+If a reused token has been revoked at the bank, the first sync fails and the
+connection demotes to `reconnect_required`, where update mode or a new link can
+repair it. Reuse matters for Plaid Trial accounts: 10 Production Items are
+allowed and deleting an Item does not restore capacity.
 
 ### 3.4 Restore completion
 
