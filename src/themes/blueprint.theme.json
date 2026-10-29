@@ -1,0 +1,147 @@
+{
+  "$schema": "./theme.schema.json",
+  "id": "blueprint",
+  "name": "Blueprint",
+  "description": "Wychoi.com: navy ink, white paper, electric blue action, orange markers.",
+  "options": {
+    "navigation": "topbar",
+    "cardArt": "faces",
+    "density": "comfortable",
+    "motion": "full",
+    "overview": {
+      "composition": "ranked-bars",
+      "trend": "bars",
+      "topCategories": 5,
+      "trendMonths": 12
+    }
+  },
+  "type": {
+    "sans": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", sans-serif",
+    "mono": "ui-monospace, \"SF Mono\", Menlo, monospace",
+    "display": "\"Hoefler Text\", \"Iowan Old Style\", Palatino, ui-serif, Georgia, serif",
+    "scale": 1.02,
+    "displayWeight": 500,
+    "displayTracking": -0.035,
+    "lineHeight": 1.55
+  },
+  "shape": {
+    "controlRadius": 2,
+    "panelRadius": 3,
+    "cardRadius": 6,
+    "borderWidth": 1
+  },
+  "spacing": {
+    "screen": 32,
+    "card": 20,
+    "gap": 16
+  },
+  "motion": {
+    "fast": 160,
+    "base": 220,
+    "easing": "cubic-bezier(.22, 1, .36, 1)"
+  },
+  "modes": {
+    "light": {
+      "bg": "#eef2f7",
+      "sidebar": "#e7edf5",
+      "surface": "#ffffff",
+      "surface2": "#e7eeff",
+      "surface3": "#dce6ff",
+      "text": "#081120",
+      "text2": "#26324a",
+      "muted": "#53627a",
+      "border": "#b9c6da",
+      "borderStrong": "#93a6c4",
+      "borderControl": "#5c6e8c",
+      "accent": "#2f5bff",
+      "accentInk": "#2447d8",
+      "success": "#1d4ed8",
+      "onAccent": "#ffffff",
+      "warning": "#a8490a",
+      "danger": "#c83426",
+      "focus": "#2447d8",
+      "chart": [
+        "#2f5bff",
+        "#c45a18",
+        "#081120",
+        "#93a6c4",
+        "#c83426",
+        "#5c6e8c"
+      ],
+      "shadow": "rgb(8 17 32 / 7%)",
+      "shadowStrong": "rgb(8 17 32 / 42%)"
+    },
+    "dark": {
+      "bg": "#070d1a",
+      "sidebar": "#0a1730",
+      "surface": "#0e2040",
+      "surface2": "#12284d",
+      "surface3": "#17325b",
+      "text": "#f4f7ff",
+      "text2": "#dce6fb",
+      "muted": "#a9b9d8",
+      "border": "#29476f",
+      "borderStrong": "#3e5f8f",
+      "borderControl": "#7f9ac2",
+      "accent": "#5b8dff",
+      "accentInk": "#9dbbff",
+      "success": "#9dbbff",
+      "onAccent": "#07101f",
+      "warning": "#ff9a5a",
+      "danger": "#ff5c4d",
+      "focus": "#5b8dff",
+      "chart": [
+        "#5b8dff",
+        "#ff9a5a",
+        "#f4f7ff",
+        "#bfd3ff",
+        "#ff5c4d",
+        "#7f9ac2"
+      ],
+      "shadow": "rgb(0 0 0 / 40%)",
+      "shadowStrong": "rgb(0 0 0 / 68%)"
+    }
+  },
+  "issuers": {
+    "default": {
+      "from": "#17325b",
+      "to": "#081120",
+      "ink": "#f4f7ff"
+    },
+    "chase": {
+      "from": "#2f5bff",
+      "to": "#12284d",
+      "ink": "#f4f7ff"
+    },
+    "synchrony": {
+      "from": "#1b2430",
+      "to": "#070d1a",
+      "ink": "#f4f7ff"
+    },
+    "bilt": {
+      "from": "#262c38",
+      "to": "#0b111c",
+      "ink": "#f4f7ff"
+    },
+    "american-express": {
+      "from": "#dce6ff",
+      "to": "#bfd3ff",
+      "ink": "#07101f"
+    },
+    "citi": {
+      "from": "#0f3bb0",
+      "to": "#071f66",
+      "ink": "#f4f7ff"
+    },
+    "demo-bank": {
+      "from": "#b8500f",
+      "to": "#8f2f22",
+      "ink": "#fff7f2"
+    },
+    "paypal": {
+      "from": "#2f5bff",
+      "to": "#091c4d",
+      "ink": "#f4f7ff"
+    }
+  }
+}

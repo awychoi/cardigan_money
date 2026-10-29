@@ -260,6 +260,14 @@ native macOS behavior are still owner smoke items. The proposal images in this f
 visual reference; screenshots are not duplicated here because they age faster than the theme
 contract.
 
+### Visual QA (2026-10-28)
+
+**Blueprint** — the [wychoi.com](https://wychoi.com) palette: white paper and navy ink in light,
+near-black and deep navy in dark, electric blue for action, orange for markers. It was rendered at
+1440×960 in both modes with the demo data: the picker card, Overview (ranked bars, 12-month trend),
+and Cards (all eight issuer faces) stayed legible, the contrast matrix passes, and there was no
+horizontal overflow.
+
 ---
 
 ## 6. What themes cannot change (and where to go instead)
@@ -301,6 +309,11 @@ a deliberate daylight translation. Mode still comes from `settings.theme`.
 
 **Paper / editorial theme.** Serif `display`, cream `surface`, `cardArt: "tiles"`,
 `motion: "calm"`, larger `spacing`, small radii. Editorial.
+
+**Portfolio / brand theme.** Sample the four colors from the source's own tokens: a light canvas,
+a dark ink, one action color for `accent`, and one marker color for `warning` and chart series 2.
+Keep the action color for `focus`, use a darker tint for `success`, and let a system serif carry
+`display`. Blueprint is this recipe.
 
 **Only change the accent.** Change `accent`, `accentInk`, and `success` in both modes; the wash
 and lines derive automatically.
