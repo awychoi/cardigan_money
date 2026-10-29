@@ -264,9 +264,9 @@ contract.
 
 **Blueprint** — the [wychoi.com](https://wychoi.com) palette: white paper and navy ink in light,
 near-black and deep navy in dark, electric blue for action, orange for markers. It was rendered at
-1440×960 in both modes with the demo data: the picker card, Overview (ranked bars, 12-month trend),
-and Cards (all eight issuer faces) stayed legible, the contrast matrix passes, and there was no
-horizontal overflow.
+1440×960 and 1100×760 in both modes with the demo data: the picker card, Overview (ranked bars,
+12-month trend), Cards (all eight issuer faces), Transactions, and Settings stayed legible, the
+contrast matrix passes, and there was no horizontal overflow.
 
 ---
 
