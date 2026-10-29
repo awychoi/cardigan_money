@@ -7,12 +7,6 @@ no telemetry.
 
 Built with Tauri 2, React, TypeScript, Rust, and SQLCipher.
 
-Blueprint is the default theme. The app mark is the **Placket**, with a colorway for each theme;
-Blueprint is also the fixed default for the Dock icon and for any theme without a colorway. See the
-[colorway board](docs/design/brand/abacus/preview/theme-colorways.png).
-
-Made by [Wai Yin Choi](https://wychoi.com).
-
 ![Overview screen with the Blueprint theme in dark mode and synthetic demo data](docs/design/app-blueprint-overview-dark.png)
 
 ## What it does
