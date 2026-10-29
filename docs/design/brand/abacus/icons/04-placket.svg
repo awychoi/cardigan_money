@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Cardigan placket">
+<rect x="100" y="100" width="824" height="824" rx="184" fill="#07090d"/>
+<path d="M 376 316 Q 376 300 392 300 L 492 348 Q 512 356 532 348 L 632 300 Q 648 300 648 316 V 620 Q 648 756 512 756 Q 376 756 376 620 Z" fill="#ffffff"/>
+<circle cx="512" cy="440" r="62" fill="#07090d"/>
+<g fill="#ffffff">
+    <circle cx="491" cy="419" r="9"/>
+    <circle cx="533" cy="419" r="9"/>
+    <circle cx="491" cy="461" r="9"/>
+    <circle cx="533" cy="461" r="9"/>
+  </g>
+<circle cx="512" cy="560" r="62" fill="#5b8dff"/>
+<g fill="#ffffff">
+    <circle cx="491" cy="539" r="9"/>
+    <circle cx="533" cy="539" r="9"/>
+    <circle cx="491" cy="581" r="9"/>
+    <circle cx="533" cy="581" r="9"/>
+  </g>
+<circle cx="512" cy="680" r="62" fill="#07090d"/>
+<g fill="#ffffff">
+    <circle cx="491" cy="659" r="9"/>
+    <circle cx="533" cy="659" r="9"/>
+    <circle cx="491" cy="701" r="9"/>
+    <circle cx="533" cy="701" r="9"/>
+  </g>
+</svg>

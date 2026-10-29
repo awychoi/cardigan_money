@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="824" height="824" viewBox="100 100 824 824" role="img" aria-label="Source abacus, wychoi.com">
+<rect x="100" y="100" width="824" height="824" rx="184" fill="#07090d"/>
+<rect x="228.5" y="299.5" width="566" height="402" rx="68" fill="none" stroke="#ffffff" stroke-width="39"/>
+<line x1="248" y1="435" x2="773" y2="435" stroke="#515f77" stroke-width="16" stroke-linecap="round"/>
+<line x1="248" y1="602" x2="773" y2="602" stroke="#515f77" stroke-width="16" stroke-linecap="round"/>
+<circle cx="356" cy="435" r="55" fill="#ffffff"/>
+<circle cx="510" cy="435" r="55" fill="#5b8dff"/>
+<circle cx="665" cy="435" r="55" fill="#ffffff"/>
+<circle cx="433" cy="602" r="55" fill="#ffffff"/>
+<circle cx="588" cy="602" r="55" fill="#ffffff"/>
+</svg>

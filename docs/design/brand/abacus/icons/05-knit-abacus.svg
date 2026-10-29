@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Knit abacus">
+<rect x="100" y="100" width="824" height="824" rx="184" fill="#17453a"/>
+<rect x="232" y="316" width="560" height="392" rx="84" fill="none" stroke="#f2e7d5" stroke-width="46"/>
+<line x1="292" y1="456" x2="732" y2="456" stroke="#7fc2b0" stroke-width="22" stroke-linecap="round"/>
+<line x1="292" y1="568" x2="732" y2="568" stroke="#7fc2b0" stroke-width="22" stroke-linecap="round"/>
+<g><circle cx="384" cy="456" r="52" fill="#f2e7d5"/>
+    <circle cx="366" cy="438" r="7" fill="#17453a"/>
+    <circle cx="402" cy="438" r="7" fill="#17453a"/>
+    <circle cx="366" cy="474" r="7" fill="#17453a"/>
+    <circle cx="402" cy="474" r="7" fill="#17453a"/>
+  </g>
+<g><circle cx="512" cy="456" r="52" fill="#b26a4c"/>
+    <circle cx="494" cy="438" r="7" fill="#f2e7d5"/>
+    <circle cx="530" cy="438" r="7" fill="#f2e7d5"/>
+    <circle cx="494" cy="474" r="7" fill="#f2e7d5"/>
+    <circle cx="530" cy="474" r="7" fill="#f2e7d5"/>
+  </g>
+<g><circle cx="640" cy="456" r="52" fill="#f2e7d5"/>
+    <circle cx="622" cy="438" r="7" fill="#17453a"/>
+    <circle cx="658" cy="438" r="7" fill="#17453a"/>
+    <circle cx="622" cy="474" r="7" fill="#17453a"/>
+    <circle cx="658" cy="474" r="7" fill="#17453a"/>
+  </g>
+<g><circle cx="448" cy="568" r="52" fill="#f2e7d5"/>
+    <circle cx="430" cy="550" r="7" fill="#17453a"/>
+    <circle cx="466" cy="550" r="7" fill="#17453a"/>
+    <circle cx="430" cy="586" r="7" fill="#17453a"/>
+    <circle cx="466" cy="586" r="7" fill="#17453a"/>
+  </g>
+<g><circle cx="576" cy="568" r="52" fill="#f2e7d5"/>
+    <circle cx="558" cy="550" r="7" fill="#17453a"/>
+    <circle cx="594" cy="550" r="7" fill="#17453a"/>
+    <circle cx="558" cy="586" r="7" fill="#17453a"/>
+    <circle cx="594" cy="586" r="7" fill="#17453a"/>
+  </g>
+</svg>

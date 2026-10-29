@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Card abacus, site palette">
+<rect x="100" y="100" width="824" height="824" rx="184" fill="#07090d"/>
+<rect x="202" y="316" width="620" height="392" rx="64" fill="#10151f" stroke="#ffffff" stroke-width="52"/>
+<rect x="678" y="354" width="92" height="68" rx="14" fill="#515f77"/>
+<path d="M 698 354 V 422 M 678 388 H 770" fill="none" stroke="#10151f" stroke-width="8"/>
+<line x1="286" y1="492" x2="778" y2="492" stroke="#515f77" stroke-width="28" stroke-linecap="round"/>
+<line x1="286" y1="600" x2="778" y2="600" stroke="#515f77" stroke-width="28" stroke-linecap="round"/>
+<circle cx="380" cy="492" r="56" fill="#ffffff"/>
+<circle cx="512" cy="492" r="56" fill="#5b8dff"/>
+<circle cx="644" cy="492" r="56" fill="#ffffff"/>
+<circle cx="446" cy="600" r="56" fill="#ffffff"/>
+<circle cx="578" cy="600" r="56" fill="#ffffff"/>
+</svg>

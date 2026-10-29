@@ -9,6 +9,17 @@ the [Knit Graph hero](hero/h2-knit-graph.svg). The repository README uses the Kn
 The rest of this page is the exploration that led there; the colorway comparisons remain as the
 design record.
 
+## Abacus alternatives — 28 Oct 2026
+
+Six directions carry the [wychoi.com](https://wychoi.com) abacus into the app; the Forest button
+stays installed. [Board](abacus/preview/board.png) · [Colorways](abacus/preview/colorways.png) ·
+[Rationale and files](abacus/README.md).
+
+![Six abacus alternatives](abacus/preview/board.png)
+
+The shortlist is **C abacus** (the strongest at 16 px), **Card abacus** (the best product mark),
+and **Placket** (the most memorable story).
+
 ## README banner candidates — 26 Oct 2026
 
 Three drafts put the mark and **cardigan_money** wordmark first and demote the chart to a small

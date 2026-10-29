@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Ledger abacus">
+<rect x="100" y="100" width="824" height="824" rx="184" fill="#07090d"/>
+<path d="M 306 252 H 658 L 762 356 V 728 Q 762 772 718 772 H 306 Q 262 772 262 728 V 296 Q 262 252 306 252 Z" fill="#ffffff"/>
+<path d="M 658 252 L 762 356 H 658 Z" fill="#c3cee0"/>
+<rect x="306" y="300" width="160" height="18" rx="9" fill="#d7dfeb"/>
+<line x1="318" y1="500" x2="706" y2="500" stroke="#d7dfeb" stroke-width="18" stroke-linecap="round"/>
+<line x1="318" y1="610" x2="706" y2="610" stroke="#d7dfeb" stroke-width="18" stroke-linecap="round"/>
+<circle cx="400" cy="500" r="46" fill="#07090d"/>
+<circle cx="512" cy="500" r="46" fill="#5b8dff"/>
+<circle cx="624" cy="500" r="46" fill="#07090d"/>
+<circle cx="456" cy="610" r="46" fill="#07090d"/>
+<circle cx="568" cy="610" r="46" fill="#07090d"/>
+<rect x="560" y="704" width="146" height="12" rx="6" fill="#d7dfeb"/>
+</svg>

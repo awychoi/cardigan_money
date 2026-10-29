@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Five beads">
+<rect x="100" y="100" width="824" height="824" rx="184" fill="#07090d"/>
+<rect x="196" y="300" width="632" height="424" rx="76" fill="none" stroke="#ffffff" stroke-width="30" opacity="0.15"/>
+<line x1="292" y1="440" x2="732" y2="440" stroke="#515f77" stroke-width="28" stroke-linecap="round"/>
+<line x1="292" y1="584" x2="732" y2="584" stroke="#515f77" stroke-width="28" stroke-linecap="round"/>
+<circle cx="380" cy="440" r="64" fill="#ffffff"/>
+<circle cx="512" cy="440" r="64" fill="#5b8dff"/>
+<circle cx="644" cy="440" r="64" fill="#ffffff"/>
+<circle cx="448" cy="584" r="64" fill="#ffffff"/>
+<circle cx="576" cy="584" r="64" fill="#ffffff"/>
+</svg>
