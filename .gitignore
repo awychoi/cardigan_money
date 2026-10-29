@@ -67,4 +67,5 @@ test-results/
 playwright-report/
 blob-report/
 *.tsbuildinfo
+
 /AGENTS.md
