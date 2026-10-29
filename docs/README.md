@@ -51,7 +51,7 @@ everything else lives in one of the groups below.
 
 **Operations**
 
-- [operations/github-metadata.md](operations/github-metadata.md) — sync the GitHub About/topics from a local file
+- [operations/github-metadata.md](operations/github-metadata.md) — sync GitHub About/topics with the Settings app
 - [operations/backup-recovery.md](operations/backup-recovery.md)
 - [operations/native-smoke.md](operations/native-smoke.md)
 - [operations/performance.md](operations/performance.md)

@@ -28,8 +28,7 @@
     "verify:rust": "cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
     "verify:all": "pnpm verify && pnpm format:check && pnpm test:e2e && pnpm verify:rust",
     "theme:check": "vitest run src/theme",
-    "theme:schema": "UPDATE_THEME_SCHEMA=1 vitest run src/theme/schema.test.ts",
-    "github:metadata": "node scripts/sync-github-metadata.mjs"
+    "theme:schema": "UPDATE_THEME_SCHEMA=1 vitest run src/theme/schema.test.ts"
   },
   "dependencies": {
     "@tanstack/react-table": "8.21.3",
