@@ -47,12 +47,14 @@ export const zTheme = z.enum(["light", "dark", "system"]);
 /** Lowercase slug. Unknown ids fall back to the default theme in the UI. */
 export const zThemeId = z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/);
 export const zCloseBehavior = z.enum(["unset", "hide", "quit"]);
+export const zNavigation = z.enum(["sidebar", "topbar"]);
 
 export const zSettings = z
   .object({
     timezone: z.string().min(1).max(64),
     theme: zTheme,
     themeId: zThemeId,
+    navigation: zNavigation,
     closeBehavior: zCloseBehavior,
     onboardingCompleted: z.boolean(),
     autoLockMinutes: z.number().int().min(1).max(240),
@@ -108,6 +110,7 @@ export const zSettingsPatch = z
     timezone: z.string().min(1).max(64).optional(),
     theme: zTheme.optional(),
     themeId: zThemeId.optional(),
+    navigation: zNavigation.optional(),
     closeBehavior: zCloseBehavior.optional(),
     onboardingCompleted: z.boolean().optional(),
     autoLockMinutes: z.number().int().min(1).max(240).optional(),
@@ -847,6 +850,7 @@ export interface CommandDefs {
   account_update: { request: { id: string; account: AccountPayload }; response: Account };
   account_archive: { request: { id: string; archived: boolean }; response: Account };
   app_quit: { request: Record<string, never>; response: { quitting: boolean } };
+  open_website: { request: Record<string, never>; response: { opened: boolean } };
   demo_open: { request: Record<string, never>; response: VaultState };
   demo_close: { request: Record<string, never>; response: VaultState };
   demo_reset: { request: Record<string, never>; response: VaultState };
@@ -949,6 +953,7 @@ export const requestSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["req
   account_update: zAccountUpdateRequest,
   account_archive: zAccountArchiveRequest,
   app_quit: zEmpty,
+  open_website: zEmpty,
   demo_open: zEmpty,
   demo_close: zEmpty,
   demo_reset: zEmpty,
@@ -1039,6 +1044,7 @@ export const responseSchemas: { [K in CommandName]: z.ZodType<CommandDefs[K]["re
   account_update: zAccount,
   account_archive: zAccount,
   app_quit: z.object({ quitting: z.boolean() }).strict(),
+  open_website: z.object({ opened: z.boolean() }).strict(),
   demo_open: zVaultState,
   demo_close: zVaultState,
   demo_reset: zVaultState,

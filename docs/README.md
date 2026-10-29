@@ -23,7 +23,7 @@ everything else lives in one of the groups below.
 |---|---|
 | [`plans/`](plans) | Completed plans, plus archived plans |
 | [`security/`](security) | Architecture, threat model, incident runbook, dated reviews |
-| [`design/`](design) | UI proposal, interactive mockup, theming reference, screenshots |
+| [`design/`](design) | UI proposal, interactive mockup, theming reference, brand system, screenshots |
 | [`operations/`](operations) | Backup/recovery, performance, native smoke, adversarial verification |
 | [`reference/`](reference) | Decisions, data dictionary, test plan, implementation status |
 | [`integrations/`](integrations) | Plaid feasibility, setup guide, verification records |
@@ -47,7 +47,7 @@ everything else lives in one of the groups below.
 - [design/theming.md](design/theming.md) — theme schema, authoring guide, limits
 - [design/proposal.md](design/proposal.md) — the UI direction and what shipped from it
 - [design/mockup.html](design/mockup.html) — clickable mockup (Overview, Cards, Settings, language sheet)
-- [design/brand/](design/brand/) — Forest C + Knit Graph brand system, installed
+- [design/brand/](design/brand/) — Placket colorways, the personal maker mark, and the brand rationale
 
 **Operations**
 

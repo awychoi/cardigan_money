@@ -54,7 +54,7 @@ UNTRUSTED                         VALIDATED BOUNDARY                  TRUSTED (m
 - The renderer is untrusted even though it is locally bundled. npm dependencies, HTML injection, and future features run there.
 - The passphrase, backup/export passwords, and Plaid client secret are collected by a native AppKit sheet built in Rust. The renderer receives only `unlocked`, `failed`, or `cancelled`.
 - Native file dialogs and file I/O are opened from Rust. The renderer receives opaque job IDs, counts, and sanitized errors — never a path.
-- All network calls are Rust-only with a fixed host allowlist. The release CSP has no HTTPS source at all.
+- All network calls are Rust-only with a fixed host allowlist. The release CSP has no HTTPS source at all. The only other outbound action is the fixed maker link `https://wychoi.com`, opened in the system browser by a Rust command that accepts no renderer URL and sends no app data.
 - The Keychain holds provider tokens and the Plaid client secret only. It never holds the passphrase, DEK, or KEK.
 - Demo mode is a separate database and code path with a fixed synthetic key; it cannot open the real ledger.
 

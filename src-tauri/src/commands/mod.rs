@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::domain::money::parse_currency_amount;
 use crate::error::{AppError, AppResult, ErrorPayload};
@@ -27,6 +28,10 @@ use crate::storage::edits::{
 use crate::storage::events::SecurityEvent;
 use crate::storage::ledger::{query_ledger, LedgerPage, LedgerQuery};
 use crate::storage::settings::{apply_patch, save_settings, Settings, SettingsPatch};
+
+/// The maker's website. This is the only external URL the renderer can ask the
+/// app to open, and the renderer cannot substitute another one.
+const MAKER_URL: &str = "https://wychoi.com";
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -566,6 +571,13 @@ pub fn execute<R: tauri::Runtime>(
             app.exit(0);
             GatewayResponse::ok(serde_json::json!({ "quitting": true }))
         }
+        "open_website" => {
+            let _: EmptyPayload = request.decode_payload()?;
+            app.opener()
+                .open_url(MAKER_URL, None::<&str>)
+                .map_err(|_| AppError::Internal)?;
+            GatewayResponse::ok(serde_json::json!({ "opened": true }))
+        }
         "transaction_detail" => {
             let payload: TransactionIdPayload = request.decode_payload()?;
             let detail: TransactionDetail = state.with_db(|conn, _h, _s| {
@@ -928,6 +940,11 @@ mod tests {
             command: command.into(),
             payload,
         }
+    }
+
+    #[test]
+    fn maker_url_is_fixed_https() {
+        assert_eq!(MAKER_URL, "https://wychoi.com");
     }
 
     #[test]

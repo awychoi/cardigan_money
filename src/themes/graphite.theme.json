@@ -2,9 +2,8 @@
   "$schema": "./theme.schema.json",
   "id": "graphite",
   "name": "Graphite",
-  "description": "Cool neutrals, blue accent, tab navigation and tighter density.",
+  "description": "Cool neutrals, steel-blue accent, ranked bars and tighter density.",
   "options": {
-    "navigation": "topbar",
     "cardArt": "faces",
     "density": "compact",
     "motion": "calm",

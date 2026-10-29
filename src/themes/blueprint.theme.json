@@ -4,7 +4,6 @@
   "name": "Blueprint",
   "description": "Wychoi.com: navy ink, white paper, electric blue action, orange markers.",
   "options": {
-    "navigation": "topbar",
     "cardArt": "faces",
     "density": "comfortable",
     "motion": "full",

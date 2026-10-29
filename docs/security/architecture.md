@@ -183,6 +183,7 @@ Self-contained authenticated snapshot: 256-byte header + SQLCipher database byte
 - No URLs from provider payloads, institutions, imported files, or the renderer are fetched. No remote images/fonts/scripts. No inbound listener, webhook, or local server.
 - Provider JSON is typed, bounded, and rejected on malformed/oversized content. Raw payloads are not retained.
 - Plaid client secret, link tokens, public tokens, and access tokens stay in Rust/Keychain, are zeroized after use, and are never logged or placed in a URL the app controls. The Hosted Link URL is opened directly in the system browser through a Rust command that accepts only the exact verified Plaid host; it is never logged or persisted. Browser-history exposure is a documented residual risk.
+- The only other external action is the fixed maker link `https://wychoi.com`: a custom Rust command opens it in the system browser, accepts no URL from the renderer, and carries no app data. The renderer has no opener permission.
 - No automatic billable refresh endpoints. Token exchange is not blindly retried.
 
 ## 10. IPC gateway
@@ -198,7 +199,7 @@ Self-contained authenticated snapshot: 256-byte header + SQLCipher database byte
 
 - Release CSP: `default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; media-src 'none'`. No HTTPS source, no `unsafe-eval`.
 - A separate dev CSP allows only the loopback Vite server and HMR socket.
-- One capability, `main-window`, scoped to the `main` window, with only core event permissions. No fs/shell/http/opener/sql/store/process/updater/deep-link/dialog/clipboard/websocket/upload permissions.
+- One capability, `main-window`, scoped to the `main` window, with only core event permissions. No fs/shell/http/opener/sql/store/process/updater/deep-link/dialog/clipboard/websocket/upload permissions are granted to the renderer. The Rust-side opener plugin is reachable only through the verified Plaid command and the fixed maker-link command.
 - `freezePrototype: true`, `withGlobalTauri: false`, asset protocol disabled, devtools disabled, drag-and-drop disabled, navigation restricted to the app origin, new windows denied.
 - `set_content_protected(true)` on the main window; state restoration disabled; no financial data in titles, menus, notifications, or saved state.
 - No `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function`, remote assets, or Markdown-to-HTML. Provider/CSV text is rendered as text with control/bidi characters stripped for display.

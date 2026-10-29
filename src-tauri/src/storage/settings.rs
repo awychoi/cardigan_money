@@ -23,6 +23,15 @@ pub enum CloseBehavior {
     Quit,
 }
 
+/// How the main navigation is laid out. This is a user preference, not a theme
+/// option: any theme can run with either layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NavigationStyle {
+    Sidebar,
+    Topbar,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Settings {
@@ -31,6 +40,9 @@ pub struct Settings {
     /// Visual theme id. Unknown ids fall back to the default in the front end;
     /// this value is persisted but never trusted as a path or CSS.
     pub theme_id: String,
+    /// Left source list or a tab strip under the toolbar. Independent of the
+    /// visual theme so the two can be mixed and matched.
+    pub navigation: NavigationStyle,
     pub close_behavior: CloseBehavior,
     pub onboarding_completed: bool,
     pub auto_lock_minutes: u32,
@@ -56,6 +68,7 @@ impl Default for Settings {
             timezone: "America/New_York".to_string(),
             theme: Theme::System,
             theme_id: "ledger".to_string(),
+            navigation: NavigationStyle::Sidebar,
             close_behavior: CloseBehavior::Unset,
             onboarding_completed: false,
             auto_lock_minutes: 15,
@@ -76,6 +89,7 @@ pub struct SettingsPatch {
     pub timezone: Option<String>,
     pub theme: Option<Theme>,
     pub theme_id: Option<String>,
+    pub navigation: Option<NavigationStyle>,
     pub close_behavior: Option<CloseBehavior>,
     pub onboarding_completed: Option<bool>,
     pub auto_lock_minutes: Option<u32>,
@@ -88,6 +102,7 @@ const KEYS: &[&str] = &[
     "timezone",
     "theme",
     "themeId",
+    "navigation",
     "closeBehavior",
     "onboardingCompleted",
     "autoLockMinutes",
@@ -126,6 +141,9 @@ pub fn load_settings(conn: &Connection) -> AppResult<Settings> {
     }
     if let Some(v) = take!("themeId") {
         settings.theme_id = v;
+    }
+    if let Some(v) = take!("navigation") {
+        settings.navigation = v;
     }
     if let Some(v) = take!("closeBehavior") {
         settings.close_behavior = v;
@@ -225,6 +243,9 @@ pub fn apply_patch(current: &Settings, patch: SettingsPatch) -> AppResult<Settin
     if let Some(v) = patch.theme_id {
         next.theme_id = v;
     }
+    if let Some(v) = patch.navigation {
+        next.navigation = v;
+    }
     if let Some(v) = patch.close_behavior {
         next.close_behavior = v;
     }
@@ -250,7 +271,7 @@ pub fn apply_patch(current: &Settings, patch: SettingsPatch) -> AppResult<Settin
 pub fn save_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
     validate_settings(settings)?;
     let now = now_rfc3339();
-    let pairs: [(&str, String); 13] = [
+    let pairs: [(&str, String); 14] = [
         (
             "timezone",
             serde_json::to_string(&settings.timezone).map_err(|_| AppError::Internal)?,
@@ -262,6 +283,10 @@ pub fn save_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
         (
             "themeId",
             serde_json::to_string(&settings.theme_id).map_err(|_| AppError::Internal)?,
+        ),
+        (
+            "navigation",
+            serde_json::to_string(&settings.navigation).map_err(|_| AppError::Internal)?,
         ),
         (
             "closeBehavior",
@@ -329,6 +354,7 @@ mod tests {
         validate_settings(&s).unwrap();
         assert_eq!(s.timezone, "America/New_York");
         assert_eq!(s.theme_id, "ledger");
+        assert_eq!(s.navigation, NavigationStyle::Sidebar);
         assert_eq!(s.auto_lock_minutes, 15);
         assert!(s.lock_on_system_events);
         assert!(s.content_protection);
@@ -372,6 +398,25 @@ mod tests {
         .unwrap();
         assert_eq!(ok.theme, Theme::Dark);
         assert_eq!(ok.auto_lock_minutes, 30);
+    }
+
+    #[test]
+    fn navigation_style_is_validated_and_patchable() {
+        let s = Settings::default();
+        let next = apply_patch(
+            &s,
+            SettingsPatch {
+                navigation: Some(NavigationStyle::Topbar),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(next.navigation, NavigationStyle::Topbar);
+
+        let bad = serde_json::from_value::<SettingsPatch>(serde_json::json!({
+            "navigation": "diagonal"
+        }));
+        assert!(bad.is_err());
     }
 
     #[test]

@@ -4,7 +4,6 @@
   "name": "Ledger",
   "description": "Warm paper, ledger green, card faces in the wallet. The default.",
   "options": {
-    "navigation": "sidebar",
     "cardArt": "faces",
     "density": "comfortable",
     "motion": "full",

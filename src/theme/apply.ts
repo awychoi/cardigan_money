@@ -7,7 +7,6 @@ import type { Theme, ThemeMode } from "./schema";
  * Data attributes switch component variants and density/motion in CSS:
  *   data-theme   light | dark        (existing attribute; drives color-scheme)
  *   data-skin    theme id
- *   data-nav     sidebar | topbar
  *   data-card-art faces | tiles
  *   data-density comfortable | compact
  *   data-motion  full | calm
@@ -24,7 +23,6 @@ export function applyTheme(theme: Theme, mode: ThemeMode): void {
 
   root.dataset.theme = mode;
   root.dataset.skin = theme.id;
-  root.dataset.nav = theme.options.navigation;
   root.dataset.cardArt = theme.options.cardArt;
   root.dataset.density = theme.options.density;
   root.dataset.motion = theme.options.motion;
@@ -40,7 +38,6 @@ export function clearTheme(): void {
     if (name.startsWith("--")) root.style.removeProperty(name);
   }
   delete root.dataset.skin;
-  delete root.dataset.nav;
   delete root.dataset.cardArt;
   delete root.dataset.density;
   delete root.dataset.motion;

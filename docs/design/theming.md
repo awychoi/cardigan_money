@@ -27,7 +27,7 @@ There are two kinds of themable decisions:
 | Kind | Example | How a theme expresses it |
 |---|---|---|
 | **Tokens** | colors, type, radii, spacing, motion, shadows | values in the JSON document |
-| **Variants** | sidebar vs top navigation, card art vs data tiles | one of a fixed enum in `options` |
+| **Variants** | card art vs data tiles, density, motion | one of a fixed enum in `options` |
 
 Everything else — screens, data, copy, security behavior, the ledger — is structure and is not
 themed. Section 6 explains where to go when you want to change structure.
@@ -78,7 +78,7 @@ Minimal shape:
   "id": "ledger",
   "name": "Ledger",
   "description": "One line for the picker.",
-  "options": { "navigation": "sidebar", "cardArt": "faces",
+  "options": { "cardArt": "faces",
                "density": "comfortable", "motion": "full",
                "overview": { "composition": "ring", "trend": "bars",
                              "topCategories": 5, "trendMonths": 12 } },
@@ -93,9 +93,13 @@ Minimal shape:
 
 ### 3.1 `options` — the variants
 
+**Navigation is not a theme option.** The left source list and the top tab strip are
+`settings.navigation` (`sidebar` or `topbar`), stored in the encrypted settings table and chosen in
+Settings → Appearance. Any theme can run with either layout; the theme picker preview follows the
+selected layout.
+
 | Key | Values | What changes | Where |
 |---|---|---|---|
-| `navigation` | `sidebar` · `topbar` | Nav as a macOS source list on the left, or a tab strip under the toolbar | `AppShell.tsx` |
 | `cardArt` | `faces` · `tiles` | Cards page: physical card art with issuer colors, or the data-tile layout | `CardsView.tsx` |
 | `density` | `comfortable` · `compact` | Row height, panel padding, screen padding in tables and panels | `:root[data-density]` in `styles.css` |
 | `motion` | `full` · `calm` | `calm` removes all transitions; the OS reduced-motion setting always wins | `:root[data-motion]` in `styles.css` |
@@ -238,7 +242,6 @@ app icon, so its palettes are build-time assets rather than runtime theme values
   "id": "editorial",                  // == file name
   "name": "Editorial",                // picker label
   "options": {
-    "navigation": "sidebar",          // design shape
     "cardArt": "tiles",               // no card faces
     "density": "comfortable",
     "motion": "calm",                 // no transitions
@@ -286,9 +289,11 @@ pnpm theme:schema
 After the Overview rebuild, the three bundled themes were rendered at 1440×960 and 1100×760 in
 both modes:
 
-- **Ledger** — sidebar, ring composition, 12-month trend.
-- **Graphite** — topbar, ranked bars, 6-month trend, compact density.
-- **Editorial** — sidebar, serif display, ring, six categories plus Other, calm motion.
+- **Ledger** — ring composition, 12-month trend.
+- **Graphite** — ranked bars, 6-month trend, compact density.
+- **Editorial** — serif display, ring, six categories plus Other, calm motion.
+
+Navigation was theme-controlled when this QA ran; it is now the independent `settings.navigation`.
 
 Legends, the due rail, the attention card, and the sectioned Settings layout stayed legible, and
 there was no horizontal overflow. The automated contrast matrix remains the floor; VoiceOver and
@@ -311,7 +316,8 @@ contrast matrix passes, and there was no horizontal overflow.
 | Want to change | Themed? | Where it lives |
 |---|---|---|
 | Colors, type, radii, spacing, motion, shadows | **Yes** | theme JSON |
-| Sidebar vs top navigation, card art vs tiles, density, motion level | **Yes** | `options` |
+| Card art vs tiles, density, motion level | **Yes** | `options` |
+| Navigation layout (left sidebar vs top tab strip) | **No — user setting** | Settings → Appearance; encrypted `settings.navigation` |
 | Card-face colors per issuer | **Yes** | `issuers` |
 | The app mark's placket colorway | **Code-side, not a theme key** (3.8) | `src/brand/marks.ts`, `scripts/build-brand-marks.mjs` |
 | Wording, labels, aria-labels | No | JSX in `src/features/**` (keep accessible names: the e2e suite depends on them) |

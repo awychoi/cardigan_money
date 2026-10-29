@@ -133,9 +133,6 @@ const chartOptions = z
 
 const options = z
   .strictObject({
-    navigation: z
-      .enum(["sidebar", "topbar"])
-      .describe("sidebar = macOS source list on the left; topbar = tab strip under the toolbar"),
     cardArt: z
       .enum(["faces", "tiles"])
       .describe("faces = physical card art in the Cards view; tiles = data tiles"),

@@ -11,7 +11,9 @@ The installed app mark is the **Placket**, with a colorway for each theme; Bluep
 default for the Dock icon and for any theme without a colorway. See the
 [colorway board](docs/design/brand/abacus/preview/theme-colorways.png).
 
-![Overview screen with the Ledger theme in dark mode and synthetic demo data](docs/design/app-ledger-overview-dark.jpg)
+Made by [Wai Yin Choi](https://wychoi.com).
+
+![Historical overview screen with the Ledger theme in dark mode and synthetic demo data](docs/design/app-ledger-overview-dark.jpg)
 
 ## What it does
 
@@ -124,5 +126,6 @@ lost data, forgotten passphrases, or incorrect financial figures. Keep your own 
 
 ## About this project
 
-This is a fun experimental agentic AI workflow project. It will keep being worked on and
-experimented with — expect rough edges, changing directions, and new ideas over time.
+This is a fun experimental agentic AI workflow project, made by
+[Wai Yin Choi](https://wychoi.com). It will keep being worked on and experimented with — expect
+rough edges, changing directions, and new ideas over time.

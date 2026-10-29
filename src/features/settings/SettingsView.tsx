@@ -9,6 +9,7 @@ import {
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { ThemePicker } from "../../components/ThemePicker";
+import { MakerCard } from "../../components/MadeBy";
 import { TimezoneSelect } from "../../components/TimezoneSelect";
 import {
   detectTimeZone,
@@ -249,9 +250,32 @@ export function SettingsView({
                 </div>
               </div>
               <div className="hr" />
+              <div className="setting-row">
+                <div>
+                  <div className="setting-label">Navigation</div>
+                  <p className="fine-print">
+                    Use a left sidebar or a tab strip under the toolbar. The layout is independent
+                    of the theme, so any theme can use either.
+                  </p>
+                </div>
+                <div className="mode-seg" role="group" aria-label="Navigation layout">
+                  {(["sidebar", "topbar"] as const).map((style) => (
+                    <button
+                      key={style}
+                      type="button"
+                      aria-pressed={settings.navigation === style}
+                      onClick={() => void update({ navigation: style })}
+                    >
+                      {style === "sidebar" ? "Sidebar" : "Top bar"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="hr" />
               <ThemePicker
                 value={settings.themeId}
                 mode={previewMode}
+                navigation={settings.navigation}
                 onChange={(themeId) => void update({ themeId })}
               />
             </section>
@@ -506,6 +530,7 @@ export function SettingsView({
           {active === "about" ? (
             <section className="panel panel-wide" aria-labelledby="about-title">
               <h2 id="about-title">About</h2>
+              <MakerCard />
               <p className="fine-print">
                 cardigan_money is a local-first, single-user encrypted ledger. There is no server
                 component and no telemetry.

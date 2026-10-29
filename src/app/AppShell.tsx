@@ -18,6 +18,7 @@ import {
   type SettingsSectionId,
 } from "../features/settings/SettingsView";
 import { BrandMark } from "../components/BrandMark";
+import { MakerLine } from "../components/MadeBy";
 import { Button } from "../components/Button";
 import { formatMonthRange, monthLabel } from "../lib/formatting";
 import type { Theme } from "../theme/schema";
@@ -93,7 +94,8 @@ export function AppShell({
     accountsTab?: AccountsTabId;
   } | null>(null);
   const demo = vault.mode === "demo";
-  const sidebar = theme.options.navigation === "sidebar";
+  const navigationStyle = vault.settings?.navigation ?? "sidebar";
+  const sidebar = navigationStyle === "sidebar";
 
   useEffect(() => {
     if (demo) {
@@ -237,7 +239,7 @@ export function AppShell({
   );
 
   return (
-    <div className={`app ${sidebar ? "app-sidebar" : "app-topbar"}`}>
+    <div className={`app ${sidebar ? "app-sidebar" : "app-topbar"}`} data-nav={navigationStyle}>
       {sidebar ? (
         <aside className="sidebar">
           {brand}
@@ -454,6 +456,7 @@ export function AppShell({
 
         <footer className="footer">
           <span>Encrypted local ledger · no telemetry</span>
+          <MakerLine withLogo={false} />
           <span>
             Theme {theme.name} · v{info.version} · SQLCipher {vault.security?.cipherVersion ?? ""}
             {demo ? " · synthetic demo" : ""}

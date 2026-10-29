@@ -9,10 +9,12 @@ import type { ThemeMode } from "../theme/schema";
 export function ThemePicker({
   value,
   mode,
+  navigation,
   onChange,
 }: {
   value: string;
   mode: ThemeMode;
+  navigation: "sidebar" | "topbar";
   onChange: (themeId: string) => void;
 }) {
   return (
@@ -29,12 +31,8 @@ export function ThemePicker({
               aria-pressed={selected}
               onClick={() => onChange(theme.id)}
             >
-              <span
-                className={`theme-preview theme-preview-${theme.options.navigation}`}
-                aria-hidden="true"
-                style={{ background: palette.bg }}
-              >
-                {theme.options.navigation === "sidebar" ? (
+              <span className="theme-preview" aria-hidden="true" style={{ background: palette.bg }}>
+                {navigation === "sidebar" ? (
                   <span className="theme-preview-side" style={{ background: palette.sidebar }} />
                 ) : null}
                 <span className="theme-preview-body">
@@ -65,8 +63,9 @@ export function ThemePicker({
         })}
       </div>
       <p className="fine-print">
-        Themes are data files in <code>src/themes</code>. Add one, run <code>pnpm theme:check</code>
-        , and it appears here. Authoring guide: <code>docs/design/theming.md</code>.
+        Themes are data files in <code>src/themes</code>. Add one plus a placket colorway, run{" "}
+        <code>pnpm theme:check</code>, and it appears here. Authoring guide:{" "}
+        <code>docs/design/theming.md</code>.
       </p>
     </>
   );

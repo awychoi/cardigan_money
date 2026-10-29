@@ -27,14 +27,6 @@
     "options": {
       "type": "object",
       "properties": {
-        "navigation": {
-          "type": "string",
-          "enum": [
-            "sidebar",
-            "topbar"
-          ],
-          "description": "sidebar = macOS source list on the left; topbar = tab strip under the toolbar"
-        },
         "cardArt": {
           "type": "string",
           "enum": [
@@ -103,7 +95,6 @@
         }
       },
       "required": [
-        "navigation",
         "cardArt",
         "density",
         "motion",

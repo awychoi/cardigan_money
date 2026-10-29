@@ -4,7 +4,6 @@
   "name": "Editorial",
   "description": "Cream paper, serif headings, terracotta accent, data tiles instead of card art.",
   "options": {
-    "navigation": "sidebar",
     "cardArt": "tiles",
     "density": "comfortable",
     "motion": "calm",

@@ -3,6 +3,7 @@ import { command, type RestoreResult, type VaultState } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { BrandMark } from "../../components/BrandMark";
+import { MakerLine } from "../../components/MadeBy";
 import { RestoreBackupFlow } from "../settings/RestoreBackupFlow";
 
 type Busy = "create" | "unlock" | "backup" | null;
@@ -220,6 +221,10 @@ export function VaultGate({
             {notice}
           </p>
         ) : null}
+
+        <div className="vault-maker">
+          <MakerLine />
+        </div>
       </div>
       <span className="sr-only">{notice ?? ""}</span>
     </main>

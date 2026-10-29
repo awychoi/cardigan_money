@@ -20,6 +20,50 @@ test.describe("settings sections (browser mock)", () => {
     await expect(page.getByText(/4\.6\.1 community/).first()).toBeVisible();
   });
 
+  test("navigation layout is independent of the theme", async ({ page }) => {
+    await openUnlocked(page);
+    await expect(page.locator(".app")).toHaveAttribute("data-nav", "sidebar");
+
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    const navigation = page.getByRole("group", { name: "Navigation layout" });
+    await navigation.getByRole("button", { name: "Top bar" }).click();
+    await expect(page.locator(".app")).toHaveAttribute("data-nav", "topbar");
+    await expect(page.locator(".app")).toHaveClass(/app-topbar/);
+    await expect(page.locator(".sidebar")).toHaveCount(0);
+
+    // Ledger used to force a sidebar; it must keep the chosen top bar.
+    await page.locator(".theme-card", { hasText: "Ledger" }).click();
+    await expect(page.locator(".app")).toHaveAttribute("data-nav", "topbar");
+    await expect(page.locator(".sidebar")).toHaveCount(0);
+
+    // Graphite used to force a top bar; it must keep the chosen sidebar.
+    await navigation.getByRole("button", { name: "Sidebar" }).click();
+    await expect(page.locator(".app")).toHaveAttribute("data-nav", "sidebar");
+    await page.locator(".theme-card", { hasText: "Graphite" }).click();
+    await expect(page.locator(".app")).toHaveAttribute("data-nav", "sidebar");
+    await expect(page.locator(".sidebar")).toBeVisible();
+    await page.getByRole("button", { name: "Overview", exact: true }).click();
+    await expect(page.locator(".app")).toHaveClass(/app-sidebar/);
+  });
+
+  test("shows the maker credit on the locked gate, About and footer", async ({ page }) => {
+    await openLocked(page);
+    await expect(page.locator(".vault-maker")).toContainText("Made by Wai Yin Choi");
+    await expect(page.locator(".vault-maker")).toContainText("wychoi.com");
+
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await page.getByRole("heading", { name: "Overview" }).waitFor();
+    await expect(page.locator(".footer .maker-line")).toContainText("Made by Wai Yin Choi");
+
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("button", { name: "About", exact: true }).click();
+    const card = page.locator(".maker-card");
+    await expect(card).toContainText("Made by Wai Yin Choi");
+    await expect(card).toContainText("New York");
+    await expect(card.locator("img")).toHaveCount(1);
+    await expect(card.getByRole("button", { name: "wychoi.com" })).toBeVisible();
+  });
+
   test("detects and persists a reporting timezone from the friendly dropdown", async ({ page }) => {
     await openUnlocked(page);
     await openSettingsSection(page, "Lock & idle");

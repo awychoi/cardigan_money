@@ -361,7 +361,7 @@ See `docs/integrations/plaid-verification-2026-10-24.md`.
 - **Accessibility:** labels, focusable controls, and keyboard-activatable primary navigation test added. VoiceOver/native sheet accessibility remains an owner smoke item.
 - **Artifact:** release bundle rebuilt 2026-10-29 after the placket mark and its four theme colorways were installed, with `pnpm tauri build` (repo-local toolchain via `scripts/dev-env.sh`); ad-hoc signed (`codesign --force --deep --sign -`), `codesign --verify --deep --strict` passes, Identifier `com.awychoi.cardiganmoney`, Mach-O arm64. Binary SHA-256: **a81bc6e8c551312c5dee952b04b8cbb2f1d8a555aae36a3fc3e25c437c1a7162** (`Contents/MacOS/cardigan-money`). Artifact scan passed, the embedded assets contain the placket colorways, and the bundled `icon.icns` matches the regenerated Blueprint icon. Not notarized, hardened runtime, or App Sandboxed; not distribution-ready. This hash is historical: rebuild and record a new hash after any source change.
 - **Docs:** README updated; `docs/operations/backup-recovery.md`, `docs/operations/performance.md`, `docs/operations/adversarial-verification.md`, `docs/operations/native-smoke.md`, `docs/reference/data-dictionary.md`, `docs/security/incident-runbook.md`, and the Plaid blocker section.
-- **Automated suites (current):** 198 Rust passed (1 ignored release perf test), 90 Vitest, 49 Playwright; `pnpm build` + artifact scan passed.
+- **Automated suites (current):** 200 Rust passed (1 ignored release perf test), 90 Vitest, 51 Playwright; `pnpm build` + artifact scan passed.
 
 ### Independent review (completed)
 A separate read-only review agent examined backup/restore, sync, gateway validation, network policy, native confirmations, and session races. It reported **no Critical or High findings**, 2 Medium, 1 Low–Medium, 2 Low. All five were fixed: demo-mode crypto-erase/passphrase guards; restore mode/vault re-check after the native prompt; settings lock/session race; no chmod of arbitrary selected backups; `O_NOFOLLOW` backup reads with owner-only mode enforcement. Regression tests were added. Full disposition and accepted residual risks: [`docs/security/independent-review-2026-10-23.md`](../security/independent-review-2026-10-23.md).
@@ -598,3 +598,21 @@ Release blockers are not UI work: owner native smoke, a real Trial/Production ve
 | `pnpm verify` | typecheck, lint, **90 Vitest**, production build, and release-artifact scan passed |
 | `pnpm test:e2e` | **49 Playwright passed**, including the theme switch asserting the Ledger then Graphite mark |
 | `cargo test` | not rerun; Rust and SQLCipher were untouched |
+
+## 12. Navigation setting and maker branding (2026-10-29)
+
+### Implemented
+- **Navigation is a user setting, not a theme option.** `settings.navigation` (`sidebar` or `topbar`) is stored in the encrypted settings table, defaults to sidebar, and is exposed in Settings → Appearance. The theme picker previews the chosen layout. Any theme can use either layout.
+- `options.navigation`, the `data-nav` theme attribute, and the navigation field in the theme schema and all four theme JSONs were removed; `theme.schema.json` was regenerated. Existing settings rows without the key load as sidebar.
+- **Maker credit.** Settings → About, the locked gate, and the app footer show **Wai Yin Choi**, `wychoi.com`, and the personal abacus mark (`src/assets/wychoi-abacus.svg`). The website opens through the new `open_website` command, which hard-codes `https://wychoi.com`, accepts no URL, and uses the existing Rust opener plugin. The renderer still has no opener capability.
+- **Cleanup.** Removed the superseded Forest C brand assets (icons, heroes, previews, build scripts, index) and six unreferenced app screenshots. Rewrote `docs/design/brand/README.md`; kept the current abacus/colorway docs and the historical README banner.
+- Updated the theming contract, decision log (D-027–D-029), security architecture and threat model, README, and docs index.
+
+### Actual test runs
+| Suite | Result |
+| --- | --- |
+| `pnpm verify` | typecheck, lint, **90 Vitest**, production build, and release-artifact scan passed |
+| `pnpm test:e2e` | **51 Playwright passed**, including navigation/theme mix-and-match and maker credit on the gate, About and footer |
+| `cargo test` | **200 passed**, 1 ignored (50k perf) |
+| `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo fmt --all --check` | clean |

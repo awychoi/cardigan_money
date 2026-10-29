@@ -102,6 +102,7 @@ const defaultSettings: Settings = {
   timezone: "America/New_York",
   theme: "system",
   themeId: "ledger",
+  navigation: "sidebar",
   closeBehavior: "unset",
   onboardingCompleted: params.get("mockOnboarding") !== "1",
   autoLockMinutes: 15,
@@ -223,6 +224,10 @@ export async function mockCommand(name: string, payload: unknown): Promise<unkno
       data = { settings: structuredClone(settings) };
       break;
     }
+    case "open_website":
+      // The real app opens the fixed wychoi.com URL in the system browser.
+      data = { opened: true };
+      break;
     case "security_status":
       requireUnlocked();
       data = { security: securitySummary() };
