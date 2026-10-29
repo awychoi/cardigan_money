@@ -1,4 +1,4 @@
-![cardigan_money — the Knit Graph banner with the Forest button mark](docs/design/brand/preview/r2-center-stage.png)
+![cardigan_money — the historical Knit Graph banner with the Forest button mark](docs/design/brand/preview/r2-center-stage.png)
 
 
 A local-first, encrypted personal finance app for macOS. It tracks one person's credit-card
@@ -6,6 +6,10 @@ balances and calendar-month spending, and keeps everything on the Mac — no acc
 no telemetry.
 
 Built with Tauri 2, React, TypeScript, Rust, and SQLCipher.
+
+The installed app mark is the **Placket**, with a colorway for each theme; Blueprint is the fixed
+default for the Dock icon and for any theme without a colorway. See the
+[colorway board](docs/design/brand/abacus/preview/theme-colorways.png).
 
 ![Overview screen with the Ledger theme in dark mode and synthetic demo data](docs/design/app-ledger-overview-dark.jpg)
 

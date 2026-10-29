@@ -9,9 +9,11 @@ type Busy = "create" | "unlock" | "backup" | null;
 
 export function VaultGate({
   exists,
+  themeId,
   onOpened,
 }: {
   exists: boolean;
+  themeId?: string;
   onOpened: (state: VaultState) => void;
 }) {
   const [busy, setBusy] = useState<Busy>(null);
@@ -106,7 +108,7 @@ export function VaultGate({
     <main className="vault-gate" aria-labelledby="vault-title">
       <div className="vault-card">
         <div className="vault-brand">
-          <BrandMark />
+          <BrandMark themeId={themeId} />
           <span className="brand-name">cardigan_money</span>
         </div>
 

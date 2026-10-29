@@ -190,7 +190,7 @@ export function AppShell({
 
   const brand = (
     <div className="brand">
-      <BrandMark />
+      <BrandMark themeId={theme.id} />
       <span className="brand-name">cardigan_money</span>
       {demo ? <span className="status-pill status-warn">Demo</span> : null}
     </div>

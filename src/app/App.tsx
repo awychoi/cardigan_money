@@ -176,7 +176,7 @@ export function App() {
   if (boot.kind === "loading") {
     return (
       <main className="boot-screen" aria-labelledby="app-title">
-        <BrandMark className="boot-mark" />
+        <BrandMark className="boot-mark" themeId={theme.id} />
         <h1 id="app-title">cardigan_money</h1>
         <p className="muted">Local-first, encrypted personal card ledger.</p>
         <p className="status" role="status">
@@ -192,7 +192,7 @@ export function App() {
   if (boot.kind === "error") {
     return (
       <main className="boot-screen" role="alert">
-        <BrandMark className="boot-mark" />
+        <BrandMark className="boot-mark" themeId={theme.id} />
         <h1>cardigan_money</h1>
         <p className="error-text">{boot.message}</p>
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
@@ -208,7 +208,7 @@ export function App() {
   if (!boot.vault.unlocked) {
     return (
       <>
-        <VaultGate exists={boot.vault.exists} onOpened={handleOpened} />
+        <VaultGate exists={boot.vault.exists} themeId={theme.id} onOpened={handleOpened} />
         <div className="gate-banner" role="status">
           {usingMockBridge ? "Mock desktop bridge — browser test mode." : ""}
         </div>

@@ -1,3 +1,4 @@
+import { BrandMark } from "./BrandMark";
 import { THEMES } from "../theme";
 import type { ThemeMode } from "../theme/schema";
 
@@ -53,7 +54,10 @@ export function ThemePicker({
                 </span>
               </span>
               <span className="theme-card-text">
-                <span className="theme-card-name">{theme.name}</span>
+                <span className="theme-card-heading">
+                  <BrandMark className="theme-card-mark" themeId={theme.id} />
+                  <span className="theme-card-name">{theme.name}</span>
+                </span>
                 <span className="theme-card-desc">{theme.description ?? ""}</span>
               </span>
             </button>

@@ -1928,6 +1928,27 @@ h3 {
   height: 14px;
   border-radius: 50%;
 }
+.theme-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.theme-card-mark {
+  width: 20px;
+  height: 20px;
+  min-width: 0;
+  flex: 0 0 20px;
+  border-radius: 5px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.theme-card-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .theme-card-name {
   display: block;
   font-size: 12.5px;

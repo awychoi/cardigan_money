@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 const root = import.meta.dirname;
 const heroDir = resolve(root, "hero/options");
 const previewDir = resolve(root, "preview");
-const mark = `data:image/svg+xml;base64,${readFileSync(resolve(root, "../../../src/assets/brand-mark.svg")).toString("base64")}`;
+const mark = `data:image/svg+xml;base64,${readFileSync(resolve(root, "../../../src/assets/brand/placket-blueprint.svg")).toString("base64")}`;
 
 const W = 1600;
 const H = 480;

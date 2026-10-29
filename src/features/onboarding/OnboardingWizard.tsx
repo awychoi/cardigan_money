@@ -165,7 +165,7 @@ export function OnboardingWizard({
       <div className="wizard-card">
         <header className="wizard-header">
           <div className="vault-brand">
-            <BrandMark />
+            <BrandMark themeId={settings.themeId} />
             <span className="brand-name">cardigan_money</span>
           </div>
           <button
