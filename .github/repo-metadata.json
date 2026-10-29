@@ -1,0 +1,18 @@
+{
+  "description": "A local-first, encrypted credit-card ledger for macOS. Tauri 2, Rust, React, TypeScript, SQLCipher.",
+  "homepage": "https://wychoi.com/#workbench-cardigan_money",
+  "topics": [
+    "local-first",
+    "macos",
+    "tauri",
+    "tauri-v2",
+    "rust",
+    "react",
+    "typescript",
+    "sqlcipher",
+    "personal-finance",
+    "privacy",
+    "encryption",
+    "credit-cards"
+  ]
+}
