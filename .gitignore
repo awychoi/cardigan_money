@@ -46,6 +46,7 @@ fixtures/real/
 .env
 .env.*
 !.env.example
+.direnv/
 *.pem
 *.key
 *.p12
@@ -56,16 +57,31 @@ fixtures/real/
 *.ips
 core.*
 
-# OS / editor
+# OS / editor / local files
 .DS_Store
+Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
+.history/
+.fleet/
+*.iml
 *.swp
+*~
+*.orig
+*.rej
 
 # Test output
 test-results/
 playwright-report/
 blob-report/
 *.tsbuildinfo
+
+# Local tool output
+coverage/
+.nyc_output/
+lcov.info
+.eslintcache
+.vite/
 
 /AGENTS.md
