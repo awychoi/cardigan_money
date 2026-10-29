@@ -11,25 +11,26 @@ test.describe("read-only dashboard (browser mock)", () => {
     await expect(page.getByText("Pending in this month")).toBeVisible();
     await expect(page.getByText(/Balances and upcoming payments as of/i)).toBeVisible();
     await expect(page.getByText(/Other currencies are shown separately/i)).toBeVisible();
-    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Spending by category" })).toBeVisible();
     await expect(page.getByRole("img", { name: /Monthly net spending/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
   });
 
-  test("theme switch swaps ring for ranked bars without a reload", async ({ page }) => {
+  test("theme switch swaps ranked bars for the ring without a reload", async ({ page }) => {
     await openUnlocked(page);
-    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Spending by category" })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toHaveCount(0);
 
-    await expect(page.locator(".brand-mark")).toHaveAttribute("data-brand-theme", "ledger");
+    await expect(page.locator(".brand-mark")).toHaveAttribute("data-brand-theme", "blueprint");
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(page.locator(".theme-card-mark img")).toHaveCount(4);
-    await page.locator(".theme-card", { hasText: "Graphite" }).click();
-    await expect(page.locator(".brand-mark")).toHaveAttribute("data-brand-theme", "graphite");
+    await page.locator(".theme-card", { hasText: "Ledger" }).click();
+    await expect(page.locator(".brand-mark")).toHaveAttribute("data-brand-theme", "ledger");
     await page.getByRole("button", { name: "Overview", exact: true }).click();
 
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Spending by category" })).toBeVisible();
-    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toHaveCount(0);
+    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Spending by category" })).toHaveCount(0);
   });
 
   test("cards show due amount kinds without inventing an amount due", async ({ page }) => {
@@ -131,9 +132,9 @@ test.describe("read-only dashboard (browser mock)", () => {
       .locator(".metric", { hasText: "Current card balances" })
       .locator(".metric-value")
       .innerText();
-    const ringBefore = await page
-      .getByRole("img", { name: /Gross spending by category/i })
-      .getAttribute("aria-label");
+    const compositionBefore = await page
+      .getByRole("list", { name: "Spending by category" })
+      .innerText();
     const trendBefore = await page
       .getByRole("img", { name: /Monthly net spending/i })
       .getAttribute("aria-label");
@@ -143,13 +144,13 @@ test.describe("read-only dashboard (browser mock)", () => {
       "aria-label",
       /September 2026/,
     );
-    const ringAfter = await page
-      .getByRole("img", { name: /Gross spending by category/i })
-      .getAttribute("aria-label");
+    const compositionAfter = await page
+      .getByRole("list", { name: "Spending by category" })
+      .innerText();
     const trendAfter = await page
       .getByRole("img", { name: /Monthly net spending/i })
       .getAttribute("aria-label");
-    expect(ringAfter).not.toBe(ringBefore);
+    expect(compositionAfter).not.toBe(compositionBefore);
     expect(trendAfter).not.toBe(trendBefore);
     const balancesAfter = await page
       .locator(".metric", { hasText: "Current card balances" })
@@ -163,7 +164,7 @@ test.describe("read-only dashboard (browser mock)", () => {
   test("stays usable at 1100 x 760 without page overflow", async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 760 });
     await openUnlocked(page);
-    await expect(page.getByRole("img", { name: /Gross spending by category/i })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Spending by category" })).toBeVisible();
     const overviewOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );

@@ -2,7 +2,7 @@
   "$schema": "./theme.schema.json",
   "id": "ledger",
   "name": "Ledger",
-  "description": "Warm paper, ledger green, card faces in the wallet. The default.",
+  "description": "Warm paper, ledger green, card faces in the wallet.",
   "options": {
     "cardArt": "faces",
     "density": "comfortable",

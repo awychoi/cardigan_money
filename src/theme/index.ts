@@ -49,7 +49,7 @@ if (THEMES.length === 0) {
   throw new Error("No valid themes were found in src/themes/*.theme.json");
 }
 
-export const DEFAULT_THEME = THEMES.find((theme) => theme.id === "ledger") ?? THEMES[0];
+export const DEFAULT_THEME = THEMES.find((theme) => theme.id === "blueprint") ?? THEMES[0];
 
 const warned = new Set<string>();
 

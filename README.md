@@ -1,4 +1,4 @@
-![cardigan_money — the historical Knit Graph banner with the Forest button mark](docs/design/brand/preview/r2-center-stage.png)
+![cardigan_money — local-first, encrypted personal finance for macOS](docs/design/brand/hero/github-social-preview.png)
 
 
 A local-first, encrypted personal finance app for macOS. It tracks one person's credit-card
@@ -7,13 +7,13 @@ no telemetry.
 
 Built with Tauri 2, React, TypeScript, Rust, and SQLCipher.
 
-The installed app mark is the **Placket**, with a colorway for each theme; Blueprint is the fixed
-default for the Dock icon and for any theme without a colorway. See the
+Blueprint is the default theme. The app mark is the **Placket**, with a colorway for each theme;
+Blueprint is also the fixed default for the Dock icon and for any theme without a colorway. See the
 [colorway board](docs/design/brand/abacus/preview/theme-colorways.png).
 
 Made by [Wai Yin Choi](https://wychoi.com).
 
-![Historical overview screen with the Ledger theme in dark mode and synthetic demo data](docs/design/app-ledger-overview-dark.jpg)
+![Overview screen with the Blueprint theme in dark mode and synthetic demo data](docs/design/app-blueprint-overview-dark.png)
 
 ## What it does
 

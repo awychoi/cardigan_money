@@ -34,8 +34,8 @@ themed. Section 6 explains where to go when you want to change structure.
 
 **Where it is stored.** The theme id is `settings.themeId` in the encrypted SQLCipher database;
 light/dark/system is `settings.theme`. Both survive lock, restart, and demo mode, and neither is
-written to `localStorage` (there is a test for that). Unknown ids fall back to `ledger` with one
-console warning.
+written to `localStorage` (there is a test for that). Blueprint is the default theme; unknown ids
+fall back to `blueprint` with one console warning.
 
 ---
 

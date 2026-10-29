@@ -67,7 +67,7 @@ impl Default for Settings {
         Self {
             timezone: "America/New_York".to_string(),
             theme: Theme::System,
-            theme_id: "ledger".to_string(),
+            theme_id: "blueprint".to_string(),
             navigation: NavigationStyle::Sidebar,
             close_behavior: CloseBehavior::Unset,
             onboarding_completed: false,
@@ -353,7 +353,7 @@ mod tests {
         let s = Settings::default();
         validate_settings(&s).unwrap();
         assert_eq!(s.timezone, "America/New_York");
-        assert_eq!(s.theme_id, "ledger");
+        assert_eq!(s.theme_id, "blueprint");
         assert_eq!(s.navigation, NavigationStyle::Sidebar);
         assert_eq!(s.auto_lock_minutes, 15);
         assert!(s.lock_on_system_events);

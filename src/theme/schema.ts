@@ -187,4 +187,4 @@ export type IssuerArt = z.infer<typeof issuerArt>;
 
 export const THEME_MODE_NAMES: ThemeMode[] = ["light", "dark"];
 
-export const DEFAULT_THEME_ID = "ledger";
+export const DEFAULT_THEME_ID = "blueprint";

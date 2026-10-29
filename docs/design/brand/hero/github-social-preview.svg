@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="cardigan_money — local-first, encrypted personal finance for macOS">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070d1a"/>
+      <stop offset=".55" stop-color="#081426"/>
+      <stop offset="1" stop-color="#0a1730"/>
+    </linearGradient>
+    <radialGradient id="blue-glow" cx=".16" cy=".18" r=".55">
+      <stop offset="0" stop-color="#2f5bff" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#2f5bff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ember" cx=".06" cy=".96" r=".5">
+      <stop offset="0" stop-color="#ff9a5a" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#ff9a5a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="icon-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity=".55"/>
+    </filter>
+    <filter id="card-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="26" flood-color="#000000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#blue-glow)"/>
+  <rect width="1280" height="640" fill="url(#ember)"/>
+
+  <g stroke="#7fb0e0" stroke-width="1" opacity=".035">
+    <path d="M 0 0 V 640"/><path d="M 64 0 V 640"/><path d="M 128 0 V 640"/><path d="M 192 0 V 640"/><path d="M 256 0 V 640"/><path d="M 320 0 V 640"/><path d="M 384 0 V 640"/><path d="M 448 0 V 640"/><path d="M 512 0 V 640"/><path d="M 576 0 V 640"/><path d="M 640 0 V 640"/><path d="M 704 0 V 640"/><path d="M 768 0 V 640"/><path d="M 832 0 V 640"/><path d="M 896 0 V 640"/><path d="M 960 0 V 640"/><path d="M 1024 0 V 640"/><path d="M 1088 0 V 640"/><path d="M 1152 0 V 640"/><path d="M 1216 0 V 640"/>
+    <path d="M 0 0 H 1280"/><path d="M 0 64 H 1280"/><path d="M 0 128 H 1280"/><path d="M 0 192 H 1280"/><path d="M 0 256 H 1280"/><path d="M 0 320 H 1280"/><path d="M 0 384 H 1280"/><path d="M 0 448 H 1280"/><path d="M 0 512 H 1280"/><path d="M 0 576 H 1280"/>
+  </g>
+  <circle cx="1088" cy="320" r="330" fill="none" stroke="#29476f" stroke-width="1" opacity=".45"/>
+  <circle cx="1088" cy="320" r="400" fill="none" stroke="#29476f" stroke-width="1" opacity=".2"/>
+  <path d="M 64 600 H 1216" stroke="#29476f" stroke-width="1" opacity=".55"/>
+  <path d="M 968 64 V 576" stroke="#29476f" stroke-width="1" opacity=".65"/>
+
+  <!-- App mark: Blueprint placket on a dark plate -->
+  <g filter="url(#icon-shadow)">
+    <rect x="64" y="64" width="240" height="240" rx="56" fill="#0e2040" stroke="#29476f" stroke-width="1"/>
+  </g>
+  <rect x="64" y="64" width="240" height="240" rx="56" fill="none" stroke="#5b8dff" opacity=".16"/>
+  <image href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MjQiIGhlaWdodD0iODI0IiB2aWV3Qm94PSIxMDAgMTAwIDgyNCA4MjQiPgo8cmVjdCB4PSIxMDAiIHk9IjEwMCIgd2lkdGg9IjgyNCIgaGVpZ2h0PSI4MjQiIHJ4PSIxODQiIGZpbGw9IiMwODExMjAiLz4KPHBhdGggZD0iTSAzNzYgMzE2IFEgMzc2IDMwMCAzOTIgMzAwIEwgNDkyIDM0OCBRIDUxMiAzNTYgNTMyIDM0OCBMIDYzMiAzMDAgUSA2NDggMzAwIDY0OCAzMTYgViA2MjAgUSA2NDggNzU2IDUxMiA3NTYgUSAzNzYgNzU2IDM3NiA2MjAgWiIgZmlsbD0iI2Y0ZjdmZiIvPgo8cGF0aCBkPSJNIDQwNCAzMzAgTCA0OTQgMzYyIFEgNTEyIDM3MCA1MzAgMzYyIEwgNjIwIDMzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYzQ1YTE4IiBzdHJva2Utd2lkdGg9IjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8Y2lyY2xlIGN4PSI1MTIiIGN5PSI0NDAiIHI9IjYyIiBmaWxsPSIjMDgxMTIwIi8+CjxnIGZpbGw9IiNmNGY3ZmYiPjxjaXJjbGUgY3g9IjQ5MSIgY3k9IjQxOSIgcj0iOSIvPjxjaXJjbGUgY3g9IjUzMyIgY3k9IjQxOSIgcj0iOSIvPjxjaXJjbGUgY3g9IjQ5MSIgY3k9IjQ2MSIgcj0iOSIvPjxjaXJjbGUgY3g9IjUzMyIgY3k9IjQ2MSIgcj0iOSIvPjwvZz4KPGNpcmNsZSBjeD0iNTEyIiBjeT0iNTYwIiByPSI2MiIgZmlsbD0iIzJmNWJmZiIvPgo8ZyBmaWxsPSIjZjRmN2ZmIj48Y2lyY2xlIGN4PSI0OTEiIGN5PSI1MzkiIHI9IjkiLz48Y2lyY2xlIGN4PSI1MzMiIGN5PSI1MzkiIHI9IjkiLz48Y2lyY2xlIGN4PSI0OTEiIGN5PSI1ODEiIHI9IjkiLz48Y2lyY2xlIGN4PSI1MzMiIGN5PSI1ODEiIHI9IjkiLz48L2c+CjxjaXJjbGUgY3g9IjUxMiIgY3k9IjY4MCIgcj0iNjIiIGZpbGw9IiMwODExMjAiLz4KPGcgZmlsbD0iI2Y0ZjdmZiI+PGNpcmNsZSBjeD0iNDkxIiBjeT0iNjU5IiByPSI5Ii8+PGNpcmNsZSBjeD0iNTMzIiBjeT0iNjU5IiByPSI5Ii8+PGNpcmNsZSBjeD0iNDkxIiBjeT0iNzAxIiByPSI5Ii8+PGNpcmNsZSBjeD0iNTMzIiBjeT0iNzAxIiByPSI5Ii8+PC9nPgo8L3N2Zz4K" x="84" y="84" width="200" height="200"/>
+
+  <!-- Name and promise -->
+  <text x="336" y="154" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="56" font-weight="500" letter-spacing="-2.2" fill="#f4f7ff">cardigan<tspan fill="#5b8dff">_</tspan>money</text>
+  <text x="338" y="196" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="20" fill="#c6d2e6">Local-first, encrypted personal finance for macOS.</text>
+  <path d="M 338 226 H 900" stroke="#29476f" stroke-width="1"/>
+
+  <text x="338" y="282" font-family="'Hoefler Text', 'Iowan Old Style', Palatino, Georgia, serif" font-size="27" letter-spacing="-.4" fill="#f4f7ff">Private by design. <tspan fill="#5b8dff">Local by default</tspan><tspan fill="#ff9a5a">.</tspan></text>
+  <text x="338" y="314" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="13.5" fill="#a9b9d8">Your cards, balances and spending stay on this Mac.</text>
+  <text x="338" y="338" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="13.5" fill="#a9b9d8">No cloud · No account · No telemetry.</text>
+  <text x="338" y="374" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1.7" fill="#7fb0e0">SQLCIPHER-ENCRYPTED · ARGON2ID · LOCAL-ONLY</text>
+
+  <!-- Stack -->
+  <text x="64" y="446" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="10" letter-spacing="2.2" fill="#7fb0e0">BUILT WITH</text>
+  <g>
+      <rect x="64" y="462" width="92" height="34" rx="17" fill="#0e2040" stroke="#29476f"/>
+      <text x="110" y="484" text-anchor="middle" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="11" font-weight="500" letter-spacing=".2" fill="#dce6fb">Tauri 2</text>
+    </g>
+<g>
+      <rect x="168" y="462" width="64" height="34" rx="17" fill="#0e2040" stroke="#29476f"/>
+      <text x="200" y="484" text-anchor="middle" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="11" font-weight="500" letter-spacing=".2" fill="#dce6fb">Rust</text>
+    </g>
+<g>
+      <rect x="244" y="462" width="72" height="34" rx="17" fill="#0e2040" stroke="#29476f"/>
+      <text x="280" y="484" text-anchor="middle" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="11" font-weight="500" letter-spacing=".2" fill="#dce6fb">React</text>
+    </g>
+<g>
+      <rect x="328" y="462" width="106" height="34" rx="17" fill="#0e2040" stroke="#29476f"/>
+      <text x="381" y="484" text-anchor="middle" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="11" font-weight="500" letter-spacing=".2" fill="#dce6fb">TypeScript</text>
+    </g>
+<g>
+      <rect x="446" y="462" width="104" height="34" rx="17" fill="#1f1a18" stroke="#8a5a2a"/>
+      <text x="498" y="484" text-anchor="middle" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="11" font-weight="500" letter-spacing=".2" fill="#ffb27a">SQLCipher</text>
+    </g>
+  <text x="64" y="574" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="10.5" fill="#6f7c90">github.com/awychoi/cardigan_money</text>
+
+  <!-- Maker card -->
+  <g filter="url(#card-shadow)">
+    <rect x="1000" y="64" width="216" height="512" rx="24" fill="#f4f7ff"/>
+  </g>
+  <image href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MjQiIGhlaWdodD0iODI0IiB2aWV3Qm94PSIxMDAgMTAwIDgyNCA4MjQiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iV3ljaG9pLmNvbSBhYmFjdXMgbWFyayI+CjxyZWN0IHg9IjEwMCIgeT0iMTAwIiB3aWR0aD0iODI0IiBoZWlnaHQ9IjgyNCIgcng9IjE4NCIgZmlsbD0iIzA3MDkwZCIvPgo8cmVjdCB4PSIyMjguNSIgeT0iMjk5LjUiIHdpZHRoPSI1NjYiIGhlaWdodD0iNDAyIiByeD0iNjgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIzOSIvPgo8bGluZSB4MT0iMjQ4IiB5MT0iNDM1IiB4Mj0iNzczIiB5Mj0iNDM1IiBzdHJva2U9IiM1MTVmNzciIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8bGluZSB4MT0iMjQ4IiB5MT0iNjAyIiB4Mj0iNzczIiB5Mj0iNjAyIiBzdHJva2U9IiM1MTVmNzciIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8Y2lyY2xlIGN4PSIzNTYiIGN5PSI0MzUiIHI9IjU1IiBmaWxsPSIjZmZmZmZmIi8+CjxjaXJjbGUgY3g9IjUxMCIgY3k9IjQzNSIgcj0iNTUiIGZpbGw9IiM1YjhkZmYiLz4KPGNpcmNsZSBjeD0iNjY1IiBjeT0iNDM1IiByPSI1NSIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSI0MzMiIGN5PSI2MDIiIHI9IjU1IiBmaWxsPSIjZmZmZmZmIi8+CjxjaXJjbGUgY3g9IjU4OCIgY3k9IjYwMiIgcj0iNTUiIGZpbGw9IiNmZmZmZmYiLz4KPC9zdmc+Cg==" x="1056" y="96" width="104" height="104"/>
+  <rect x="1056" y="232" width="48" height="3" rx="1.5" fill="#c45a18"/>
+  <text x="1056" y="270" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="10" letter-spacing="2.4" fill="#2f5bff">MADE BY</text>
+  <text x="1056" y="302" font-family="'Hoefler Text', 'Iowan Old Style', Palatino, Georgia, serif" font-size="24" letter-spacing="-.3" fill="#081120">Wai Yin Choi</text>
+  <text x="1056" y="330" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="12" fill="#2447d8">wychoi.com</text>
+  <path d="M 1056 336 H 1130" stroke="#2447d8" stroke-width="1" opacity=".5"/>
+  <text x="1056" y="358" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".4" fill="#53627a">NEW YORK</text>
+  <path d="M 1056 392 H 1160" stroke="#d5deec" stroke-width="1"/>
+  <text x="1056" y="420" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="11.5" fill="#53627a">A personal project.</text>
+  <text x="1056" y="440" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="11.5" fill="#53627a">Privacy is architecture.</text>
+
+  <text x="1056" y="548" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="9" letter-spacing="1.2" fill="#53627a">MADE ON A MAC</text>
+</svg>

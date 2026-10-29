@@ -81,7 +81,8 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 </style></head><body>
   <h1>One placket, four themes.</h1>
   <p class="sub">The tile, placket, buttons, accent button and neckline thread take each theme's signature colors.
-  <strong>Blueprint is the fixed default</strong> for the Dock icon and any theme without a colorway.
+  <strong>Blueprint is the default theme</strong> and the fixed default for the Dock icon and any theme
+  without a colorway.
   The board is rendered from the shipped <code>src/assets/brand/placket-*.svg</code> files.</p>
   <div class="grid">${themes.map(column).join("")}</div>
   <footer>26 px header mark · 20 px theme-picker mark · 16/32/64 px Dock checks. Geometry: the 04 Placket, 824 px tile, rx 184.</footer>

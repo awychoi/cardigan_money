@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { MIX, contrastRatio, mixSrgb } from "./color";
-import { THEMES } from "./index";
+import { DEFAULT_THEME, THEMES } from "./index";
 import { themeSchema, type Theme, type ThemeMode } from "./schema";
 import { themeVariables } from "./tokens";
 
@@ -30,7 +30,8 @@ describe("theme files", () => {
     expect(files).toBeGreaterThan(0);
     expect(THEMES).toHaveLength(files);
     expect(new Set(THEMES.map((theme) => theme.id)).size).toBe(files);
-    expect(THEMES.some((theme) => theme.id === "ledger")).toBe(true);
+    expect(DEFAULT_THEME.id).toBe("blueprint");
+    expect(THEMES.some((theme) => theme.id === "blueprint")).toBe(true);
   });
 
   it("has a stable id for every file", () => {

@@ -2,7 +2,7 @@
   "$schema": "./theme.schema.json",
   "id": "blueprint",
   "name": "Blueprint",
-  "description": "Wychoi.com: navy ink, white paper, electric blue action, orange markers.",
+  "description": "Wychoi.com: navy ink, white paper, electric blue action, orange markers. The default.",
   "options": {
     "cardArt": "faces",
     "density": "comfortable",

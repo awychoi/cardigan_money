@@ -101,7 +101,7 @@ function mockPlaidStatus(): PlaidStatus {
 const defaultSettings: Settings = {
   timezone: "America/New_York",
   theme: "system",
-  themeId: "ledger",
+  themeId: "blueprint",
   navigation: "sidebar",
   closeBehavior: "unset",
   onboardingCompleted: params.get("mockOnboarding") !== "1",
