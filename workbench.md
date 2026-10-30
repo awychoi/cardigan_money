@@ -51,6 +51,6 @@ The fallbacks: accounts entered by hand, and a statement CSV from your issuer im
 ## What I learned
 
 - **I could not offload the plan and the build.** My first useful instruction was to make the agent ask me everything it needed. The questions — backup matrix, restore paths, what happens when a passphrase is lost — became the design, because an agent otherwise proceeds on a plausible assumption.
-- **I had to check the translation.** Asking the agent to explain my prompt back in its own words caught the places where we were not on the same page.
 - **A simple ask became a complex app.** I thought this was a database, a frontend, and a fetch job. It is tens of thousands of lines, and most of that is not features. It is backups, restore, rekeying, locking, import rollback, and the refusal paths. Complexity lives in what happens when something fails.
 - **It taught me the stack.** The agent explained why Tauri, SQLCipher, and native secure input were needed, which made the complexity legible instead of mysterious.
+- **I had to check the translation.** Asking the agent to explain my prompt back in its own words caught the places where we were not on the same page.
