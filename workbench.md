@@ -18,7 +18,7 @@ link:
 ---
 ## What it is
 
-A macOS app for one person’s credit-card balances and calendar-month spending. The ledger is encrypted with SQLCipher; the passphrase and provider tokens stay in Rust and the macOS Keychain; there is no account and no cloud sync.
+A macOS app for one person’s credit-card ledger: card balances, upcoming payments, and spending by calendar month. Month totals are kept separate from statement cycles, and pending, posted, refunds, and payments stay distinct. The ledger is encrypted with SQLCipher and unlocked with a passphrase typed into a native macOS sheet; keys and provider tokens stay in Rust and the macOS Keychain. No account, no cloud, no telemetry.
 
 ## Decisions
 
@@ -26,29 +26,22 @@ I set the constraints; the agent made the calls inside them. The repository keep
 
 ### What I decided
 
-- **Local-first, no account, no cloud.** Not a feature added at the end. It removed whole categories of design before any code existed.
-- **No passphrase recovery, by design.** Losing the passphrase means losing the ledger. I would rather hold that risk than hand the app a recovery path I cannot audit.
-- **The secrets stay mine.** The agent built the Plaid integration around a client secret it never saw. I enrolled the trial account, typed the credentials into the native sheet, and ran the verification myself.
-- **Reviews before code.** A security critique and a CTO-style review happened before implementation, and no phase closed while a high-severity finding was open.
-- **Themes as data, not code.** New looks arrive as a file, so I can change the app’s appearance without asking the agent to re-read the codebase.
+- **Local-first, no account, no cloud.** A constraint from the start, not a feature added later.
+- **No passphrase recovery, by design.** Losing it loses the ledger. I would rather own that risk than ship a recovery path I cannot audit.
+- **The secrets stay mine.** The agent built the Plaid integration without ever seeing the client secret; I enrolled the trial, entered the credentials, and ran the verification.
+- **The ten-Item trial is a budget.** I asked whether a duplicate connection would waste a slot. It would, so duplicate links are refused and a restore reuses the token already in the Keychain.
 
 ### What the agent decided
 
-- **Envelope encryption.** An Argon2id-derived key wraps a random 256-bit data key; SQLCipher only ever receives the raw key. That let automatic backups exist without retaining the passphrase.
-- **One IPC command, `gateway`,** with typed payloads per command, instead of a broad Tauri bridge. The window is created in Rust so the security handlers exist before the first page load.
-- **Hosted Link plus polling** for Plaid, once research showed custom URL schemes are unsupported and a local callback only works in Sandbox. My “no server” rule removed the alternatives.
-- **Staged restores.** A candidate backup is validated before anything touches the live vault, and the app refuses to open a ledger it cannot prove is encrypted.
-- **One Plaid Item per institution.** A duplicate burns one of ten trial slots, and removing an Item does not refund it.
-- **Locking in Rust,** driven by real screen-lock and idle signals rather than a timer in the interface.
+- **Envelope encryption.** An Argon2id-derived key wraps a random 256-bit data key; SQLCipher only ever sees the raw key.
+- **One IPC command, `gateway`,** with typed payloads, and the window built in Rust so the guards exist before the first page loads.
+- **Hosted Link plus polling** for Plaid — the only flow left once custom URL schemes and a local callback were ruled out.
+- **Staged restores.** A backup is validated before the live vault is touched, and the app refuses to open a ledger it cannot prove is encrypted.
 
 ## What I learned
 
-The scarce input was never the code. It was knowing what *correct* looks like: a statement balance is not an amount due, a refund lands in a different month from its purchase, missing is not zero. The agent writes plausible code quickly; it cannot supply the standard the code is judged against. That standard came from twenty years of audit and financial systems.
+The spec I started from told the agent not to ask follow-up questions. My first instruction was the opposite: read it, then ask me everything you need. The unanswered questions turned out to be the design — the backup matrix, the restore paths, what happens when a passphrase is lost. An agent will proceed on a plausible assumption; the assumptions are where the risk lives.
 
-So I stopped reading code line by line and started interviewing it: what did you understand, what did you assume, what did you leave out, and what have you not verified. Review by interview catches drift that a diff does not.
+I thought this was a database, a frontend, and a fetch job. It is closer to twenty thousand lines, and most of that is not features. It is backups, restore, rekeying, locking, import rollback, and the refusal paths. Complexity lives in what happens when something fails.
 
-The drift is real. Left alone, the agent optimises for completeness — more copy, more tabs, more explanation of things I never asked about. A surprising amount of my time went into deleting rather than building. The constraint is focus, not capability.
-
-And “unverified” has to stay a word. The discipline that mattered most was writing down what had *not* been proven: live Plaid linking, native passphrase entry, Keychain behaviour under a rebuild. A control counts when a test or a recorded manual check says so, not when the code looks like it does.
-
-It is early, not distribution-ready, and has no passphrase recovery. That is the honest version, and it is the one worth putting on the record.
+The security review I asked for before the build turned the plan into twenty findings; later read-only reviews found that demo mode could erase the real vault and that a restore could race a long native prompt. None of that is visible from a feature list. So the habit became writing down what had *not* been verified — live Plaid linking, native passphrase entry, Keychain behaviour after a rebuild — because an unchecked claim is the one thing I cannot review.
