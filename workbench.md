@@ -18,7 +18,7 @@ link:
 ---
 ## What it is
 
-A macOS app for one person’s credit-card ledger: card balances, upcoming payments, and spending by calendar month. Month totals are kept separate from statement cycles, and pending, posted, refunds, and payments stay distinct. The ledger is encrypted with SQLCipher and unlocked with a passphrase typed into a native macOS sheet; keys and provider tokens stay in Rust and the macOS Keychain. No account, no cloud, no telemetry.
+A macOS app for one person’s credit cards: balances, upcoming payments, and spending by calendar month, kept apart from statement cycles. The numbers come from you — accounts entered by hand, a statement CSV from your issuer, or an optional Plaid link under your own Plaid account. Nothing is scraped, and no service of mine sits in the middle. The ledger is encrypted with SQLCipher and unlocked by a passphrase typed into a native macOS sheet. A synthetic demo opens without one.
 
 ## Decisions
 
