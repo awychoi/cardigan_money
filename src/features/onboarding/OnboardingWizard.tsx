@@ -15,6 +15,7 @@ import {
 } from "../../lib/timezone";
 import { AccountForm } from "../accounts/AccountForm";
 import { BrandMark } from "../../components/BrandMark";
+import { BrandName } from "../../components/BrandName";
 import { Button } from "../../components/Button";
 import { TimezoneSelect } from "../../components/TimezoneSelect";
 
@@ -166,7 +167,7 @@ export function OnboardingWizard({
         <header className="wizard-header">
           <div className="vault-brand">
             <BrandMark themeId={settings.themeId} />
-            <span className="brand-name">cardigan_money</span>
+            <BrandName />
           </div>
           <button
             type="button"

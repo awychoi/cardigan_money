@@ -22,10 +22,16 @@ test.describe("read-only dashboard (browser mock)", () => {
     await expect(page.getByRole("img", { name: /Gross spending by category/i })).toHaveCount(0);
 
     await expect(page.locator(".brand-mark")).toHaveAttribute("data-brand-theme", "blueprint");
+    const separator = page.locator(".brand-name-separator");
+    await expect(separator).toHaveText("_");
+    await expect(page.locator(".brand-name")).toHaveCSS("font-family", /mono/i);
+    const blueprintUnderscore = await separator.evaluate((el) => getComputedStyle(el).color);
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(page.locator(".theme-card-mark img")).toHaveCount(4);
     await page.locator(".theme-card", { hasText: "Ledger" }).click();
     await expect(page.locator(".brand-mark")).toHaveAttribute("data-brand-theme", "ledger");
+    const ledgerUnderscore = await separator.evaluate((el) => getComputedStyle(el).color);
+    expect(ledgerUnderscore).not.toBe(blueprintUnderscore);
     await page.getByRole("button", { name: "Overview", exact: true }).click();
 
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();

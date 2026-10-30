@@ -26,7 +26,7 @@ describe("app shell", () => {
     expect(await screen.findByText(/Your encrypted ledger is locked/)).toBeInTheDocument();
     expect(document.querySelector("input[type='password']")).toBeNull();
     expect(screen.getByText(/native macOS sheet/i)).toBeInTheDocument();
-    expect(screen.getByText("cardigan_money")).toBeInTheDocument();
+    expect(screen.getByLabelText("cardigan_money")).toBeInTheDocument();
   });
 
   it("offers vault creation when no vault exists", async () => {

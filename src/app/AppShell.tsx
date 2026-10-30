@@ -18,6 +18,7 @@ import {
   type SettingsSectionId,
 } from "../features/settings/SettingsView";
 import { BrandMark } from "../components/BrandMark";
+import { BrandName } from "../components/BrandName";
 import { MakerLine } from "../components/MadeBy";
 import { Button } from "../components/Button";
 import { formatMonthRange, monthLabel } from "../lib/formatting";
@@ -193,7 +194,7 @@ export function AppShell({
   const brand = (
     <div className="brand">
       <BrandMark themeId={theme.id} />
-      <span className="brand-name">cardigan_money</span>
+      <BrandName />
       {demo ? <span className="status-pill status-warn">Demo</span> : null}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { BrandMark } from "../components/BrandMark";
+import { BrandName } from "../components/BrandName";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AppShell } from "./AppShell";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -177,7 +178,9 @@ export function App() {
     return (
       <main className="boot-screen" aria-labelledby="app-title">
         <BrandMark className="boot-mark" themeId={theme.id} />
-        <h1 id="app-title">cardigan_money</h1>
+        <h1 id="app-title">
+          <BrandName />
+        </h1>
         <p className="muted">Local-first, encrypted personal card ledger.</p>
         <p className="status" role="status">
           Opening the secure bridge…
@@ -193,7 +196,9 @@ export function App() {
     return (
       <main className="boot-screen" role="alert">
         <BrandMark className="boot-mark" themeId={theme.id} />
-        <h1>cardigan_money</h1>
+        <h1>
+          <BrandName />
+        </h1>
         <p className="error-text">{boot.message}</p>
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
           Retry

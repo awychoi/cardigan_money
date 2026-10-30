@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { logEvent } from "../lib/logging";
+import { BrandName } from "./BrandName";
 
 interface Props {
   children: ReactNode;
@@ -26,7 +27,9 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.failed) {
       return (
         <main className="fatal-screen" role="alert">
-          <h1>cardigan_money</h1>
+          <h1>
+            <BrandName />
+          </h1>
           <p>A display error occurred.</p>
           <button type="button" onClick={() => this.setState({ failed: false })}>
             Try again

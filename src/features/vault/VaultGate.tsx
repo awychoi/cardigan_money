@@ -3,6 +3,7 @@ import { command, type RestoreResult, type VaultState } from "../../lib/bridge";
 import { friendlyError } from "../../lib/bridge/errors";
 import { Button } from "../../components/Button";
 import { BrandMark } from "../../components/BrandMark";
+import { BrandName } from "../../components/BrandName";
 import { MakerLine } from "../../components/MadeBy";
 import { RestoreBackupFlow } from "../settings/RestoreBackupFlow";
 
@@ -110,7 +111,7 @@ export function VaultGate({
       <div className="vault-card">
         <div className="vault-brand">
           <BrandMark themeId={themeId} />
-          <span className="brand-name">cardigan_money</span>
+          <BrandName />
         </div>
 
         {exists ? (

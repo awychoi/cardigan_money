@@ -120,6 +120,9 @@ selected layout.
 | `displayTracking` | −0.06–0.02 | em tracking for headings and hero numbers |
 | `lineHeight` | 1.2–1.8 | Body line height |
 
+`mono` also sets the app wordmark. The name is rendered at weight 500, and the `_` takes the
+theme's `accent`, so the separator stays distinct in every palette.
+
 Use system fonts. The CSP is `font-src 'self'`; a webfont must be bundled and would need its own
 `@font-face` — not supported by the theme format today.
 
