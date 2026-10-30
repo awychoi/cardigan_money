@@ -18,7 +18,9 @@ link:
 ---
 ## What it is
 
-One place for every credit card you carry. Balances and transactions from all of them land in a single ledger, so you stop opening four banking apps to answer one question. Plaid keeps it in sync under your own Plaid account, and one Item per institution means a duplicate link cannot waste a trial slot.
+One ledger for every credit card you carry. Balances sit side by side, so the figure you read is the total you owe, not four numbers you add up in your head. Transactions share one timeline and one set of categories, so a month of spending reads as a month, not a card-by-card reconciliation.
+
+Plaid is how they arrive: you bring your own credentials, link an institution once, and balances and transactions sync in the background.
 
 ## What the security costs
 
@@ -43,7 +45,7 @@ No account, no cloud, no telemetry, and nothing scraped. The ledger sits in SQLC
 
 ## The rest
 
-The fallbacks: accounts entered by hand, and a statement CSV from your issuer imported with a preview and rollback, for when linking is not what you want. Spending is counted by calendar month rather than statement cycle, an upcoming-payments view stays current whichever month you are reading, and a synthetic demo opens without a passphrase.
+The fallbacks: accounts entered by hand, and a statement CSV from your issuer imported with a preview and rollback. Spending is counted by calendar month rather than statement cycle, an upcoming-payments view stays current whichever month you are reading, a duplicate link is refused rather than spending another Item, and a synthetic demo opens without a passphrase.
 
 ## What I learned
 
