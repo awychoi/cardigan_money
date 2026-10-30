@@ -18,25 +18,32 @@ link:
 ---
 ## What it is
 
-A macOS app for one person’s credit cards: balances, upcoming payments, and spending by calendar month, kept apart from statement cycles. The numbers come from you — accounts entered by hand, a statement CSV from your issuer, or an optional Plaid link under your own Plaid account. Nothing is scraped, and no service of mine sits in the middle. The ledger is encrypted with SQLCipher and unlocked by a passphrase typed into a native macOS sheet. A synthetic demo opens without one.
+One place for every credit card you carry. Balances and transactions from all of them land in a single ledger, so you stop opening four banking apps to answer one question. Plaid keeps it in sync under your own Plaid account, and one Item per institution means a duplicate link cannot waste a trial slot.
 
-## Decisions
+## What the security costs
 
-I set the constraints; the agent made the calls inside them. The repository keeps a decision log that separates the two.
+A ledger is only worth keeping if it is safe to put real numbers in. Most of the design work went here, and every choice has a price.
 
 ### What I decided
 
-- **Local-first, no account, no cloud.** A constraint from the start, not a feature added later.
-- **No passphrase recovery, by design.** Losing it loses the ledger. I would rather own that risk than ship a recovery path I cannot audit.
+- **No passphrase recovery.** Lose it and the ledger is gone. I would rather own that trade than ship a recovery path I cannot audit.
 - **The secrets stay mine.** The agent built the Plaid integration without ever seeing the client secret; I enrolled the trial, entered the credentials, and ran the verification.
-- **The ten-Item trial is a budget.** I asked whether a duplicate connection would waste a slot. It would, so duplicate links are refused and a restore reuses the token already in the Keychain.
+- **Reviews before code.** A security critique and a CTO-style review came before the build, and no phase closed while a high-severity finding was open.
 
 ### What the agent decided
 
-- **Envelope encryption.** An Argon2id-derived key wraps a random 256-bit data key; SQLCipher only ever sees the raw key.
-- **One IPC command, `gateway`,** with typed payloads, and the window built in Rust so the guards exist before the first page loads.
-- **Hosted Link plus polling** for Plaid — the only flow left once custom URL schemes and a local callback were ruled out.
-- **Staged restores.** A backup is validated before the live vault is touched, and the app refuses to open a ledger it cannot prove is encrypted.
+- **Envelope encryption.** An Argon2id-derived key wraps a random 256-bit data key; SQLCipher only ever sees the raw key. The cost is more machinery at unlock and in every backup.
+- **One IPC command, `gateway`,** with typed payloads and the window built in Rust, so every call is checked in one place.
+- **Hosted Link plus polling** — the only Plaid flow that survives a ban on servers and custom URL schemes. The cost is a link URL that has to be treated as a bearer token.
+- **Staged restores, and a fail-closed open.** A backup is validated before the live vault is touched, and the app refuses a ledger it cannot prove is encrypted. The cost is more failure paths to test.
+
+## Privacy
+
+No account, no cloud, no telemetry, and nothing scraped. The ledger sits in SQLCipher on the Mac and is unlocked by a passphrase typed into a native macOS sheet; keys and provider tokens stay in Rust and the macOS Keychain. No server of mine ever sees it.
+
+## The rest
+
+The fallbacks: accounts entered by hand, and a statement CSV from your issuer imported with a preview and rollback, for when linking is not what you want. Spending is counted by calendar month rather than statement cycle, an upcoming-payments view stays current whichever month you are reading, and a synthetic demo opens without a passphrase.
 
 ## What I learned
 
@@ -44,4 +51,4 @@ The spec I started from told the agent not to ask follow-up questions. My first 
 
 I thought this was a database, a frontend, and a fetch job. It is closer to twenty thousand lines, and most of that is not features. It is backups, restore, rekeying, locking, import rollback, and the refusal paths. Complexity lives in what happens when something fails.
 
-The security review I asked for before the build turned the plan into twenty findings; later read-only reviews found that demo mode could erase the real vault and that a restore could race a long native prompt. None of that is visible from a feature list. So the habit became writing down what had *not* been verified — live Plaid linking, native passphrase entry, Keychain behaviour after a rebuild — because an unchecked claim is the one thing I cannot review.
+The security reviews were worth their cost. The one I asked for before the build produced twenty findings; later read-only passes found that demo mode could erase the real vault and that a restore could race a long native prompt. So the habit became writing down what had *not* been verified — live Plaid linking, native passphrase entry, Keychain behaviour after a rebuild — because an unchecked claim is the one thing I cannot review.
