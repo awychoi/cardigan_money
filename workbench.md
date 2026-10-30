@@ -19,7 +19,7 @@ link:
 
 ## What it is
 
-Cardigan Money is a macOS app for the credit cards one person actually carries. It gathers every balance into one ledger, every transaction onto one timeline, and the next payments into one view, so the total you owe is a figure you read rather than four balances you add up, and a month of spending is one set of categories instead of four separate reconciliations. Pending, posted, refunds, fees, payments, and transfers stay distinct, and a balance the app cannot see is reported as unknown rather than counted as zero.
+Cardigan Money is a macOS app for the credit cards one person actually carries. It gathers every balance into one ledger, puts every transaction on one timeline, and brings the next payments into one view. The total you owe becomes a figure you read rather than four balances you add up, and a month of spending becomes one set of categories instead of four separate reconciliations. Pending, posted, refunds, fees, payments, and transfers stay distinct, and a balance the app cannot see is reported as unknown rather than counted as zero.
 
 Plaid is the live feed. You bring your own Plaid credentials, link an institution once, and balances and transactions sync on a schedule and at launch. One Item per institution keeps the feed from doubling up: a second link is stopped before Plaid issues a token, and Update/Reconnect repairs the existing connection instead. The cost is that two separate logins at the same bank cannot both be connected; I took that over duplicate Items, double-counted accounts, and wasted Trial capacity.
 
