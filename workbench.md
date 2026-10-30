@@ -2,6 +2,8 @@
 treatment: hero
 order: 10
 kicker: Private · Local-first
+banner: docs/design/app-blueprint-overview-dark.png
+banner_alt: Cardigan Money overview screen showing net spending, reported payments, and card balances.
 meta:
   - label: Status
     value: Personal project; early
