@@ -19,9 +19,9 @@ link:
 
 ## What it is
 
-Cardigan Money consolidates a person's credit-card balances and transactions into one Plaid-synced dashboard. The vault is SQLCipher-encrypted; an Argon2id-derived key wraps the data key behind a passphrase that is never stored — lose it and the vault is gone, by design.
+Cardigan Money consolidates a person's credit-card balances and transactions into one Plaid-synced dashboard. Or keep it offline via CSV import or manual entry. Credentials and Item tokens live in the macOS Keychain.
 
-Plaid credentials and Item tokens live in the macOS Keychain, and Plaid secures the bank connection. Otherwise the app is fully local, with CSV import or manual entry to keep it fully offline.
+The vault is SQLCipher-encrypted; an Argon2id-derived key wraps the data key behind a passphrase that is never stored — lose it and the vault is gone, by design. Plaid secures the bank connections.
 
 ## The decision split
 
