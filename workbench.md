@@ -36,7 +36,7 @@ Most of the engineering went into making the ledger safe enough to hold real bal
 **What the agent decided**
 
 - **Envelope encryption.** An Argon2id-derived key wraps a random 256-bit data key; SQLCipher only ever sees the raw key. The cost is more machinery at unlock and in every backup.
-- **One IPC command, `gateway`,** with typed payloads and the window built in Rust, so every call is checked in one place. The cost is a single chokepoint every feature has to fit through.
+- **One IPC command, `gateway`,** with typed payloads, plus a window built in Rust so its guards exist before the first page loads. The cost is a single chokepoint every feature has to fit through.
 - **Hosted Link plus polling** — the only Plaid flow left once servers and custom URL schemes were ruled out. The cost is a link URL that has to be treated as a bearer token.
 - **Staged restores, and a fail-closed open.** A backup is validated before the live vault is touched, and the app refuses a ledger it cannot prove is encrypted. The cost is more failure paths to test.
 
